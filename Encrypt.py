@@ -36,14 +36,6 @@ while True:
                     restart2 = False
                     print("Quitting the program... Take care of yourself!")
                     break
-                elif choice == "Fuck" or choice == "fuck":
-                    print("What did you say? Not funny.")
-                    restart2 = True
-                    break
-                elif choice == "fuck u" or choice == "fuck you" or choice == "Fuck u" or choice == "Fuck you":
-                    print("Why don't you try to be more respectful?")
-                    restart2 = True
-                    break
                 elif choice == "rs" or choice == "re":
                     exit == False
                     restart = True
@@ -55,7 +47,10 @@ while True:
                     break
                 print("ERROR: Your choice must be a number. Numbers are shown in top.")
                 restart2 = False
-            if restart2 == True:
+            try:
+                if restart2 == True:
+                    continue
+            except NameError:
                 continue
         if exit == True:
             exit = True
