@@ -12,7 +12,7 @@ while True:
     print("██████████████████████████████████████████████████████████")
     print("██████▓▒░ Write exit or quit to exit the program ░▒▓██████")
     print("██████████████████████████████████████████████████████████")
-    print("█                  █ Version v0.2.1 Build 12 █ Main Menu █")1
+    print("█                  █ Version v0.2.1 Build 12 █ Main Menu █")
     while True:
         print("█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█")
         print("█ [1] Encryption                                         █")
