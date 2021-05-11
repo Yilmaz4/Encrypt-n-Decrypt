@@ -3,7 +3,7 @@ from time import sleep
 from sys import exit
 from ctypes import windll
 from tkinter.filedialog import asksaveasfile, Tk
-version = "v0.2"
+version = "v0.2.1"
 windll.kernel32.SetConsoleTitleW("Encrypt'n'Decrypt {}".format(version))
 exit = False
 while True:
