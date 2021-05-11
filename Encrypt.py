@@ -68,7 +68,7 @@ while True:
             print("")
             print("█▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█")
             print("█ [1] Save the key to a file                             █") 
-            print("█ [2] Exit                                               █")
+            print("█ [2] Back to Main Menu                                  █")
             print("█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█")
             while True:
                 choice2 = input("Your choice: ")
@@ -79,7 +79,7 @@ while True:
                         print("█ [1] Save to 'Encryption Key.key' file                  █")
                         print("█ [2] Save to 'Encryption Key.txt' file                  █")
                         print("█ [3] Save as...                                         █")
-                        print("█ [4] Exit                                               █")
+                        print("█ [4] Back to Main Menu                                  █")
                         print("█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█")
                         while True:
                             choice3 = input("Your choice: ")
@@ -154,10 +154,10 @@ while True:
                 while True:
                     keyInput = input("Key: ")
                     if keyInput == "reenter":
+                        main = True
                         break
                     elif keyInput == "quit" or keyInput == "exit" or keyInput == "q" or keyInput == "e":
-                        exit = True
-                        print("Quitting the program... Take care of yourself!")
+                        exit = False
                         break
                     try:
                         key = bytes(keyInput, 'utf-8')
