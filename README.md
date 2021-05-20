@@ -4,7 +4,7 @@ Hello everyone, this project is my second Python project and first project that 
 > Python 3.4 has reached end-of-life. Python 3.4.10 is the final release of 3.4.
 
 ### About Encryption Standart that program uses:
-`cryptography.fernet` encryption is a symmetric key encryption standart which uses 44-characters long encryption key. Encryption key must be a `base64.urlsafe_b64encode` encoded key. Normally this `cryptography.fernet` key is 32 characters long so this key is an `AES-256` key but after encoding, key turns into 44-characters long key and `cryptography.fernet` only supports `base64.urlsafe_b64encode` encoded 44-characters long keys.
+`cryptography.fernet` encryption is a symmetric key encryption standart which uses 44-characters long encryption key. Encryption key must be a `base64.urlsafe_b64encode` encoded key. In fact this `cryptography.fernet` key is 32 characters long `AES-256` key but after encoding, key turns into 44-characters long key because `cryptography.fernet` only supports `base64.urlsafe_b64encode` encoded 44-characters long keys.
 ## Future plans:
 In future releases, I'm planning to add GUI to program and support for encrypting files. Also I'm planning to change encryption standart to `AES-256`, `AES-192` and `AES-128` encryption standarts. I'm also planning to add `RSA-1024` and above asymmetric key encryption standarts. I am currently working on GUI update. It will be released soon.
 
