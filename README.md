@@ -24,4 +24,10 @@ from tkinter.filedialog import asksaveasfilename # Used for save-as function
 from tkinter import Tk # Used to close tkinter window after save-as.
 ```
 
-![#f03c15](https://via.placeholder.com/15/f03c15/000000?text=Merhaba)
+## Version comparison
+Version|GUI|Fernet Encryption|AES Encryption|RSA Encryption|Save key to a file|Use key from a file|File Encryption|
+|--|--|--|--|--|--|--|--|
+| Version 0.1.0 |   | ✔ |    |   |   |   |   |
+| Version 0.2.0 |   | ✔ |    |   | ✔ |   |   |
+| Version 0.2.1 |   | ✔ |    |   | ✔ |   |   |
+| Version 0.2.2 |   | ✔ |    |   | ✔ | ✔ |   |
