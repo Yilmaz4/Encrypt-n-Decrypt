@@ -122,6 +122,14 @@ def CheckUpdates():
         if version[1:] < (Version.json()["tag_name"])[1:]:
             if messagebox.askyesno("Updates available!","There are updates available! Do you want to go to the download page?\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"])):open("https://github.com/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
         elif version[1:] > (Version.json()["tag_name"])[1:]:messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+def GenerateAES(Length):
+    key = ""
+    for i in range(Length):
+        random = randint(1,32)
+        if random<25:key+=str(choice(ascii_letters))
+        elif random>=25 and random<30:key+=str(choice(digits))
+        elif random>=30:key+=str(choice("!'^+%&/()=?_<>#${[]}\|__--$__--"))
+    return key
 if True:
 #try:
     def ShutDown():root.destroy()
@@ -186,8 +194,8 @@ if True:
                 if output == encryptedTextEntry.get():encryptedTextWidget.configure(state=NORMAL, fg="black");encryptedTextWidget.delete('1.0', END);encryptedTextWidget.insert(INSERT, cipher);encryptedTextWidget.configure(state=DISABLED);RSApublicKeyWidget.configure(state=NORMAL);RSApublicKeyWidget.delete('1.0', END);RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode());RSApublicKeyWidget.configure(state=DISABLED);RSAprivateKeyWidget.configure(state=NORMAL);RSAprivateKeyWidget.delete('1.0', END);RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode());RSAprivateKeyWidget.configure(state=DISABLED);AESkeyEntry.configure(state=NORMAL);AESkeyEntry.delete('1.0', END);AESkeyEntry.configure(state=DISABLED);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using RSA-{} symmetric key encryption.\n".format(RSAkeyVar.get()));logTextWidget.config(state=DISABLED)
                 else:pass
             elif Mode.get()==1:encryptedTextWidget.configure(state=NORMAL);encryptedTextWidget.delete('1.0',END);encryptedTextWidget.insert(INSERT, cipher);encryptedTextWidget.configure(state=DISABLED);RSApublicKeyWidget.configure(state=NORMAL);RSApublicKeyWidget.delete('1.0', END);RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode());RSApublicKeyWidget.configure(state=DISABLED);RSAprivateKeyWidget.configure(state=NORMAL);RSAprivateKeyWidget.delete('1.0', END);RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode());RSAprivateKeyWidget.configure(state=DISABLED);AESkeyEntry.configure(state=NORMAL);AESkeyEntry.delete('1.0', END);AESkeyEntry.configure(state=DISABLED);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using RSA-{} symmetric key encryption without checking.\n".format(RSAkeyVar.get()));logTextWidget.config(state=DISABLED)
-        def AESencryption(key, plaintext):
-            global cipher, Mode, encryptedTextWidget
+        def AESencryption(key,plaintext=encryptedTextEntry.get()):
+            global cipher,Mode,encryptedTextWidget
             plaintext = bytes(plaintext, encoding.get())
             iv = Random.new().read(AES.block_size)
             iv_int = int(binascii.hexlify(iv), 16) 
@@ -255,15 +263,8 @@ if True:
                 logTextWidget.config(state=DISABLED)
         if Encryption.index(Encryption.select()) == 0:
             if KeySelectVar.get() == 1:
-                if RandomKeyVar.get() == 128:
-                    key = base64.urlsafe_b64encode(os.urandom(10))
-                    AESencryption(key, encryptedTextEntry.get())
-                elif RandomKeyVar.get() == 192:
-                    key = base64.urlsafe_b64encode(os.urandom(16))
-                    AESencryption(key, encryptedTextEntry.get())
-                elif RandomKeyVar.get() == 256:
-                    key = base64.urlsafe_b64encode(os.urandom(22))
-                    AESencryption(key, encryptedTextEntry.get())
+                if RandomKeyVar.get() < 352:
+                    AESencryption(bytes(GenerateAES(int(RandomKeyVar.get()/8)), 'utf-8'))
                 elif RandomKeyVar.get() == 352:
                     key = Fernet.generate_key()
                     FernetEncryption(key)
@@ -962,10 +963,9 @@ if True:
         createToolTip(SelectEncoding, "Click and select one of these encodings.")
     def Loop():
         root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
-        root.after(200, Loop)
-    Loop()
-    root.mainloop()
-    exit()
+        Encrypt()
+        root.after(1, Loop)
+    Loop();root.mainloop();exit()
 #except:
     #print("ERROR: Unexpected error occured. 0xu0000001a")
     #messagebox.showerror("FATAL_EXCEPTION","Uygulamada bilinmeyen beklenmedik bir hata oluştu. Hata örtbas edilmeye çalışılacak, başarısız olunursa program kapatılacak.\n\n0xu0000001a")
