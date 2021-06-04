@@ -1,5 +1,5 @@
 if __import__("sys").version_info.major == 2:
-    from Tkinter import messagebox
+    print("Python 2.x is not supported due to invalid syntax.")
 else:
     from tkinter import *
     from tkinter.commondialog import Dialog
