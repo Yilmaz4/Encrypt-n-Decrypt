@@ -31,6 +31,23 @@ In future releases, I'm planning to add GUI to program and support for encryptin
 The libraries that going to be used in future releases are `pycryptodome` and `pycryptodomex` libraries. These libraries are alternatives to *dead* `PyCrypto` library that fully replaces this library. These libraries can be used for both symmetric and asymmetric key encryptions and for asymmetric encryption, these libraries can support up to infinitive bytes of Private Key. For symmetric key encryption, these libraries supports `AES-256` `AES-192` and `AES-128` encryption keys.
 
 Also the library that is going to be used for GUI is `tkinter` and `ttk` librarires. I am also planning to change GUI library to `PyQt5` or `PyQt6` to improve user interface and visuality in future releases.
+### System requirements for the upcoming `v0.3.0` version:
+- Operating System: Windows Vista and up (x86 or x64)
+- Processor: At least 1GHz dual core processor recommended
+- RAM (Random Access Memory): Minimum 2GB, 4GB recommended
+- Screen resolution: Minimum 800x600, 1024x768 and up recommended
+#### Source code requirements:
+- Python 3.5 and up, Python 3.7.9 recommended
+- `ttkwidgets` version `3.2.2` and up
+- `cryptography` version `3.4.7` and up
+- `pywin32` version `300` and up
+- `pywin32-ctypes` version `0.2.0` and up
+- `pyperclip` version `1.8.2` and up
+- `typing-extensions` version `3.10.0.0` and up
+- `pycryptodome` version `3.10.1` and up
+- `pycryptodomex` version `3.10.1` and up
+- `requests` version `2.25.1` and up
+- `requests-cache` version `0.6.3` and up
 ## For developers:
 This project uses some libraries that must be installed using pip order to use them. Here are the all libraries must be installed using pip:
 ```python
