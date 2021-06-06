@@ -28,9 +28,26 @@ Source: [Cryptography Fernet official website](https://cryptography.io/en/latest
 ## Future plans:
 In future releases, I'm planning to add GUI to program and support for encrypting files. Also I'm planning to change encryption standart to `AES-256`, `AES-192` and `AES-128` encryption standarts. I'm also planning to add `RSA-1024` and above asymmetric key encryption standarts. I am currently working on GUI update. It will be released soon.
 
-The libraries that going to be used in future releases are `pycryptodome` and `pycryptodomex` libraries. These libraries are alternatives to *dead* `PyCrypto` library that fully replaces this library. These libraries can be used for both symmetric and asymmetric key encryptions and for asymmetric encryption, these libraries can support up to 16Kb (16384-bit) private RSA key. For symmetric key encryption, these libraries supports `AES-256` `AES-192` and `AES-128` encryption keys.
+The libraries that going to be used in future releases are `pycryptodome` and `pycryptodomex` libraries. These libraries are alternatives to *dead* `PyCrypto` library that fully replaces this library. These libraries can be used for both symmetric and asymmetric key encryptions and for asymmetric encryption, these libraries can support up to infinitive bytes of Private Key. For symmetric key encryption, these libraries supports `AES-256` `AES-192` and `AES-128` encryption keys.
 
 Also the library that is going to be used for GUI is `tkinter` and `ttk` librarires. I am also planning to change GUI library to `PyQt5` or `PyQt6` to improve user interface and visuality in future releases.
+### System requirements for the upcoming `v0.3.0` version:
+- Operating System: Windows Vista and up (x86 or x64)
+- Processor: At least 1GHz dual core processor recommended
+- RAM (Random Access Memory): Minimum 2GB, 4GB recommended
+- Screen resolution: Minimum 800x600, 1024x768 and up recommended
+#### Source code requirements:
+- Python 3.5 and up, Python 3.7.9 recommended
+- `ttkwidgets` version `3.2.2` and up
+- `cryptography` version `3.4.7` and up
+- `pywin32` version `300` and up
+- `pywin32-ctypes` version `0.2.0` and up
+- `pyperclip` version `1.8.2` and up
+- `typing-extensions` version `3.10.0.0` and up
+- `pycryptodome` version `3.10.1` and up
+- `pycryptodomex` version `3.10.1` and up
+- `requests` version `2.25.1` and up
+- `requests-cache` version `0.6.3` and up
 ## For developers:
 This project uses some libraries that must be installed using pip order to use them. Here are the all libraries must be installed using pip:
 ```python
@@ -46,10 +63,10 @@ from tkinter.filedialog import asksaveasfilename # Used for save-as function
 from tkinter import Tk # Used to close tkinter window after save-as.
 ```
 ## Version status:
->Current *stable* release: `v0.2.2`
+>### Current *stable* release: `v0.2.2`
 >
->Current *beta* release in *development*: `v0.2.3`
+>### Current *beta* release in *development*: `v0.2.3`
 >
->Current *major* release in *development*: `v0.3.0`
+>### Current *major* release in *development*: `v0.3.0`
 
-I am planning to release v0.2.3 next week and v0.3.0 next month.
+I am planning to release `v0.2.3` next week and `v0.3.0` next month.
