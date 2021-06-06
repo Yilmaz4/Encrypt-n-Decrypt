@@ -22,6 +22,8 @@ from requests import get
 from webbrowser import open
 from random import randint, choice
 from string import ascii_letters, digits
+from markdown import markdown
+from tkinterweb import HtmlFrame
 _MAX_CLOCK_SKEW = 60
 ERROR = "error";INFO = "info";QUESTION = "question";WARNING = "warning";ABORTRETRYIGNORE = "abortretryignore";OK = "ok";OKCANCEL = "okcancel";RETRYCANCEL = "retrycancel";YESNO = "yesno";YESNOCANCEL = "yesnocancel";ABORT = "abort";RETRY = "retry";IGNORE = "ignore";OK = "ok";CANCEL = "cancel";YES = "yes";NO = "no"
 class Message(Dialog):command  = "tk_messageBox"
@@ -109,7 +111,7 @@ class Fernet(object):
         try:unpadded += unpadder.finalize()
         except ValueError:raise InvalidToken
         return unpadded
-appWidth=800;appHeight=550;version="v0.3.0";root=Tk();root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")));root.resizable(width=FALSE, height=FALSE);root.geometry("{}x{}".format(appWidth, appHeight));root.attributes("-fullscreen", False);root.minsize(appWidth, appHeight)
+appWidth=800;appHeight=550;version="v0.2.1";root=Tk();root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")));root.resizable(width=FALSE, height=FALSE);root.geometry("{}x{}".format(appWidth, appHeight));root.attributes("-fullscreen", False);root.minsize(appWidth, appHeight)
 """style = ThemedStyle(root)
 style.set_theme("vista")"""
 MainScreen=ttk.Notebook(root,width=380,height=340);LogFrame=Frame(MainScreen);logTextWidget=Text(LogFrame,height=22,width=107,font=("Consolas",9),state=DISABLED)
@@ -117,11 +119,31 @@ logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ROOT: Created r
 menu=Menu(root);root.config(menu=menu);enterMenu=Menu(menu,tearoff=0);viewMenu=Menu(menu,tearoff=0);helpMenu=Menu(menu,tearoff=0);transMenu=Menu(viewMenu,tearoff=0);langMenu=Menu(viewMenu,tearoff=0);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT,"ROOT: Registered menu entries.\n");logTextWidget.config(state=DISABLED);root.wm_iconbitmap("Ico.ico")
 def CheckUpdates():
     Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
-    if Version.json()["tag_name"] == version and Version.json()["prerelease"] == False:messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+    if Version.json()["tag_name"] == version:messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
     else:
-        if version[1:] < (Version.json()["tag_name"])[1:]:
-            if messagebox.askyesno("Updates available!","There are updates available! Do you want to go to the download page?\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"])):open("https://github.com/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
-        elif version[1:] > (Version.json()["tag_name"])[1:]:messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+        if version[1:] > (Version.json()["tag_name"])[1:]:
+            messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+        else:
+            update = Tk()
+            update.title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
+            update.resizable(height=False, width=False)
+            update.attributes("-fullscreen", False)
+            update.geometry("669x400")
+            update.maxsize("669","400")
+            update.minsize("669","400")
+            update.iconbitmap("Ico.ico")
+            HTML = markdown(Version.json()["body"]).replace("<h2>Screenshot:</h2>","")
+            frame = HtmlFrame(update, height=400, width=300, messages_enabled=False, vertical_scrollbar=False)
+            frame.load_html(HTML)
+            frame.set_zoom(0.7)
+            frame.grid_propagate(0)
+            frame.enable_images(0)
+            frame.place(x=0, y=0)
+            DownloadPage = Entry(update, width=40)
+            DownloadPage.insert(0, str(Version.json()["html_url"]))
+            DownloadPage.configure(state=DISABLED)
+            DownloadPage.place(x=412, y=10)
+            update.mainloop()
 def GenerateAES(Length):
     key = ""
     for i in range(Length):
@@ -798,18 +820,18 @@ if True:
         RSA16384Check.place(x=125, y=63)
         RSAkeylength.place(x=170, y=83)
     if True: #Sub-Menus
-        enterMenu.add_command(label = "Encryption", command=EncryptPage, accelerator="Ctrl+E", underline=1)
-        enterMenu.add_command(label = "File Encryption", accelerator="Ctrl+F")
-        enterMenu.add_command(label = "Decryption", command=DecryptPage, accelerator="Ctrl+D")
-        enterMenu.add_command(label = "Key Generator", accelerator="Ctrl+K")
-        enterMenu.add_command(label = "Logs", accelerator="Ctrl+L")
+        enterMenu.add_command(label = "Encryption", command=EncryptPage, accelerator="Ctrl+E", underline=0)
+        enterMenu.add_command(label = "File Encryption", accelerator="Ctrl+F", underline=0)
+        enterMenu.add_command(label = "Decryption", command=DecryptPage, accelerator="Ctrl+D", underline=0)
+        enterMenu.add_command(label = "Key Generator", accelerator="Ctrl+K", underline=0)
+        enterMenu.add_command(label = "Logs", accelerator="Ctrl+L", underline=0)
         enterMenu.add_separator()
-        enterMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=CheckUpdates)
+        enterMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=CheckUpdates, underline=10)
         enterMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda:root.destroy())
         InfoVar = IntVar(); WarningVar = IntVar(); ErrorVar = IntVar(); InfoVar.set(1); WarningVar.set(1); ErrorVar.set(1)
-        viewMenu.add_checkbutton(label = "Show info message dialogs", accelerator="Ctrl+Alt+I", onvalue=1, offvalue=0, variable=InfoVar)
-        viewMenu.add_checkbutton(label = "Show warning message dialogs", accelerator="Ctrl+Alt+W", onvalue=1, offvalue=0, variable=WarningVar)
-        viewMenu.add_checkbutton(label = "Show error message dialogs", accelerator="Ctrl+Alt+E", onvalue=1, offvalue=0, variable=ErrorVar)
+        viewMenu.add_checkbutton(label = "Show info message dialogs", accelerator="Ctrl+Alt+I", onvalue=1, offvalue=0, variable=InfoVar, underline=5)
+        viewMenu.add_checkbutton(label = "Show warning message dialogs", accelerator="Ctrl+Alt+W", onvalue=1, offvalue=0, variable=WarningVar, underline=5)
+        viewMenu.add_checkbutton(label = "Show error message dialogs", accelerator="Ctrl+Alt+E", onvalue=1, offvalue=0, variable=ErrorVar, underline=5)
         viewMenu.add_separator()
         if True: #Transparency sub-menu
             transMenu.add_radiobutton(label = "%20", value=20, variable=Alpha, command=lambda:changeAlpha(20), accelerator="Ctrl+Alt+2")
@@ -819,7 +841,7 @@ if True:
             transMenu.add_radiobutton(label = "%90", value=90, variable=Alpha, command=lambda:changeAlpha(90), accelerator="Ctrl+Alt+9")
             transMenu.add_radiobutton(label = "Opaque", value=100, variable=Alpha, command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+1")
             transMenu.add_separator()
-            transMenu.add_command(label = "Reset opacity", command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+O")
+            transMenu.add_command(label = "Reset opacity", command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+O", underline=6)
             viewMenu.add_cascade(menu=transMenu, label = "Window opacity")
         viewMenu.add_separator()
         if True: #Language sub-menu
@@ -958,12 +980,10 @@ if True:
         createToolTip(SelectKeyCheck, "If you want to use your key that was already generated, select this radiobutton and enter your key below.")
         createToolTip(AES128Check, "AES-128 key is a 16 characters long base64 encoded AES key. Currently secure against normal computers but unsecure against powerful quantum computers.\nAlso AES-128 keys will be unsecure for normal computers too in the future.  An AES-128 key has 2¹²⁸ of possible combinations.")
         createToolTip(AES192Check, "AES-192 key is a 24 characters long base64 encoded AES key. Ideal for most of encryptions and currently secure against super computers and quantum computers.\nBut while quantum computers are being more powerful, AES-192 keys will be unsecure against quantum computers in the future. An AES-192 key has 2¹⁹² of possible combinations.")
-        createToolTip(AES256Check, "AES-256 key is a 32 characters long base64 encoded AES key. Impossible to crack with normal computers and highly secure against quantum computers.\nIt will take about billions of years to brute-force an AES-256 key with a normal computer as an AES-256 key has 2²⁵⁶ of possible combinations. In theory, AES-256 key is 2¹²⁸ times stronger than AES-128 key.")
+        createToolTip(AES256Check, "AES-256 key is a 32 characters long base64 encoded AES key. Impossible to crack with normal computers and highly secure against quantum computers.\nIt will take about billions of years to brute-force an AES-256 key with a normal computer as an AES-256 key has 2²⁵⁶ of possible combinations.\nIn theory, AES-256 key is 2¹²⁸ times stronger than AES-128 key.")
         createToolTip(AES352Check, "Legacy Fernet key is a 44 characters long base64 encoded key. In fact, Fernet key is a 32 characters long AES-256 key but after encoding key turns into 44 characters long key.\nFernet key is as secure as AES-256 key. Also Fernet key allows user to define a diffirent encryption time when encrypting and allows to extract encrypted time when decrypting.")
-        createToolTip(SelectEncoding, "Click and select one of these encodings.")
     def Loop():
         root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
-        Encrypt()
         root.after(1, Loop)
     Loop();root.mainloop();exit()
 #except:
