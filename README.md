@@ -48,6 +48,8 @@ Also the library that is going to be used for GUI is `tkinter` and `ttk` librari
 - `pycryptodomex` version `3.10.1` and up
 - `requests` version `2.25.1` and up
 - `requests-cache` version `0.6.3` and up
+- `markdown` version `3.3.4` and up
+- `tkinterweb` version `3.9.1` and up
 ## For developers:
 This project uses some libraries that must be installed using pip order to use them. Here are the all libraries must be installed using pip:
 ```python
