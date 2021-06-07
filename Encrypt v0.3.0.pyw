@@ -190,47 +190,61 @@ class Fernet(object):
         try:unpadded += unpadder.finalize()
         except ValueError:raise InvalidToken
         return unpadded
-appWidth=800;appHeight=550;version="v0.2.1";root=Tk();root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")));root.resizable(width=FALSE, height=FALSE);root.geometry("{}x{}".format(appWidth, appHeight));root.attributes("-fullscreen", False);root.minsize(appWidth, appHeight)
+appWidth=800;appHeight=550;version="v0.2.1";build="Build 15";root=Tk();root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")));root.resizable(width=FALSE, height=FALSE);root.geometry("{}x{}".format(appWidth, appHeight));root.attributes("-fullscreen", False);root.minsize(appWidth, appHeight)
 """style = ThemedStyle(root)
 style.set_theme("vista")"""
 MainScreen=ttk.Notebook(root,width=380,height=340);LogFrame=Frame(MainScreen);logTextWidget=Text(LogFrame,height=22,width=107,font=("Consolas",9),state=DISABLED)
 logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ROOT: Created root, started mainloop.\n");logTextWidget.config(state=DISABLED)
 menu=Menu(root);root.config(menu=menu);enterMenu=Menu(menu,tearoff=0);viewMenu=Menu(menu,tearoff=0);helpMenu=Menu(menu,tearoff=0);transMenu=Menu(viewMenu,tearoff=0);langMenu=Menu(viewMenu,tearoff=0);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT,"ROOT: Registered menu entries.\n");logTextWidget.config(state=DISABLED);root.wm_iconbitmap("Ico.ico")
 def CheckUpdates():
-    Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
-    if Version.json()["tag_name"] == version:messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+    try:Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
+    except Exception as e:messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub API. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
     else:
-        if version[1:] > (Version.json()["tag_name"])[1:]:
-            messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+        try:TestAPI = Version.json()["tag_name"]
+        except Exception as e:messagebox.showerror("ERR_CONNECTION_REFUSED","An error occured while trying to connect to the GitHub API. GitHub API is refusing connection to database. Please try again after 1 hours.\n\nError details: {}".format(str(e)+" "+"key is not found in database."));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
         else:
-            update = Tk()
-            update.title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
-            update.resizable(height=False, width=False)
-            update.attributes("-fullscreen", False)
-            update.geometry("669x400")
-            update.maxsize("669","400")
-            update.minsize("669","400")
-            update.iconbitmap("Ico.ico")
-            if int(uname()[2])>8:raw_update_available=Image.open(r"icons/update_available_win10.png");update_available=ImageTk.PhotoImage(raw_update_available,master=update)
-            elif int(uname()[2])<8 and uname()[0] == "Windows":raw_update_available=Image.open(r"icons/update_available_win7.png");update_available=ImageTk.PhotoImage(raw_update_available,master=update)
-            else:raw_update_available=Image.open(r"icons/update_available_win10.png");update_available=ImageTk.PhotoImage(raw_update_available,master=update)
-            HTML = markdown(Version.json()["body"]).replace("<h2>Screenshot:</h2>","")
-            frame = HtmlFrame(update, height=400, width=300, messages_enabled=False, vertical_scrollbar=True)
-            frame.load_html(HTML);frame.set_zoom(0.7);frame.grid_propagate(0);frame.enable_images(0);frame.place(x=0, y=0)
-            AvailableLabel = Canvas(update, width=90, height=90)
-            AvailableLabel.create_image((90,90),image=update_available)
-            DownloadLabel = Label(update, text="Download page for more information and asset files:")
-            CopyDownloadLink = Button(update, text="Copy", width=10)
-            OpenDownloadLink = Button(update, text="Open in browser", width=15)
-            DownloadPage = Entry(update, width=57)
-            DownloadPage.insert(0, str(Version.json()["html_url"]))
-            DownloadPage.configure(state=DISABLED)
-            DownloadLabel.place(x=309, y=106)
-            CopyDownloadLink.place(x=310, y=155)
-            OpenDownloadLink.place(x=385, y=155)
-            DownloadPage.place(x=311, y=128)
-            AvailableLabel.place(x=310, y=10)
-            update.mainloop()
+            if Version.json()["tag_name"] == version:messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+            else:
+                if version[1:] > (Version.json()["tag_name"])[1:]:messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+                else:
+                    update = Tk()
+                    update.title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
+                    update.resizable(height=False, width=False)
+                    update.attributes("-fullscreen", False)
+                    update.geometry("669x400")
+                    update.maxsize("669","400")
+                    update.minsize("669","400")
+                    update.iconbitmap("Ico.ico")
+                    HTML = markdown(Version.json()["body"]).replace("<h2>Screenshot:</h2>","")
+                    frame = HtmlFrame(update, height=400, width=300, messages_enabled=False, vertical_scrollbar=True)
+                    frame.load_html(HTML);frame.set_zoom(0.8);frame.grid_propagate(0);frame.enable_images(0);frame.place(x=0, y=0)
+                    UpdateAvailableLabel = Label(update, text="An update is available!", font=('Segoe UI', 22), foreground="#189200")
+                    LatestVersionLabel = Label(update, text="Latest version: {}".format(Version.json()["name"], font=('Segoe UI', 11)))
+                    YourVersionLabel = Label(update, text="Current version: Encrypt'n'Decrypt {} ({})".format(version,build), font=('Segoe UI', 9))
+                    DownloadLabel = Label(update, text="Download page for more information and asset files:")
+                    DownloadLinkLabel = Label(update, text="Download link for x64 version:")
+                    Separator1 = Separator(update, orient='horizontal')
+                    Separator2 = Separator(update, orient='horizontal')
+                    CopyDownloadLink = Button(update, text="Copy", width=10)
+                    OpenDownloadLink = Button(update, text="Open in browser", width=17)
+                    DownloadPage = Entry(update, width=57)
+                    DownloadPage.insert(0, str(Version.json()["html_url"]))
+                    DownloadPage.configure(state=DISABLED)
+                    DownloadLink = Entry(update, width=57)
+                    DownloadLink.insert(0, str(Version.json()["assets"][0]["browser_download_url"]))
+                    DownloadLink.configure(state=DISABLED)
+                    LatestVersionLabel.place(x=309, y=43)
+                    YourVersionLabel.place(x=309, y=63)
+                    UpdateAvailableLabel.place(x=310, y=2)
+                    Separator1.place(x=312, y=87, width=346)
+                    Separator2.place(x=312, y=170, width=346)
+                    DownloadLabel.place(x=309, y=89)
+                    CopyDownloadLink.place(x=310, y=138)
+                    OpenDownloadLink.place(x=385, y=138)
+                    DownloadPage.place(x=311, y=111)
+                    DownloadLink.place(x=311, y=195)
+                    update.focus_force()
+                    update.mainloop()
 def GenerateAES(Length):
     key = ""
     for i in range(Length):
@@ -239,8 +253,7 @@ def GenerateAES(Length):
         elif random>=25 and random<30:key+=str(choice(digits))
         elif random>=30:key+=str(choice("!'^+%&/()=?_<>#${[]}\|__--$__--"))
     return key
-if True:
-#try:
+try:
     def ShutDown():root.destroy()
     showCharState = IntVar(value=0);deshowCharState = IntVar(value=0);showChar = True;genPassword = IntVar();genPassword.set(16);Base64Check = IntVar();Base64Check.set(0);ToolTipActive = False
     class ToolTip(object):
@@ -1073,6 +1086,7 @@ if True:
         root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
         root.after(1, Loop)
     Loop();root.mainloop();exit()
-#except:
-    #print("ERROR: Unexpected error occured. 0xu0000001a")
-    #messagebox.showerror("FATAL_EXCEPTION","Uygulamada bilinmeyen beklenmedik bir hata oluştu. Hata örtbas edilmeye çalışılacak, başarısız olunursa program kapatılacak.\n\n0xu0000001a")
+except Exception as e:
+    logTextWidget.config(state=NORMAL)
+    logTextWidget.insert(INSERT, "ERROR: {}\n".format(e))
+    logTextWidget.config(state=DISABLED)
