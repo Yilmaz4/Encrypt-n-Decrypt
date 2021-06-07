@@ -6,8 +6,8 @@ else:
     from tkinter import ttk
     from tkinter.ttk import *
 from ttkthemes import ThemedStyle
-import pyperclip, os, base64, binascii, struct, time, typing, win32con
-from sys import exit, path
+import pyperclip, os, base64, binascii, struct, time, typing, collections, warnings
+from sys import exit, path, platform
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Util import Counter
 from Crypto import Random
@@ -24,9 +24,88 @@ from random import randint, choice
 from string import ascii_letters, digits
 from markdown import markdown
 from tkinterweb import HtmlFrame
+from sys import platform
+from PIL import Image, ImageTk
 _MAX_CLOCK_SKEW = 60
-ERROR = "error";INFO = "info";QUESTION = "question";WARNING = "warning";ABORTRETRYIGNORE = "abortretryignore";OK = "ok";OKCANCEL = "okcancel";RETRYCANCEL = "retrycancel";YESNO = "yesno";YESNOCANCEL = "yesnocancel";ABORT = "abort";RETRY = "retry";IGNORE = "ignore";OK = "ok";CANCEL = "cancel";YES = "yes";NO = "no"
+ERROR = "error";INFO = "info";QUESTION = "question";WARNING = "warning";ABORTRETRYIGNORE = "abortretryignore";OK = "ok";OKCANCEL = "okcancel";RETRYCANCEL = "retrycancel";YESNO = "yesno";YESNOCANCEL = "yesnocancel";ABORT = "abort";RETRY = "retry";IGNORE = "ignore";OK = "ok";CANCEL = "cancel";YES = "yes";NO = "no";_UNIXCONFDIR = '/etc';_ver_stages={'dev':10,'alpha':20,'a':20,'beta':30,'b':30,'c':40,'RC':50,'rc':50,'pl': 200, 'p': 200,};_component_re = re.compile(r'([0-9]+|[._+-])');uname_result = collections.namedtuple("uname_result","system node release version machine processor");_uname_cache = None;_WIN32_CLIENT_RELEASES = {(5, 0): "2000",(5, 1): "XP",(5, 2): "2003Server",(5, None): "post2003",(6, 0): "Vista",(6, 1): "7",(6, 2): "8",(6, 3): "8.1",(6, None): "post8.1",(10, 0): "10",(10, None): "post10",}
 class Message(Dialog):command  = "tk_messageBox"
+try:DEV_NULL = os.devnull
+except AttributeError:
+    if sys.platform in ('dos', 'win32', 'win16'):DEV_NULL = 'NUL'
+    else:DEV_NULL = '/dev/null'
+def _node(default=''):
+    try:import socket
+    except ImportError:return default
+    try:return socket.gethostname()
+    except OSError:return default
+def win32_ver(release='', version='', csd='', ptype=''):
+    try:from sys import getwindowsversion
+    except ImportError:return release, version, csd, ptype
+    winver = getwindowsversion();maj, min, build = winver.platform_version or winver[:3];version = '{0}.{1}.{2}'.format(maj, min, build);release = (_WIN32_CLIENT_RELEASES.get((maj, min)) or _WIN32_CLIENT_RELEASES.get((maj, None)) or release)
+    if winver[:2] == (maj, min):
+        try:csd = 'SP{}'.format(winver.service_pack_major)
+        except AttributeError:
+            if csd[:13] == 'Service Pack ':csd = 'SP' + csd[13:]
+    if getattr(winver, 'product_type', None) == 3:release = (_WIN32_SERVER_RELEASES.get((maj, min)) or _WIN32_SERVER_RELEASES.get((maj, None)) or release)
+    try:
+        try:import winreg
+        except ImportError:import _winreg as winreg
+    except ImportError:pass
+    else:
+        try:
+            cvkey = r'SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+            with winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, cvkey) as key:ptype = winreg.QueryValueEx(key, 'CurrentType')[0]
+        except OSError:pass
+    return release, version, csd, ptype
+def uname():
+    global _uname_cache;no_os_uname=0
+    if _uname_cache is not None:return _uname_cache
+    processor=''
+    try:system, node, release, version, machine = os.uname()
+    except AttributeError:no_os_uname=1
+    if no_os_uname or not list(filter(None,(system,node,release,version,machine))):
+        if no_os_uname:system = sys.platform;release='';version='';node=_node();machine=''
+        use_syscmd_ver=1
+        if system=='win32':
+            release,version,csd,ptype=win32_ver()
+            if release and version:use_syscmd_ver=0
+            if not machine:
+                if "PROCESSOR_ARCHITEW6432" in os.environ:machine = os.environ.get("PROCESSOR_ARCHITEW6432",'')
+                else:machine = os.environ.get('PROCESSOR_ARCHITECTURE','')
+            if not processor:processor = os.environ.get('PROCESSOR_IDENTIFIER',machine)
+        if use_syscmd_ver:
+            system, release, version = _syscmd_ver(system)
+            if system=='Microsoft Windows':system='Windows'
+            elif system=='Microsoft' and release=='Windows':
+                system = 'Windows'
+                if '6.0'==version[:3]:release='Vista'
+                else:release=''
+        if system in ('win32', 'win16'):
+            if not version:
+                if system=='win32':version='32bit'
+                else:version='16bit'
+            system='Windows'
+        elif system[:4]=='java':
+            release,vendor,vminfo,osinfo=java_ver();system='Java';version=','.join(vminfo)
+            if not version:version=vendor
+    if system=='OpenVMS':
+        if not release or release=='0':release=version;version=''
+        try:import vms_lib
+        except ImportError:pass
+        else:
+            csid,cpu_number=vms_lib.getsyi('SYI$_CPU',0)
+            if (cpu_number>=128):processor='Alpha'
+            else:processor='VAX'
+    if not processor:processor=_syscmd_uname('-p','')
+    if system=='unknown':system=''
+    if node=='unknown':node=''
+    if release=='unknown':release=''
+    if version=='unknown':version=''
+    if machine=='unknown':machine=''
+    if processor=='unknown':processor=''
+    if system=='Microsoft' and release=='Windows':system='Windows';release='Vista'
+    _uname_cache=uname_result(system,node,release,version,machine,processor)
+    return _uname_cache
 def _show(title=None, message=None, _icon=None, _type=None, **options):
     if _icon and "icon" not in options:    options["icon"] = _icon
     if _type and "type" not in options:    options["type"] = _type
@@ -132,17 +211,25 @@ def CheckUpdates():
             update.maxsize("669","400")
             update.minsize("669","400")
             update.iconbitmap("Ico.ico")
+            if int(uname()[2])>8:raw_update_available=Image.open(r"icons/update_available_win10.png");update_available=ImageTk.PhotoImage(raw_update_available,master=update)
+            elif int(uname()[2])<8 and uname()[0] == "Windows":raw_update_available=Image.open(r"icons/update_available_win7.png");update_available=ImageTk.PhotoImage(raw_update_available,master=update)
+            else:raw_update_available=Image.open(r"icons/update_available_win10.png");update_available=ImageTk.PhotoImage(raw_update_available,master=update)
             HTML = markdown(Version.json()["body"]).replace("<h2>Screenshot:</h2>","")
-            frame = HtmlFrame(update, height=400, width=300, messages_enabled=False, vertical_scrollbar=False)
-            frame.load_html(HTML)
-            frame.set_zoom(0.7)
-            frame.grid_propagate(0)
-            frame.enable_images(0)
-            frame.place(x=0, y=0)
-            DownloadPage = Entry(update, width=40)
+            frame = HtmlFrame(update, height=400, width=300, messages_enabled=False, vertical_scrollbar=True)
+            frame.load_html(HTML);frame.set_zoom(0.7);frame.grid_propagate(0);frame.enable_images(0);frame.place(x=0, y=0)
+            AvailableLabel = Canvas(update, width=90, height=90)
+            AvailableLabel.create_image((90,90),image=update_available)
+            DownloadLabel = Label(update, text="Download page for more information and asset files:")
+            CopyDownloadLink = Button(update, text="Copy", width=10)
+            OpenDownloadLink = Button(update, text="Open in browser", width=15)
+            DownloadPage = Entry(update, width=57)
             DownloadPage.insert(0, str(Version.json()["html_url"]))
             DownloadPage.configure(state=DISABLED)
-            DownloadPage.place(x=412, y=10)
+            DownloadLabel.place(x=309, y=106)
+            CopyDownloadLink.place(x=310, y=155)
+            OpenDownloadLink.place(x=385, y=155)
+            DownloadPage.place(x=311, y=128)
+            AvailableLabel.place(x=310, y=10)
             update.mainloop()
 def GenerateAES(Length):
     key = ""
