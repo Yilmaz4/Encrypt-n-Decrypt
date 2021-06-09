@@ -236,7 +236,8 @@ def CheckUpdates():
             else:
                 if version.replace("b","").replace("v","").replace(".","") > (Version.json()["tag_name"]).replace("b","").replace("v","").replace(".",""):messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
                 else:
-                    update = Tk()
+                    update = Toplevel(root)
+                    update.grab_set()
                     update.title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
                     update.resizable(height=False, width=False)
                     update.attributes("-fullscreen", False)
@@ -311,6 +312,7 @@ def CheckUpdates():
                     DownloadLinks.place(x=310, y=168)
                     update.focus_force()
                     update.mainloop()
+                    update.grab_release()
 def GenerateAES(Length):
     key = ""
     for i in range(Length):
