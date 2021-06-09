@@ -18,7 +18,8 @@ from cryptography.hazmat.backends import _get_backend
 from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.hmac import HMAC
-from requests import get
+from requests import get, head
+from urllib.request import urlretrieve
 from webbrowser import open
 from random import randint, choice
 from string import ascii_letters, digits
@@ -26,6 +27,7 @@ from markdown import markdown
 from tkinterweb import HtmlFrame
 from sys import platform
 from PIL import Image, ImageTk
+from getpass import getuser
 _MAX_CLOCK_SKEW = 60
 ERROR = "error";INFO = "info";QUESTION = "question";WARNING = "warning";ABORTRETRYIGNORE = "abortretryignore";OK = "ok";OKCANCEL = "okcancel";RETRYCANCEL = "retrycancel";YESNO = "yesno";YESNOCANCEL = "yesnocancel";ABORT = "abort";RETRY = "retry";IGNORE = "ignore";OK = "ok";CANCEL = "cancel";YES = "yes";NO = "no";_UNIXCONFDIR = '/etc';_ver_stages={'dev':10,'alpha':20,'a':20,'beta':30,'b':30,'c':40,'RC':50,'rc':50,'pl': 200, 'p': 200,};_component_re = re.compile(r'([0-9]+|[._+-])');uname_result = collections.namedtuple("uname_result","system node release version machine processor");_uname_cache = None;_WIN32_CLIENT_RELEASES = {(5, 0): "2000",(5, 1): "XP",(5, 2): "2003Server",(5, None): "post2003",(6, 0): "Vista",(6, 1): "7",(6, 2): "8",(6, 3): "8.1",(6, None): "post8.1",(10, 0): "10",(10, None): "post10",}
 class Message(Dialog):command  = "tk_messageBox"
@@ -190,22 +192,49 @@ class Fernet(object):
         try:unpadded += unpadder.finalize()
         except ValueError:raise InvalidToken
         return unpadded
-appWidth=800;appHeight=550;version="v0.2.1";build="Build 15";root=Tk();root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")));root.resizable(width=FALSE, height=FALSE);root.geometry("{}x{}".format(appWidth, appHeight));root.attributes("-fullscreen", False);root.minsize(appWidth, appHeight)
+appWidth=800;appHeight=550;version="v0.3.0";build="Build 15";root=Tk();root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")));root.resizable(width=FALSE, height=FALSE);root.geometry("{}x{}".format(appWidth, appHeight));root.attributes("-fullscreen", False);root.minsize(appWidth, appHeight)
 """style = ThemedStyle(root)
 style.set_theme("vista")"""
 MainScreen=ttk.Notebook(root,width=380,height=340);LogFrame=Frame(MainScreen);logTextWidget=Text(LogFrame,height=22,width=107,font=("Consolas",9),state=DISABLED)
 logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ROOT: Created root, started mainloop.\n");logTextWidget.config(state=DISABLED)
 menu=Menu(root);root.config(menu=menu);enterMenu=Menu(menu,tearoff=0);viewMenu=Menu(menu,tearoff=0);helpMenu=Menu(menu,tearoff=0);transMenu=Menu(viewMenu,tearoff=0);langMenu=Menu(viewMenu,tearoff=0);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT,"ROOT: Registered menu entries.\n");logTextWidget.config(state=DISABLED);root.wm_iconbitmap("Ico.ico")
 def CheckUpdates():
+    def Asset0DownloadBrowser():
+        open(Version.json()["assets"][0]["browser_download_url"])
+    def Asset1DownloadBrowser():
+        open(Version.json()["assets"][1]["browser_download_url"])
+    def Asset0Download():
+        startTime = time.time()
+        try:
+            urlretrieve(str(Version.json()["assets"][0]["browser_download_url"]),"C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"]))
+        except Exception as e:
+            messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub server connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
+        else:
+            finishTime = time.time()
+            messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed sucsessfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
+    def Asset1Download():
+        startTime = time.time()
+        try:
+            urlretrieve(str(Version.json()["assets"][1]["browser_download_url"]),"C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][1]["name"]))
+        except Exception as e:
+            messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub server connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
+        else:
+            finishTime = time.time()
+            messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed sucsessfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][1]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][1]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size2) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size2) / MBFACTOR))
     try:Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
     except Exception as e:messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub API. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
     else:
+        MBFACTOR = float(1 << 20)
+        response = head(Version.json()["assets"][0]["browser_download_url"], allow_redirects=True)
+        size = response.headers.get('content-length', 0)
+        response2 = head(Version.json()["assets"][1]["browser_download_url"], allow_redirects=True)
+        size2 = response2.headers.get('content-length', 0)
         try:TestAPI = Version.json()["tag_name"]
         except Exception as e:messagebox.showerror("ERR_CONNECTION_REFUSED","An error occured while trying to connect to the GitHub API. GitHub API is refusing connection to database. Please try again after 1 hours.\n\nError details: {}".format(str(e)+" "+"key is not found in database."));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
         else:
             if Version.json()["tag_name"] == version:messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
             else:
-                if version[1:] > (Version.json()["tag_name"])[1:]:messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+                if version.replace("b","").replace("v","").replace(".","") > (Version.json()["tag_name"]).replace("b","").replace("v","").replace(".",""):messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
                 else:
                     update = Tk()
                     update.title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
@@ -222,27 +251,64 @@ def CheckUpdates():
                     LatestVersionLabel = Label(update, text="Latest version: {}".format(Version.json()["name"], font=('Segoe UI', 11)))
                     YourVersionLabel = Label(update, text="Current version: Encrypt'n'Decrypt {} ({})".format(version,build), font=('Segoe UI', 9))
                     DownloadLabel = Label(update, text="Download page for more information and asset files:")
-                    DownloadLinkLabel = Label(update, text="Download link for x64 version:")
+                    DownloadLinks = LabelFrame(update, text="Download links", height=188, width=349)
+                    DownloadLinkLabel = Label(DownloadLinks, text=Version.json()["assets"][0]["name"])
+                    DownloadLinkLabel2 = Label(DownloadLinks, text=Version.json()["assets"][1]["name"])
                     Separator1 = Separator(update, orient='horizontal')
-                    Separator2 = Separator(update, orient='horizontal')
-                    CopyDownloadLink = Button(update, text="Copy", width=10)
+                    Separator2 = Separator(DownloadLinks, orient='horizontal')
+                    CopyDownloadPage = Button(update, text="Copy", width=10)
                     OpenDownloadLink = Button(update, text="Open in browser", width=17)
+                    CopyDownloadLink = Button(DownloadLinks, text="Copy", width=10)
+                    DownloadTheLinkBrowser = Button(DownloadLinks, text="Download from browser", width=25, command=Asset0DownloadBrowser)
+                    DownloadTheLinkBuiltin = Button(DownloadLinks, text="Download", width=13, command=Asset0Download)
+                    CopyDownloadLink2 = Button(DownloadLinks, text="Copy", width=10)
+                    DownloadTheLinkBrowser2 = Button(DownloadLinks, text="Download from browser", width=25, command=Asset1DownloadBrowser)
+                    DownloadTheLinkBuiltin2 = Button(DownloadLinks, text="Download", width=13, command=Asset1Download)
                     DownloadPage = Entry(update, width=57)
                     DownloadPage.insert(0, str(Version.json()["html_url"]))
                     DownloadPage.configure(state=DISABLED)
-                    DownloadLink = Entry(update, width=57)
+                    DownloadLink = Entry(DownloadLinks, width=54)
                     DownloadLink.insert(0, str(Version.json()["assets"][0]["browser_download_url"]))
                     DownloadLink.configure(state=DISABLED)
+                    DownloadLink2 = Entry(DownloadLinks, width=54)
+                    DownloadLink2.insert(0, str(Version.json()["assets"][1]["browser_download_url"]))
+                    DownloadLink2.configure(state=DISABLED)
+                    AssetSize = Label(DownloadLinks, text=("{:.2f} MB".format(int(size) / MBFACTOR)), foreground="#474747")
+                    AssetSize2 = Label(DownloadLinks, text=("{:.2f} MB".format(int(size2) / MBFACTOR)), foreground="#474747")
+                    if response.headers.get('Last-Modified', 0)[:17][16] == " ":
+                        DateVariable = response.headers.get('Last-Modified', 0)[:16]
+                    else:
+                        DateVariable = response.headers.get('Last-Modified', 0)[:17]
+                    Date = Label(DownloadLinks, text=DateVariable, foreground="gray")
+                    Date2 = Label(DownloadLinks, text=DateVariable, foreground="gray")
                     LatestVersionLabel.place(x=309, y=43)
                     YourVersionLabel.place(x=309, y=63)
                     UpdateAvailableLabel.place(x=310, y=2)
-                    Separator1.place(x=312, y=87, width=346)
-                    Separator2.place(x=312, y=170, width=346)
+                    Separator1.place(x=312, y=86, width=346)
+                    Separator2.place(x=7, y=81, width=329)
                     DownloadLabel.place(x=309, y=89)
-                    CopyDownloadLink.place(x=310, y=138)
+                    DownloadLinkLabel.place(x=6, y=0)
+                    AssetSize.place(x=175, y=0)
+                    if len(DateVariable) == 16:
+                        Date.place(x=240, y=0)
+                        Date2.place(x=240, y=86)
+                    elif len(DateVariable) == 17:
+                        Date.place(x=237, y=0)
+                        Date2.place(x=237, y=86)
+                    DownloadLinkLabel2.place(x=6, y=86)
+                    AssetSize2.place(x=175, y=86)
+                    CopyDownloadPage.place(x=310, y=138)
                     OpenDownloadLink.place(x=385, y=138)
                     DownloadPage.place(x=311, y=111)
-                    DownloadLink.place(x=311, y=195)
+                    DownloadLink.place(x=7, y=22)
+                    DownloadLink2.place(x=7, y=108)
+                    DownloadTheLinkBuiltin.place(x=81, y=49)
+                    DownloadTheLinkBrowser.place(x=177, y=49)
+                    CopyDownloadLink.place(x=6, y=49)
+                    DownloadTheLinkBuiltin2.place(x=81, y=135)
+                    DownloadTheLinkBrowser2.place(x=177, y=135)
+                    CopyDownloadLink2.place(x=6, y=135)
+                    DownloadLinks.place(x=310, y=168)
                     update.focus_force()
                     update.mainloop()
 def GenerateAES(Length):
@@ -919,6 +985,7 @@ try:
         RSA8192Check.place(x=125, y=44)
         RSA16384Check.place(x=125, y=63)
         RSAkeylength.place(x=170, y=83)
+        SelectRSAKeyCheck.place(x=5, y=101)
     if True: #Sub-Menus
         enterMenu.add_command(label = "Encryption", command=EncryptPage, accelerator="Ctrl+E", underline=0)
         enterMenu.add_command(label = "File Encryption", accelerator="Ctrl+F", underline=0)
@@ -927,6 +994,7 @@ try:
         enterMenu.add_command(label = "Logs", accelerator="Ctrl+L", underline=0)
         enterMenu.add_separator()
         enterMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=CheckUpdates, underline=10)
+        enterMenu.add_separator()
         enterMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda:root.destroy())
         InfoVar = IntVar(); WarningVar = IntVar(); ErrorVar = IntVar(); InfoVar.set(1); WarningVar.set(1); ErrorVar.set(1)
         viewMenu.add_checkbutton(label = "Show info message dialogs", accelerator="Ctrl+Alt+I", onvalue=1, offvalue=0, variable=InfoVar, underline=5)
@@ -1035,7 +1103,6 @@ try:
     Text = "This program can encrypt and decrypt plain texts and files with AES-128, AES-192, AES-256, Fernet and RSA encryption standarts. AES-128 key is a 16 characters long and base64.urlsafe encoded key, AES-192 key is a 24 characters long and base64.urlsafe encoded key and AES-256 key is a 32 characters long and base64.urlsafe encoded key. RSA keys are base64.urlsafe encoded keys that in any length longer than 128 characters. Program can generate a fresh random AES or RSA key or can use a pre-generated key. In RSA encryption, Public Key is used to encrypt the data and Private Key is required to decrypt the cipher (Encrypted data). Public key can be extracted from Private key. 1024-bit RSA encryption can take 1 second to 10 seconds and 8196-bit RSA encryption can take 1 minute to 12 minutes depending on your computer. AES encryptions are way faster than RSA encryption. Fernet encryption (Legacy Fernet Key) also includes ability to change encryption time. That means you can encrypt your data with a fake date. But AES and RSA doesn't support this. Also you can select Fast mode to encrypt the data faster but bypass encyrption check.\n\nIf you are having problems with program, below information might be helpful to resolve problems:\n\nERR_ENCRYPTER_NOT_WORKING_PROPERLY: This error indicates that encrypter is not working properly even 'abc' text encryption failed. Try encrypting again after restarting the program. If problem persists, please report this problem to me.\n\nERR_INVALID_ENCRYPTION_KEY: This error occures when you selected to enter an encryption key and entered a non-encryption key. Please be sure you entered a AES-128, AES-192, AES-256, Fernet or RSA key that is bigger than 1024-bit; if the key you entered is one of them, be sure it's base64.urlsafe encoded.\n\nERR_UNENCRYPTABLE_TEXT: This error indicates that text you entered to encrypt is not encryptable or includes a illegal character for selected encoding system. Please try another text to encyrpt.\n\nERR_UNABLE_TO_CLEAR: This error pops-up when an unknown error occures while trying to clear the cipher or key from output. Only solution is probably restarting the program. If problem persists, please report this problem to me.\n\nERR_UNABLE_TO_DECRYPT: This errorVersion: {} Build 14\nAuthor: Yılmaz Alpaslan\ngithub.com\Yilmaz4\Encrypt-n-Decrypt".format(version)
     about.insert(INSERT, Text)
     about.configure(state=DISABLED)
-    ToleranceLabel.place(x=220, y=84)
     SelectEncoding.place(x=301, y=49)
     scrollbar.place(x=762, y=10, height=312)
     encryptedTextEntry.place(x=10, y=22)
@@ -1084,7 +1151,7 @@ try:
         createToolTip(AES352Check, "Legacy Fernet key is a 44 characters long base64 encoded key. In fact, Fernet key is a 32 characters long AES-256 key but after encoding key turns into 44 characters long key.\nFernet key is as secure as AES-256 key. Also Fernet key allows user to define a diffirent encryption time when encrypting and allows to extract encrypted time when decrypting.")
     def Loop():
         root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
-        root.after(1, Loop)
+        root.after(200, Loop)
     Loop();root.mainloop();exit()
 except Exception as e:
     logTextWidget.config(state=NORMAL)
