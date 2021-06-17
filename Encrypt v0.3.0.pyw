@@ -1,5 +1,13 @@
 if __import__("sys").version_info.major == 2:
-    print("Python 2.x is not supported due to invalid syntax.")
+    from sys import exit
+    print("Python 2.x is not supported due to incompatible syntax. Please use Python 3.x instead.")
+    choice = str(input("Do you still want to run the code? [Y|N]: "))
+    if choice == "Y":
+        from Tkinter import *
+        from Tkinter.commondialog import Dialog
+        from ttk import *
+    else:
+        exit()
 else:
     from tkinter import *
     from tkinter.commondialog import Dialog
@@ -20,13 +28,16 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.hmac import HMAC
 from requests import get, head
 from urllib.request import urlretrieve
-from webbrowser import open
+from webbrowser import open as openweb
 from random import randint, choice
 from string import ascii_letters, digits
 from markdown import markdown
 from tkinterweb import HtmlFrame
 from PIL import Image, ImageTk
 from getpass import getuser
+def is_admin():
+    try:return ctypes.windll.shell32.IsUserAnAdmin()
+    except:return False
 _MAX_CLOCK_SKEW = 60
 ERROR = "error";INFO = "info";QUESTION = "question";WARNING = "warning";ABORTRETRYIGNORE = "abortretryignore";OK = "ok";OKCANCEL = "okcancel";RETRYCANCEL = "retrycancel";YESNO = "yesno";YESNOCANCEL = "yesnocancel";ABORT = "abort";RETRY = "retry";IGNORE = "ignore";OK = "ok";CANCEL = "cancel";YES = "yes";NO = "no";_UNIXCONFDIR = '/etc';_ver_stages={'dev':10,'alpha':20,'a':20,'beta':30,'b':30,'c':40,'RC':50,'rc':50,'pl': 200, 'p': 200,};uname_result = collections.namedtuple("uname_result","system node release version machine processor");_uname_cache = None;_WIN32_CLIENT_RELEASES = {(5, 0): "2000",(5, 1): "XP",(5, 2): "2003Server",(5, None): "post2003",(6, 0): "Vista",(6, 1): "7",(6, 2): "8",(6, 3): "8.1",(6, None): "post8.1",(10, 0): "10",(10, None): "post10",}
 class Message(Dialog):command  = "tk_messageBox"
@@ -77,12 +88,6 @@ def uname():
                 if system=='win32':version='32bit'
                 else:version='16bit'
             system='Windows'
-    if system=='OpenVMS':
-        if not release or release=='0':release=version;version=''
-        else:
-            csid,cpu_number=vms_lib.getsyi('SYI$_CPU',0)
-            if (cpu_number>=128):processor='Alpha'
-            else:processor='VAX'
     if system=='unknown':system=''
     if node=='unknown':node=''
     if release=='unknown':release=''
@@ -183,39 +188,47 @@ MainScreen=ttk.Notebook(root,width=380,height=340);LogFrame=Frame(MainScreen);lo
 logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ROOT: Created root, started mainloop.\n");logTextWidget.config(state=DISABLED)
 menu=Menu(root);root.config(menu=menu);enterMenu=Menu(menu,tearoff=0);viewMenu=Menu(menu,tearoff=0);helpMenu=Menu(menu,tearoff=0);transMenu=Menu(viewMenu,tearoff=0);langMenu=Menu(viewMenu,tearoff=0);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT,"ROOT: Registered menu entries.\n");logTextWidget.config(state=DISABLED);root.wm_iconbitmap("Ico.ico")
 def CheckUpdates():
-    def Asset0DownloadBrowser():
-        open(Version.json()["assets"][0]["browser_download_url"])
-    def Asset1DownloadBrowser():
-        open(Version.json()["assets"][1]["browser_download_url"])
-    def Asset0Download():
+    def Asset0DownloadBrowser():openweb(Version.json()["assets"][0]["browser_download_url"])
+    def Asset1DownloadBrowser():openweb(Version.json()["assets"][1]["browser_download_url"])
+    def AssetDownload(downloadPath, ProgressBar, downloadProgress, ProgressLabel, size, Asset=0, chunkSize=2097152):
+        def Update(downloadedSize):
+            downloadedSize = downloadedSize + len(downloadURL.content)
+            downloadProgress.set(downloadProgress.get()+len(downloadURL.content))
+            ProgressLabel.configure(text="Download progress: {:.1f} MB {:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize/1024)/1024, int(size)/MBFACTOR))
         startTime = time.time()
+        size = int(size)
+        MBFACTOR = float(1 << 20)
+        #messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub server connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
         try:
-            urlretrieve(str(Version.json()["assets"][0]["browser_download_url"]),"C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"]))
+            try:os.remove(downloadPath)
+            except:pass
+            ProgressBar.configure(maximum=int(chunkSize))
+            downloadProgress.set(0)
+            downloadedSize = 0
+            file = open(downloadPath, mode='wb')
+            for chunk in range(0, int(size), int(chunkSize)):
+                downloadURL = get(Version.json()["assets"][int(Asset)]["browser_download_url"], headers={"Range":"bytes={}-{}".format(chunk, chunk+chunkSize-1)})
+                Update(downloadedSize)
+                file.write(downloadURL.content)
+                print(len(downloadURL.content))
+            file.close()
         except Exception as e:
-            messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub server connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
-        else:
-            finishTime = time.time()
-            messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed sucsessfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
-    def Asset1Download():
-        startTime = time.time()
-        try:
-            urlretrieve(str(Version.json()["assets"][1]["browser_download_url"]),"C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][1]["name"]))
-        except Exception as e:
-            messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub server connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
-        else:
-            finishTime = time.time()
-            messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed sucsessfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][1]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][1]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size2) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size2) / MBFACTOR))
+            messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: File write operation failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
+        else:ProgressLabel.configure(text="Download progress:");downloadProgress.set(0);finishTime = time.time();messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed sucsessfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
+    def Asset0Download():AssetDownload(downloadPath=("C:/Users/{}/Downloads/{}".format(getuser(),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size)
+    def Asset1Download():AssetDownload(downloadPath=("C:/Users/{}/Downloads/{}".format(getuser(),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2)
     try:Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
     except Exception as e:messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub API. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
     else:
         MBFACTOR = float(1 << 20)
-        response = head(Version.json()["assets"][0]["browser_download_url"], allow_redirects=True)
-        size = response.headers.get('content-length', 0)
-        response2 = head(Version.json()["assets"][1]["browser_download_url"], allow_redirects=True)
-        size2 = response2.headers.get('content-length', 0)
-        try:TestAPI = Version.json()["tag_name"]
-        except Exception as e:messagebox.showerror("ERR_CONNECTION_REFUSED","An error occured while trying to connect to the GitHub API. GitHub API is refusing connection to database. Please try again after 1 hours.\n\nError details: {}".format(str(e)+" "+"key is not found in database."));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
+        try:
+            response = head(Version.json()["assets"][0]["browser_download_url"], allow_redirects=True)
+        except KeyError as e:
+            messagebox.showerror("ERR_API_SERVER_LIMIT_EXCEED","An error occured while trying to connect to the GitHub API servers. GitHub API limit may be exceed as servers has only 5000 connections limit per hour and per IP adress. Please try again after 1 hours.");logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API limit exceed, connection failed. ({})\n".format(e));logTextWidget.config(state=DISABLED)
         else:
+            size = response.headers.get('content-length', 0)
+            response2 = head(Version.json()["assets"][1]["browser_download_url"], allow_redirects=True)
+            size2 = response2.headers.get('content-length', 0)
             if Version.json()["tag_name"] == version:messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
             else:
                 if version.replace("b","").replace("v","").replace(".","") > (Version.json()["tag_name"]).replace("b","").replace("v","").replace(".",""):messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
@@ -225,22 +238,23 @@ def CheckUpdates():
                     update.title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
                     update.resizable(height=False, width=False)
                     update.attributes("-fullscreen", False)
-                    update.geometry("669x400")
-                    update.maxsize("669","400")
-                    update.minsize("669","400")
+                    update.geometry("669x500")
+                    update.maxsize("669","500")
+                    update.minsize("669","500")
                     update.iconbitmap("Ico.ico")
                     HTML = markdown(Version.json()["body"]).replace("<h2>Screenshot:</h2>","")
-                    frame = HtmlFrame(update, height=400, width=300, messages_enabled=False, vertical_scrollbar=True)
+                    frame = HtmlFrame(update, height=500, width=300, messages_enabled=False, vertical_scrollbar=True)
                     frame.load_html(HTML);frame.set_zoom(0.8);frame.grid_propagate(0);frame.enable_images(0);frame.place(x=0, y=0)
                     UpdateAvailableLabel = Label(update, text="An update is available!", font=('Segoe UI', 22), foreground="#189200")
                     LatestVersionLabel = Label(update, text="Latest version: {}".format(Version.json()["name"], font=('Segoe UI', 11)))
                     YourVersionLabel = Label(update, text="Current version: Encrypt'n'Decrypt {} ({})".format(version,build), font=('Segoe UI', 9))
                     DownloadLabel = Label(update, text="Download page for more information and asset files:")
-                    DownloadLinks = LabelFrame(update, text="Download links", height=188, width=349)
+                    DownloadLinks = LabelFrame(update, text="Download links", height=250, width=349)
                     DownloadLinkLabel = Label(DownloadLinks, text=Version.json()["assets"][0]["name"])
                     DownloadLinkLabel2 = Label(DownloadLinks, text=Version.json()["assets"][1]["name"])
                     Separator1 = Separator(update, orient='horizontal')
                     Separator2 = Separator(DownloadLinks, orient='horizontal')
+                    Separator3 = Separator(DownloadLinks, orient='horizontal')
                     CopyDownloadPage = Button(update, text="Copy", width=10)
                     OpenDownloadLink = Button(update, text="Open in browser", width=17)
                     CopyDownloadLink = Button(DownloadLinks, text="Copy", width=10)
@@ -266,11 +280,18 @@ def CheckUpdates():
                         DateVariable = response.headers.get('Last-Modified', 0)[:17]
                     Date = Label(DownloadLinks, text=DateVariable, foreground="gray")
                     Date2 = Label(DownloadLinks, text=DateVariable, foreground="gray")
+                    downloadProgress = IntVar()
+                    downloadProgress.set(0)
+                    ProgressBar = Progressbar(DownloadLinks, length=329, mode='determinate', orient=HORIZONTAL, variable=downloadProgress, maximum=int(size))
+                    ProgressBar.place(x=7, y=188)
+                    ProgressLabel = Label(DownloadLinks, text="Download progress:")
+                    ProgressLabel.place(x=5, y=168)
                     LatestVersionLabel.place(x=309, y=43)
                     YourVersionLabel.place(x=309, y=63)
                     UpdateAvailableLabel.place(x=310, y=2)
                     Separator1.place(x=312, y=86, width=346)
                     Separator2.place(x=7, y=81, width=329)
+                    Separator3.place(x=7, y=167, width=329)
                     DownloadLabel.place(x=309, y=89)
                     DownloadLinkLabel.place(x=6, y=0)
                     AssetSize.place(x=175, y=0)
@@ -296,7 +317,6 @@ def CheckUpdates():
                     DownloadLinks.place(x=310, y=168)
                     update.focus_force()
                     update.mainloop()
-                    update.grab_release()
 def GenerateAES(Length):
     key = ""
     for i in range(Length):
@@ -755,47 +775,26 @@ try:
             if len(value) == 0:
                 StatusLabelAES.configure(foreground="gray", text="Validity: [Blank]")
             elif len(value) == 16:
-                CheckBase64Encoding.configure(state=NORMAL)
                 try:
                     AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
-                    if Base64Check.get() == 0:
-                        keycheck = base64.urlsafe_b64decode(value.encode())
-                        if (len(keycheck)+2)*128/96 == len(value) and value[-2:] == "==":
-                            StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-128 Key")
-                        else:
-                            StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-128 Key")
-                    else:
-                        StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-128 Key")
-                except:
-                    StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-128 Key")
-            elif len(value) == 24:
-                CheckBase64Encoding.configure(state=NORMAL)
-                try:
-                    AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
-                    if Base64Check.get() == 0:
-                        keycheck = base64.urlsafe_b64decode(value.encode())
-                        if (len(keycheck)+2)*128/96 == len(value) and value[-2:] == "==":
-                            StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-192 Key")
-                        else:
-                            StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-192 Key")
-                    else:
-                        StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-192 Key")
-                except:
-                    StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-192 Key")
-            elif len(value) == 32:
-                CheckBase64Encoding.configure(state=NORMAL)
-                try:
-                    AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
-                    if Base64Check.get() == 0:
-                        keycheck = base64.urlsafe_b64decode(value.encode())
-                        if (len(keycheck)+2)*128/96 == len(value) and value[-2:] == "==":
-                            StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
-                        else:
-                            StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
-                    else:
-                        StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
                 except:
                     StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
+                else:
+                    StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
+            elif len(value) == 24:
+                try:
+                    AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
+                except:
+                    StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
+                else:
+                    StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
+            elif len(value) == 32:
+                try:
+                    AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
+                except:
+                    StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
+                else:
+                    StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
             elif len(value) >= 44:
                 CheckBase64Encoding.configure(state=DISABLED)
                 try:
@@ -896,6 +895,8 @@ try:
         HourSeparator2 = Label(OtherOptionsFrame, text=":", state=DISABLED)
         DateSeparator = Label(OtherOptionsFrame, text="/", state=DISABLED)
         DateSeparator2 = Label(OtherOptionsFrame, text="/", state=DISABLED)
+        BenchVar = IntVar();BenchVar.set(0)
+        BenchmarkCheck = Checkbutton(OtherOptionsFrame, text="Benchmark", onvalue=1, offvalue=0, variable=BenchVar)
         HourEntry.place(x=165, y=0)
         MinuteEntry.place(x=192, y=0)
         SecondEntry.place(x=219, y=0)
@@ -906,6 +907,7 @@ try:
         HourSeparator2.place(x=212, y=0)
         DateSeparator.place(x=272, y=0)
         DateSeparator2.place(x=301, y=0)
+        BenchmarkCheck.place(x=5, y=44)
     if True:
         RandomKeyCheck = Radiobutton(KeySelectFrame, text="Generate a random key", value=1, variable=KeySelectVar, command=ChangeKeySelection)
         SelectKeyCheck = Radiobutton(KeySelectFrame, text="Use this key:", value=2, variable=KeySelectVar, command=ChangeKeySelection)
@@ -1137,7 +1139,28 @@ try:
         createToolTip(AES352Check, "Legacy Fernet key is a 44 characters long base64 encoded key. In fact, Fernet key is a 32 characters long AES-256 key but after encoding key turns into 44 characters long key.\nFernet key is as secure as AES-256 key. Also Fernet key allows user to define a diffirent encryption time when encrypting and allows to extract encrypted time when decrypting.")
     def Loop():
         root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
-        root.after(200, Loop)
+        if BenchVar.get() == 1 and KeySelectVar.get() == 1:
+            Encrypt()
+            root.after(1, Loop)
+        elif BenchVar.get() == 1 and KeySelectVar.get() == 2:
+            value = KeyValue.get()
+            if len(value) == 16 or len(value) == 24 or len(value) == 32 or len(value) == 44:
+                plaintext = bytes("TEST", 'utf-8')
+                iv = Random.new().read(AES.block_size)
+                iv_int = int(binascii.hexlify(iv), 16) 
+                ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+                try:
+                    aes = AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
+                    ciphertext = aes.encrypt(plaintext)
+                except:
+                    root.after(200, Loop)
+                else:
+                    Encrypt()
+                    root.after(1, Loop)
+            else:
+                root.after(200, Loop)
+        else:
+            root.after(200, Loop)
     Loop();root.mainloop();exit()
 except Exception as e:
     logTextWidget.config(state=NORMAL)
