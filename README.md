@@ -1,9 +1,3 @@
-## Table of contents:
-- [About Encrypt'n'Decrypt](#about-encryptndecrypt)
-- [About Fernet library and it's encryption standart](#about-fernet-library-and-its-encryption-standart)
-- [Future plans](#future-plans)
-- [For developers](#for-developers)
-- [Version status](#version-status)
 # About Encrypt'n'Decrypt:
 Hello everyone, this project is my second Python project and first project that I published in GitHub. This program can encrypt and decrypt plain texts with `cryptography.fernet` symmetric key encryption. Program uses *Python 3.7.9*. First version of program (v0.1) is compatible with all OS's including Linux and MacOS except Windows XP and below but later versions currently only compatible with Windows OS's except Windows XP and below. Windows XP and below is not compatible with program due to *Python 3.4* (Last python compatible with Windows XP) *end-of-life*. 
 
@@ -25,6 +19,13 @@ Hello everyone, this project is my second Python project and first project that 
 
 Source: [Cryptography Fernet official website](https://cryptography.io/en/latest/fernet/)
 
+---
+## System requirements:
+- **Operating System:** Microsoft® Windows® Vista or later, Microsoft® Windows® 11 is recommended
+- **Processor:** Intel® Pentium® 4 Processor 1.30 GHz or later, a dual-core 2GHz processor recommended
+- **RAM (Random Access Memory):** 1GB or larger, 2GB is recommended
+- **Screen resolution:** 640x480 or larger, 1280x720 is recommended
+---
 ## Future plans:
 In future releases, I'm planning to add GUI to program and support for encrypting files. Also I'm planning to change encryption standart to `AES-256`, `AES-192` and `AES-128` encryption standarts. I'm also planning to add `RSA-1024` and above asymmetric key encryption standarts. I am currently working on GUI update. It will be released soon.
 
@@ -32,10 +33,10 @@ The libraries that going to be used in future releases are `pycryptodome` and `p
 
 Also the library that is going to be used for GUI is `tkinter` and `ttk` librarires. I am also planning to change GUI library to `PyQt5` or `PyQt6` to improve user interface and visuality in future releases.
 ### System requirements for the upcoming `v0.3.0` version:
-- Operating System: Windows Vista and up (x86 or x64)
-- Processor: At least 1GHz dual core processor recommended
-- RAM (Random Access Memory): Minimum 2GB, 4GB recommended
-- Screen resolution: Minimum 800x600, 1024x768 and up recommended
+- **Operating System:** Microsoft® Windows® Vista or later, Microsoft® Windows® 11 is recommended
+- **Processor:** At least 1.5GHz dual-core processor or later, 2GHz dual-core processor is recommended
+- **RAM (Random Access Memory):** 2GB or larger, 4GB is recommended
+- **Screen resolution:** 800x600 or larger, 1280x720 is recommended
 #### Source code requirements:
 - Python 3.5 and up, Python 3.7.9 recommended
 - `ttkwidgets` version `3.2.2` and up
@@ -50,6 +51,7 @@ Also the library that is going to be used for GUI is `tkinter` and `ttk` librari
 - `requests-cache` version `0.6.3` and up
 - `markdown` version `3.3.4` and up
 - `tkinterweb` version `3.9.1` and up
+---
 ## For developers:
 This project uses some libraries that must be installed using pip order to use them. Here are the all libraries must be installed using pip:
 ```python
@@ -64,6 +66,7 @@ from ctypes import windll # Used to change title of window
 from tkinter.filedialog import asksaveasfilename # Used for save-as function
 from tkinter import Tk # Used to close tkinter window after save-as.
 ```
+---
 ## Version status:
 >### Current *stable* release: `v0.2.2`
 >
