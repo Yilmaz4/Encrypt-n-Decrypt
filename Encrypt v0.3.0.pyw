@@ -13,19 +13,24 @@ else:
     from tkinter.commondialog import Dialog
     from tkinter import ttk
     from tkinter.ttk import *
+
 from ttkthemes import ThemedStyle
 import pyperclip, os, base64, binascii, struct, time, typing, collections, warnings
 from sys import exit, path, platform
+
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Util import Counter
 from Crypto import Random
 from Crypto.PublicKey import RSA
+
 from cryptography import utils
+
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import _get_backend
 from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.hmac import HMAC
+
 from requests import get, head
 from urllib.request import urlretrieve
 from webbrowser import open as openweb
@@ -36,7 +41,7 @@ from tkinterweb import HtmlFrame
 from PIL import Image, ImageTk
 from getpass import getuser
 def is_admin():
-    try:return ctypes.windll.shell32.IsUserAnAdmin()
+    try:return windll.shell32.IsUserAnAdmin()
     except:return False
 _MAX_CLOCK_SKEW = 60
 ERROR = "error";INFO = "info";QUESTION = "question";WARNING = "warning";ABORTRETRYIGNORE = "abortretryignore";OK = "ok";OKCANCEL = "okcancel";RETRYCANCEL = "retrycancel";YESNO = "yesno";YESNOCANCEL = "yesnocancel";ABORT = "abort";RETRY = "retry";IGNORE = "ignore";OK = "ok";CANCEL = "cancel";YES = "yes";NO = "no";_UNIXCONFDIR = '/etc';_ver_stages={'dev':10,'alpha':20,'a':20,'beta':30,'b':30,'c':40,'RC':50,'rc':50,'pl': 200, 'p': 200,};uname_result = collections.namedtuple("uname_result","system node release version machine processor");_uname_cache = None;_WIN32_CLIENT_RELEASES = {(5, 0): "2000",(5, 1): "XP",(5, 2): "2003Server",(5, None): "post2003",(6, 0): "Vista",(6, 1): "7",(6, 2): "8",(6, 3): "8.1",(6, None): "post8.1",(10, 0): "10",(10, None): "post10",}
@@ -191,29 +196,49 @@ def CheckUpdates():
     def Asset0DownloadBrowser():openweb(Version.json()["assets"][0]["browser_download_url"])
     def Asset1DownloadBrowser():openweb(Version.json()["assets"][1]["browser_download_url"])
     def AssetDownload(downloadPath, ProgressBar, downloadProgress, ProgressLabel, size, Asset=0, chunkSize=2097152):
-        def Update(downloadedSize):
-            downloadedSize = downloadedSize + len(downloadURL.content)
-            downloadProgress.set(downloadProgress.get()+len(downloadURL.content))
-            ProgressLabel.configure(text="Download progress: {:.1f} MB {:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize/1024)/1024, int(size)/MBFACTOR))
         startTime = time.time()
         size = int(size)
         MBFACTOR = float(1 << 20)
-        #messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub server connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
+        try:os.remove(downloadPath)
+        except:pass
+        ProgressBar.configure(maximum=int(chunkSize))
+        downloadProgress.set(0)
+        downloadedSize = 0
         try:
-            try:os.remove(downloadPath)
-            except:pass
-            ProgressBar.configure(maximum=int(chunkSize))
-            downloadProgress.set(0)
-            downloadedSize = 0
             file = open(downloadPath, mode='wb')
             for chunk in range(0, int(size), int(chunkSize)):
-                downloadURL = get(Version.json()["assets"][int(Asset)]["browser_download_url"], headers={"Range":"bytes={}-{}".format(chunk, chunk+chunkSize-1)})
-                Update(downloadedSize)
-                file.write(downloadURL.content)
-                print(len(downloadURL.content))
-            file.close()
+                try:
+                    downloadURL = get(Version.json()["assets"][int(Asset)]["browser_download_url"], headers={"Range":"bytes={}-{}".format(chunk, chunk+chunkSize-1)})
+                except:
+                    messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub server connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
+                    try:os.remove(downloadPath)
+                    except:pass
+                    break
+                downloadedSize = downloadedSize + len(downloadURL.content)
+                downloadProgress.set(downloadProgress.get()+len(downloadURL.content))
+                ProgressLabel.configure(text="Download progress: {:.1f} MB {:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize/1024)/1024, int(size)/MBFACTOR))
+                try:
+                    file.write(downloadURL.content)
+                except:
+                    if not is_admin():
+                        messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: File write operation failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
+                        try:os.remove(downloadPath)
+                        except:pass
+                        break
+                    else:
+                        messagebox.showerror("ERR_INVALID_PATH","An error occured while trying to write downloaded data to '{}' path. Path may be invalid or inaccessible. Please select another path.")
+                        try:os.remove(downloadPath)
+                        except:pass
+                        break
         except Exception as e:
-            messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: File write operation failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
+            if not is_admin():
+                messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: File write operation failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
+                try:os.remove(downloadPath)
+                except:pass
+            else:
+                messagebox.showerror("ERR_INVALID_PATH","An error occured while trying to write downloaded data to '{}' path. Path may be invalid or inaccessible. Please select another path.")
+                try:os.remove(downloadPath)
+                except:pass
         else:ProgressLabel.configure(text="Download progress:");downloadProgress.set(0);finishTime = time.time();messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed sucsessfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
     def Asset0Download():AssetDownload(downloadPath=("C:/Users/{}/Downloads/{}".format(getuser(),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size)
     def Asset1Download():AssetDownload(downloadPath=("C:/Users/{}/Downloads/{}".format(getuser(),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2)
