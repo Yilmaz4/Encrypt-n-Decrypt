@@ -40,9 +40,6 @@ from markdown import markdown
 from tkinterweb import HtmlFrame
 from PIL import Image, ImageTk
 from getpass import getuser
-from ctypes import windll
-from zipfile import ZipFile
-
 def is_admin():
     try:return windll.shell32.IsUserAnAdmin()
     except:return False
@@ -191,14 +188,14 @@ class Fernet(object):
         return unpadded
 appWidth=800;appHeight=550;version="v0.2.0";build="Build 15";root=Tk();root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")));root.resizable(width=FALSE, height=FALSE);root.geometry("{}x{}".format(appWidth, appHeight));root.attributes("-fullscreen", False);root.minsize(appWidth, appHeight)
 """style = ThemedStyle(root)
-style.set_theme("plastik")"""
+style.set_theme("vista")"""
 MainScreen=ttk.Notebook(root,width=380,height=340);LogFrame=Frame(MainScreen);logTextWidget=Text(LogFrame,height=22,width=107,font=("Consolas",9),state=DISABLED)
 logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ROOT: Created root, started mainloop.\n");logTextWidget.config(state=DISABLED)
 menu=Menu(root);root.config(menu=menu);enterMenu=Menu(menu,tearoff=0);viewMenu=Menu(menu,tearoff=0);helpMenu=Menu(menu,tearoff=0);transMenu=Menu(viewMenu,tearoff=0);langMenu=Menu(viewMenu,tearoff=0);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT,"ROOT: Registered menu entries.\n");logTextWidget.config(state=DISABLED);root.wm_iconbitmap("Ico.ico")
 def CheckUpdates():
     def Asset0DownloadBrowser():openweb(Version.json()["assets"][0]["browser_download_url"])
     def Asset1DownloadBrowser():openweb(Version.json()["assets"][1]["browser_download_url"])
-    def AssetDownload(downloadPath, ProgressBar, downloadProgress, ProgressLabel, size, ExtractContent, Asset=0, chunkSize=2197318):
+    def AssetDownload(downloadPath, ProgressBar, downloadProgress, ProgressLabel, size, Asset=0, chunkSize=2097152):
         startTime = time.time()
         size = int(size)
         MBFACTOR = float(1 << 20)
@@ -207,16 +204,10 @@ def CheckUpdates():
         ProgressBar.configure(maximum=int(chunkSize))
         downloadProgress.set(0)
         downloadedSize = 0
-        def RootMainLoop():
-            update.update()
-            update.after(200, RootMainLoop())
         try:
-            ProgressLabel.configure(text="Download progress: Starting download operation . . .")
-            update.update()
             file = open(downloadPath, mode='wb')
             for chunk in range(0, int(size), int(chunkSize)):
                 try:
-                    root.after(100, RootMainLoop())
                     downloadURL = get(Version.json()["assets"][int(Asset)]["browser_download_url"], headers={"Range":"bytes={}-{}".format(chunk, chunk+chunkSize-1)})
                 except:
                     messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub server connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
@@ -225,9 +216,7 @@ def CheckUpdates():
                     break
                 downloadedSize = downloadedSize + len(downloadURL.content)
                 downloadProgress.set(downloadProgress.get()+len(downloadURL.content))
-                ProgressLabel.configure(text="Download progress: {:.1f} MB ({:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize), int(size)/MBFACTOR))
-                ProgressBar.configure(maximum=size)
-                update.update()
+                ProgressLabel.configure(text="Download progress: {:.1f} MB {:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize/1024)/1024, int(size)/MBFACTOR))
                 try:
                     file.write(downloadURL.content)
                 except:
@@ -250,33 +239,21 @@ def CheckUpdates():
                 messagebox.showerror("ERR_INVALID_PATH","An error occured while trying to write downloaded data to '{}' path. Path may be invalid or inaccessible. Please select another path.")
                 try:os.remove(downloadPath)
                 except:pass
-        else:
-            ProgressLabel.configure(text="Download progress: Finishing download operation...")
-            update.update()
-            if ExtractContent.get() == 1:
-                if DownloadPathEntry.get()[1:] == "\\":
-                    try:os.mkdir(DownloadPathEntry.get())
-                    except:pass
-                    with ZipFile("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:
-                        zip_ref.extractall(DownloadPathEntry.get())
-                else:
-                    try:os.mkdir(DownloadPathEntry.get()+"/")
-                    except:pass
-                    with ZipFile("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:
-                        zip_ref.extractall(DownloadPathEntry.get())
-            ProgressLabel.configure(text="Download progress:");downloadProgress.set(0);finishTime = time.time();messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed sucsessfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
+        else:ProgressLabel.configure(text="Download progress:");downloadProgress.set(0);finishTime = time.time();messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed sucsessfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
     def Asset0Download():
-        if DownloadPathEntry.get()[1:] == "\\":AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
-        else:AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
+        if DownloadPathEntry.get()[1:] == "\\":AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size)
+        else:AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size)
     def Asset1Download():
-        if DownloadPathEntry.get()[1:] == "\\":AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2, ExtractContent=ExtractContent)
-        else:AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2, ExtractContent=ExtractContent)
+        if DownloadPathEntry.get()[1:] == "\\":AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=siz2)
+        else:AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2)
     try:Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
     except Exception as e:messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub API. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
     else:
         MBFACTOR = float(1 << 20)
-        try:response = head(Version.json()["assets"][0]["browser_download_url"], allow_redirects=True)
-        except KeyError as e:messagebox.showerror("ERR_API_LIMIT_EXCEED","An error occured while trying to connect to the GitHub API servers. GitHub API limit may be exceed as servers has only 5000 connections limit per hour and per IP adress. Please try again after 1 hours.");logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API limit exceed, connection failed. ({})\n".format(e));logTextWidget.config(state=DISABLED)
+        try:
+            response = head(Version.json()["assets"][0]["browser_download_url"], allow_redirects=True)
+        except KeyError as e:
+            messagebox.showerror("ERR_API_SERVER_LIMIT_EXCEED","An error occured while trying to connect to the GitHub API servers. GitHub API limit may be exceed as servers has only 5000 connections limit per hour and per IP adress. Please try again after 1 hours.");logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API limit exceed, connection failed. ({})\n".format(e));logTextWidget.config(state=DISABLED)
         else:
             size = response.headers.get('content-length', 0)
             response2 = head(Version.json()["assets"][1]["browser_download_url"], allow_redirects=True)
@@ -285,8 +262,6 @@ def CheckUpdates():
             else:
                 if version.replace("b","").replace("v","").replace(".","") > (Version.json()["tag_name"]).replace("b","").replace("v","").replace(".",""):messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
                 else:
-                    def TestDirectory():
-                        pass
                     update = Toplevel(root)
                     update.grab_set()
                     update.title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
@@ -345,7 +320,7 @@ def CheckUpdates():
                         DownloadPathEntry.delete(0,'end')
                         DownloadPathEntry.insert(0, r"C:\Users\{}\Downloads".format(getuser()))
                     DownloadPathReset = Button(OtherOptions, text="Revert to default directory", width=24, command=directoryRevert)
-                    DownloadPathTest = Button(OtherOptions, text="Check directory", width=14, command=TestDirectory)
+                    DownloadPathTest = Button(OtherOptions, text="Check directory", width=14)
                     DownloadPathBrowse = Button(OtherOptions, text="Browse", width=10)
                     ExtractContent = IntVar();ExtractContent.set(0)
                     ExtractContentsCheck = Checkbutton(OtherOptions, text="Extract downloaded files", onvalue=1, offvalue=0, variable=ExtractContent)
@@ -399,7 +374,7 @@ def GenerateAES(Length):
         elif random>=25 and random<30:key+=str(choice(digits))
         elif random>=30:key+=str(choice("!'^+%&/()=?_<>#${[]}\|__--$__--"))
     return key
-if True:
+try:
     def ShutDown():root.destroy()
     showCharState = IntVar(value=0);deshowCharState = IntVar(value=0);showChar = True;genPassword = IntVar();genPassword.set(16);Base64Check = IntVar();Base64Check.set(0);ToolTipActive = False
     class ToolTip(object):
@@ -739,14 +714,20 @@ if True:
             decryptedTextWidget = Entry(EncryptFrame, width = 58)
             decryptedTextWidget.insert(0,"{}".format(OldText))
             decryptedTextWidget.place(x=10, y=10)
-    def EncryptPage():MainScreen.select(0)
-    def DecryptPage():MainScreen.select(2)
-    def HelpPage():MainScreen.select(5)
+    def EncryptPage():
+        MainScreen.select(0)
+    def DecryptPage():
+        MainScreen.select(2)
+    def HelpPage():
+        MainScreen.select(5)
     Alpha = IntVar()
     Alpha.set(100)
     def changeAlpha(alpha):
-        if alpha != 100:alpha = '0.{}'.format(alpha)
-        else:alpha = 1;Alpha.set(100)
+        if alpha != 100:
+            alpha = '0.{}'.format(alpha)
+        else:
+            alpha = 1
+            Alpha.set(100)
         root.attributes("-alpha", float(alpha))
     logTextWidget.config(state=NORMAL)
     logTextWidget.insert(INSERT, "ROOT: Registered define commands.\n")
@@ -762,16 +743,17 @@ if True:
     AboutFrame = Frame(MainScreen)
     FileEncryptFrame = Frame(MainScreen)
     PasswordGeneration = Frame(MainScreen)
-    RandomKeyVar = IntVar()
-    RandomKeyVar.set(256)
-    KeySelectVar = IntVar()
-    KeySelectVar.set(1)
-    OverrideTimeVar = IntVar()
-    OverrideTimeVar.set(0)
+    if True: #Variables
+        RandomKeyVar = IntVar()
+        RandomKeyVar.set(256)
+        KeySelectVar = IntVar()
+        KeySelectVar.set(1)
+        OverrideTimeVar = IntVar()
+        OverrideTimeVar.set(0)
     def ChangeKeySelection():
         global KeySelectVar, value
         try:
-            value = value
+            value = value # For understaning which time is this code running. First key selection or after user writes something into key selection box.
         except:
             value = "TemporaryValue"
         if KeySelectVar.get() == 2:
@@ -830,69 +812,109 @@ if True:
             DateSeparator2.config(state=DISABLED)
             HourSeparator.config(state=DISABLED)
             HourSeparator2.config(state=DISABLED)
-    def limitKeyEntry(*args):
-        global value;value = KeyValue.get()
-        if len(value) > 44: KeyValue.set(value[:44])
-        iv = Random.new().read(AES.block_size);iv_int = int(binascii.hexlify(iv), 16);ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
-        if len(value) == 0:StatusLabelAES.configure(foreground="gray", text="Validity: [Blank]")
-        elif len(value) == 16: # AES-128
-            try:AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
-            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
-            else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
-        elif len(value) == 24: # AES-192
-            try:AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
-            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
-            else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
-        elif len(value) == 32: # AES-256
-            try:AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
-            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
-            else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
-        elif len(value) >= 44: # Fernet Key
-            CheckBase64Encoding.configure(state=DISABLED)
-            try:
-                fernet = Fernet(bytes(value, 'utf-8'));fernet.encrypt(b"abc")
-                StatusLabelAES.configure(foreground="green", text="Validity: Valid Fernet key")
-            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid Fernet key")
-        else:
-            CheckBase64Encoding.configure(state=NORMAL)
-            StatusLabelAES.configure(foreground="red", text="Validity: Invalid")
-    def limitRSAEntry(*args): # Unused in final code
-        if int(RSAkeylength.get()) % 1024 == 0:ToleranceLabel.configure(foreground="green", text="±0")
-        elif int(RSAkeylength.get()) % 1024 > 0 and int(RSAkeylength.get()) % 1024 < 150:ToleranceLabel.configure(foreground="#ff7400", text="±{}".format(int(RSAkeylength.get()) % 1024))
-        elif int(RSAkeylength.get()) % 1024 > 150:ToleranceLabel.configure(foreground="red", text="±{}".format(int(RSAkeylength.get()) % 1024))
-        elif int(RSAkeylength.get()) == "":ToleranceLabel.configure(foreground="gray", text="±0")
-    KeyValue = StringVar();KeyValue.trace('w', limitKeyEntry)
-    RSAValue2 = StringVar();RSAValue2.trace('w', limitRSAEntry)
-    def limitHourEntry(*args):
-        value = Hour.get()
-        if len(value) > 2: Hour.set(value[:2])
-        if len(value) > 1:MinuteEntry.focus()
-    Hour = StringVar();Hour.trace('w', limitHourEntry)
-    def limitMinuteEntry(*args):
-        value = Minute.get()
-        if len(value) > 2: Minute.set(value[:2])
-        if len(value) > 1:SecondEntry.focus()
-    Minute = StringVar();Minute.trace('w', limitMinuteEntry)
-    def limitSecondEntry(*args):
-        value = Second.get()
-        if len(value) > 2: Second.set(value[:2])
-        if len(value) > 1:DayEntry.focus()
-    Second = StringVar();Second.trace('w', limitSecondEntry)
-    def limitDayEntry(*args):
-        value = Day.get()
-        if len(value) > 2: Day.set(value[:2])
-        if len(value) > 1:MonthEntry.focus()
-    Day = StringVar();Day.trace('w', limitDayEntry)
-    def limitMonthEntry(*args):
-        value = Month.get()
-        if len(value) > 2:Month.set(value[:2])
-        if len(value) > 1:YearEntry.focus()
-    Month = StringVar();Month.trace('w', limitMonthEntry)
-    def limitYearEntry(*args):
-        value = Year.get()
-        if len(value) > 4:Year.set(value[:4])
-    Year = StringVar();Year.trace('w', limitYearEntry)
-    Mode = IntVar();Mode.set(2)
+    if True: #Lenght limit
+        def limitKeyEntry(*args):
+            global value
+            value = KeyValue.get()
+            if len(value) > 44: 
+                KeyValue.set(value[:44])
+            iv = Random.new().read(AES.block_size)
+            iv_int = int(binascii.hexlify(iv), 16) 
+            ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+            if len(value) == 0:
+                StatusLabelAES.configure(foreground="gray", text="Validity: [Blank]")
+            elif len(value) == 16:
+                try:
+                    AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
+                except:
+                    StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
+                else:
+                    StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
+            elif len(value) == 24:
+                try:
+                    AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
+                except:
+                    StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
+                else:
+                    StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
+            elif len(value) == 32:
+                try:
+                    AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
+                except:
+                    StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
+                else:
+                    StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
+            elif len(value) >= 44:
+                CheckBase64Encoding.configure(state=DISABLED)
+                try:
+                    fernet = Fernet(bytes(value, 'utf-8'))
+                    fernet.encrypt(b"abc")
+                    StatusLabelAES.configure(foreground="green", text="Validity: Valid Fernet key")
+                except:
+                    StatusLabelAES.configure(foreground="red", text="Validity: Invalid Fernet key")
+            else:
+                CheckBase64Encoding.configure(state=NORMAL)
+                StatusLabelAES.configure(foreground="red", text="Validity: Invalid")
+        def limitRSAEntry(*args):
+            if int(RSAkeylength.get()) % 1024 == 0:
+                ToleranceLabel.configure(foreground="green", text="±0")
+            elif int(RSAkeylength.get()) % 1024 > 0 and int(RSAkeylength.get()) % 1024 < 150:
+                ToleranceLabel.configure(foreground="#ff7400", text="±{}".format(int(RSAkeylength.get()) % 1024))
+            elif int(RSAkeylength.get()) % 1024 > 150:
+                ToleranceLabel.configure(foreground="red", text="±{}".format(int(RSAkeylength.get()) % 1024))
+            elif int(RSAkeylength.get()) == "":
+                ToleranceLabel.configure(foreground="gray", text="±0")
+        KeyValue = StringVar()
+        KeyValue.trace('w', limitKeyEntry)
+        RSAValue2 = StringVar()
+        RSAValue2.trace('w', limitRSAEntry)
+        def limitHourEntry(*args):
+            value = Hour.get()
+            if len(value) > 2: 
+                Hour.set(value[:2])
+            if len(value) > 1:
+                MinuteEntry.focus()
+        Hour = StringVar()
+        Hour.trace('w', limitHourEntry)
+        def limitMinuteEntry(*args):
+            value = Minute.get()
+            if len(value) > 2: 
+                Minute.set(value[:2])
+            if len(value) > 1:
+                SecondEntry.focus()
+        Minute = StringVar()
+        Minute.trace('w', limitMinuteEntry)
+        def limitSecondEntry(*args):
+            value = Second.get()
+            if len(value) > 2: 
+                Second.set(value[:2])
+            if len(value) > 1:
+                DayEntry.focus()
+        Second = StringVar()
+        Second.trace('w', limitSecondEntry)
+        def limitDayEntry(*args):
+            value = Day.get()
+            if len(value) > 2: 
+                Day.set(value[:2])
+            if len(value) > 1:
+                MonthEntry.focus()
+        Day = StringVar()
+        Day.trace('w', limitDayEntry)
+        def limitMonthEntry(*args):
+            value = Month.get()
+            if len(value) > 2: 
+                Month.set(value[:2])
+            if len(value) > 1:
+                YearEntry.focus()
+        Month = StringVar()
+        Month.trace('w', limitMonthEntry)
+        def limitYearEntry(*args):
+            value = Year.get()
+            if len(value) > 4: Year.set(value[:4])
+        Year = StringVar()
+        Year.trace('w', limitYearEntry)
+    Mode = IntVar()
+    Mode.set(2)
     Encryption = ttk.Notebook(EncryptFrame, width=355, height=220)
     KeySelectFrame = Frame(Encryption)
     Asymmetric = Frame(Encryption)
@@ -911,172 +933,175 @@ if True:
     KeyHideCharVar.set(0)
     OtherOptionsFrame = LabelFrame(EncryptFrame, text="Other options", height=100, width=357)
     OverrideCheck = Checkbutton(OtherOptionsFrame, text="Override encryption time:", onvalue=1, offvalue=0, variable=OverrideTimeVar, command=OverrideTime)
-    HourEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Hour)
-    MinuteEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Minute)
-    SecondEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Second)
-    DayEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Day)
-    MonthEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Month)
-    YearEntry = Entry(OtherOptionsFrame, width=4, font=("Consolas",9), state=DISABLED, textvariable=Year)
-    HourSeparator = Label(OtherOptionsFrame, text=":", state=DISABLED)
-    HourSeparator2 = Label(OtherOptionsFrame, text=":", state=DISABLED)
-    DateSeparator = Label(OtherOptionsFrame, text="/", state=DISABLED)
-    DateSeparator2 = Label(OtherOptionsFrame, text="/", state=DISABLED)
-    BenchVar = IntVar();BenchVar.set(0)
-    BenchmarkCheck = Checkbutton(OtherOptionsFrame, text="Benchmark", onvalue=1, offvalue=0, variable=BenchVar)
-    HourEntry.place(x=165, y=0)
-    MinuteEntry.place(x=192, y=0)
-    SecondEntry.place(x=219, y=0)
-    DayEntry.place(x=252, y=0)
-    MonthEntry.place(x=281, y=0)
-    YearEntry.place(x=312, y=0)
-    HourSeparator.place(x=185, y=0)
-    HourSeparator2.place(x=212, y=0)
-    DateSeparator.place(x=272, y=0)
-    DateSeparator2.place(x=301, y=0)
-    BenchmarkCheck.place(x=5, y=44)
-    RandomKeyCheck = Radiobutton(KeySelectFrame, text="Generate a random key", value=1, variable=KeySelectVar, command=ChangeKeySelection)
-    SelectKeyCheck = Radiobutton(KeySelectFrame, text="Use this key:", value=2, variable=KeySelectVar, command=ChangeKeySelection)
-    SelectFileCheck = Radiobutton(KeySelectFrame, text="Use this key file:", value=3, variable= KeySelectVar, command=ChangeKeySelection)
-    SelectKeyEntry = Entry(KeySelectFrame, width=46, font=("Consolas",9), state=DISABLED, textvariable=KeyValue)
-    AES128Check = Radiobutton(KeySelectFrame, text="AES-128 Key (16 characters long)", value=128, variable=RandomKeyVar)
-    AES192Check = Radiobutton(KeySelectFrame, text="AES-192 Key (24 characters long)", value=192, variable=RandomKeyVar)
-    AES256Check = Radiobutton(KeySelectFrame, text="AES-256 Key (32 characters long)", value=256, variable=RandomKeyVar)
-    AES352Check = Radiobutton(KeySelectFrame, text="Legacy Fernet Key (44 characters long)", value=352, variable=RandomKeyVar)
-    KeyEntryHideChar = Checkbutton(KeySelectFrame, text="Hide characters", onvalue=1, offvalue=0, variable=KeyHideCharVar, state=DISABLED)
-    FastModeCheck = Radiobutton(OtherOptionsFrame, text="Fast mode (Bypass check)", value=1, variable=Mode)
-    SecureModeCheck = Radiobutton(OtherOptionsFrame, text="Secure mode (Check)", value=2, variable=Mode)
-    KeyEntryHideChar.place(x=244, y=102)
-    FastModeCheck.place(x=5, y=22)
-    SecureModeCheck.place(x=214, y=22)
-    OverrideCheck.place(x=5, y=0)
-    OtherOptionsFrame.place(x=10, y=350)
-    SelectKeyCheck.place(x=5, y=101)
-    RandomKeyCheck.place(x=5, y=5)
-    SelectFileCheck.place(x=5, y=163)
-    SelectKeyEntry.place(x=18, y=123)
-    Encryption.place(x=10, y=77)
-    AES128Check.place(x=16, y=25)
-    AES192Check.place(x=16, y=44)
-    AES256Check.place(x=16, y=63)
-    AES352Check.place(x=16, y=82)
-    RSAkeyVar = IntVar()
-    RSAkeyVar.set(1024)
-    def validate(action, index, value_if_allowed, prior_value, text, validation_type, trigger_type, widget_name):
-        if value_if_allowed:
-            try:int(value_if_allowed);return True
-            except ValueError:
-                if text == "":return True
-                else:return False
-        else:return True
-    def ChangeRSASelection():
-        if int(RSAkeyVar.get()) == 0:
-            RSAkeylength.configure(state=NORMAL)
-        else:
-            RSAkeylength.configure(state=DISABLED)
-    vcmd = (root.register(validate),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
-    RSAChangeSelection = IntVar()
-    RSAChangeSelection.set(1)
-    RandomRSAKeyCheck = Radiobutton(Asymmetric, text="Generate a random RSA key", value=1, variable=KeySelectVar, command=RSAChangeSelection)
-    RSA1024Check = Radiobutton(Asymmetric, text="RSA-1024 Key", value=1024, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSA2048Check = Radiobutton(Asymmetric, text="RSA-2048 Key", value=2048, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSA3072Check = Radiobutton(Asymmetric, text="RSA-3072 Key", value=3072, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSA4096Check = Radiobutton(Asymmetric, text="RSA-4096 Key", value=4096, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSA8192Check = Radiobutton(Asymmetric, text="RSA-8192 Key", value=8192, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSA16384Check = Radiobutton(Asymmetric, text="RSA-16384 Key", value=16384, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSAcustomCheck = Radiobutton(Asymmetric, text="Custom RSA key length:", value=0, variable=RSAkeyVar, command=ChangeRSASelection) 
-    SelectRSAKeyCheck = Radiobutton(Asymmetric, text="Use this RSA key:", value=2, variable=KeySelectVar, command=RSAChangeSelection)
-    RSAkeyEntry = Text(Asymmetric, height=2, width=45, font=("Consolas",9), state=DISABLED)
-    RSAkeylength = Entry(Asymmetric, width=6, font=("Consolas",9), validate = 'key', validatecommand = vcmd, textvariable=RSAValue2, state=DISABLED)
-    RandomRSAKeyCheck.place(x=5, y=5)
-    RSA1024Check.place(x=16, y=25)
-    RSA2048Check.place(x=16, y=44)
-    RSA3072Check.place(x=16, y=63)
-    RSAcustomCheck.place(x=16, y=82)
-    RSA4096Check.place(x=125, y=25)
-    RSA8192Check.place(x=125, y=44)
-    RSA16384Check.place(x=125, y=63)
-    RSAkeylength.place(x=170, y=83)
-    SelectRSAKeyCheck.place(x=5, y=101)
-    # Menu-bar
-    enterMenu.add_command(label = "Encryption", command=EncryptPage, accelerator="Ctrl+E", underline=0)
-    enterMenu.add_command(label = "File Encryption", accelerator="Ctrl+F", underline=0)
-    enterMenu.add_command(label = "Decryption", command=DecryptPage, accelerator="Ctrl+D", underline=0)
-    enterMenu.add_command(label = "Key Generator", accelerator="Ctrl+K", underline=0)
-    enterMenu.add_command(label = "Logs", accelerator="Ctrl+L", underline=0)
-    enterMenu.add_separator()
-    enterMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=CheckUpdates, underline=10)
-    enterMenu.add_separator()
-    enterMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda:root.destroy())
-    InfoVar = IntVar(); WarningVar = IntVar(); ErrorVar = IntVar(); InfoVar.set(1); WarningVar.set(1); ErrorVar.set(1)
-    # View menu
-    viewMenu.add_checkbutton(label = "Show info message dialogs", accelerator="Ctrl+Alt+I", onvalue=1, offvalue=0, variable=InfoVar, underline=5)
-    viewMenu.add_checkbutton(label = "Show warning message dialogs", accelerator="Ctrl+Alt+W", onvalue=1, offvalue=0, variable=WarningVar, underline=5)
-    viewMenu.add_checkbutton(label = "Show error message dialogs", accelerator="Ctrl+Alt+E", onvalue=1, offvalue=0, variable=ErrorVar, underline=5)
-    viewMenu.add_separator()
-    # Transparency sub-menu
-    transMenu.add_radiobutton(label = "%20", value=20, variable=Alpha, command=lambda:changeAlpha(20), accelerator="Ctrl+Alt+2")
-    transMenu.add_radiobutton(label = "%40", value=40, variable=Alpha, command=lambda:changeAlpha(40), accelerator="Ctrl+Alt+4")
-    transMenu.add_radiobutton(label = "%60", value=60, variable=Alpha, command=lambda:changeAlpha(60), accelerator="Ctrl+Alt+6")
-    transMenu.add_radiobutton(label = "%80", value=80, variable=Alpha, command=lambda:changeAlpha(80), accelerator="Ctrl+Alt+8")
-    transMenu.add_radiobutton(label = "%90", value=90, variable=Alpha, command=lambda:changeAlpha(90), accelerator="Ctrl+Alt+9")
-    transMenu.add_radiobutton(label = "Opaque", value=100, variable=Alpha, command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+1")
-    transMenu.add_separator()
-    transMenu.add_command(label = "Reset opacity", command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+O", underline=6)
-    # End transparency sub-menu
-    viewMenu.add_cascade(menu=transMenu, label = "Window opacity")
-    viewMenu.add_separator()
-    # Language sub-menu
-    langMenu.add_radiobutton(label = "English [Coming Soon]")
-    langMenu.add_radiobutton(label = "Türkçe [Yakında Geliyor]", state=DISABLED)
-    langMenu.add_radiobutton(label = "Deutsche [Kommt Bald]", state=DISABLED)
-    langMenu.add_radiobutton(label = "中国人 [即将推出]", state=DISABLED)
-    langMenu.add_separator()
-    langMenu.add_command(label = "Reset language to default", accelerator="Ctrl+Alt+L")
-    # End language sub-menu
-    viewMenu.add_cascade(menu=langMenu, label ="Language")
-    # End view menu
-    menu.add_cascade(label = "Main", menu=enterMenu)
-    menu.add_cascade(label = "Preferences", menu=viewMenu)
-    menu.add_command(label = "Help", command=HelpPage)
-    # File encryption widgets
-    FileEncryptFileSelect = Button(FileEncryptFrame, text = "Open a file...", width=15)
-    FileEncryptPreviewBox = Text(FileEncryptFrame, height=10, width=48, state=DISABLED, font = ("Consolas", 9))
-    FileEncryptScrollbar = Scrollbar(FileEncryptFrame, command=FileEncryptPreviewBox.yview)
-    FileEncryptPreviewBox.config(yscrollcommand=FileEncryptScrollbar.set)
-    FileEncryptPreviewCheck = Checkbutton(FileEncryptFrame, text="Preview file")
-    FileEncryptFileEntry = Entry(FileEncryptFrame, width=50, font=("Consolas",9))
-    FileEncryptEntryLabel = Label(FileEncryptFrame, text="File location:")
-    FileEncryptPreviewLabel = Label(FileEncryptFrame, text="File preview:")
-    FileEncryptShowPreview = Checkbutton(FileEncryptFrame, text="Show file preview")
-    FileEncryptWarningButton = Button(FileEncryptFrame, text="Warning!", width=18)
-    FileEncryptFileStatus = Label(FileEncryptFrame, text="Status: [No file selected]")
-    FileEncryptEntryLabel.place(x=8, y=2)
-    FileEncryptFileEntry.place(x=10, y=22)
-    FileEncryptFileSelect.place(x=9, y=47)
-    FileEncryptPreviewBox.place(x=10, y=93)
-    FileEncryptPreviewCheck.place(x=10, y=300)
-    FileEncryptScrollbar.place(x=349, y=93, height=145)
-    FileEncryptPreviewLabel.place(x=8, y=72)
-    FileEncryptShowPreview.place(x=252, y=71)
-    FileEncryptWarningButton.place(x=249, y=47)
-    FileEncryptFileStatus.place(x=113, y=50)
+    if True: #Override time entries
+        HourEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Hour)
+        MinuteEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Minute)
+        SecondEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Second)
+        DayEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Day)
+        MonthEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Month)
+        YearEntry = Entry(OtherOptionsFrame, width=4, font=("Consolas",9), state=DISABLED, textvariable=Year)
+        HourSeparator = Label(OtherOptionsFrame, text=":", state=DISABLED)
+        HourSeparator2 = Label(OtherOptionsFrame, text=":", state=DISABLED)
+        DateSeparator = Label(OtherOptionsFrame, text="/", state=DISABLED)
+        DateSeparator2 = Label(OtherOptionsFrame, text="/", state=DISABLED)
+        BenchVar = IntVar();BenchVar.set(0)
+        BenchmarkCheck = Checkbutton(OtherOptionsFrame, text="Benchmark", onvalue=1, offvalue=0, variable=BenchVar)
+        HourEntry.place(x=165, y=0)
+        MinuteEntry.place(x=192, y=0)
+        SecondEntry.place(x=219, y=0)
+        DayEntry.place(x=252, y=0)
+        MonthEntry.place(x=281, y=0)
+        YearEntry.place(x=312, y=0)
+        HourSeparator.place(x=185, y=0)
+        HourSeparator2.place(x=212, y=0)
+        DateSeparator.place(x=272, y=0)
+        DateSeparator2.place(x=301, y=0)
+        BenchmarkCheck.place(x=5, y=44)
+    if True:
+        RandomKeyCheck = Radiobutton(KeySelectFrame, text="Generate a random key", value=1, variable=KeySelectVar, command=ChangeKeySelection)
+        SelectKeyCheck = Radiobutton(KeySelectFrame, text="Use this key:", value=2, variable=KeySelectVar, command=ChangeKeySelection)
+        SelectFileCheck = Radiobutton(KeySelectFrame, text="Use this key file:", value=3, variable= KeySelectVar, command=ChangeKeySelection)
+        SelectKeyEntry = Entry(KeySelectFrame, width=46, font=("Consolas",9), state=DISABLED, textvariable=KeyValue)
+        AES128Check = Radiobutton(KeySelectFrame, text="AES-128 Key (16 characters long)", value=128, variable=RandomKeyVar)
+        AES192Check = Radiobutton(KeySelectFrame, text="AES-192 Key (24 characters long)", value=192, variable=RandomKeyVar)
+        AES256Check = Radiobutton(KeySelectFrame, text="AES-256 Key (32 characters long)", value=256, variable=RandomKeyVar)
+        AES352Check = Radiobutton(KeySelectFrame, text="Legacy Fernet Key (44 characters long)", value=352, variable=RandomKeyVar)
+        KeyEntryHideChar = Checkbutton(KeySelectFrame, text="Hide characters", onvalue=1, offvalue=0, variable=KeyHideCharVar, state=DISABLED)
+        FastModeCheck = Radiobutton(OtherOptionsFrame, text="Fast mode (Bypass check)", value=1, variable=Mode)
+        SecureModeCheck = Radiobutton(OtherOptionsFrame, text="Secure mode (Check)", value=2, variable=Mode)
+        KeyEntryHideChar.place(x=244, y=102)
+        FastModeCheck.place(x=5, y=22)
+        SecureModeCheck.place(x=214, y=22)
+        OverrideCheck.place(x=5, y=0)
+        OtherOptionsFrame.place(x=10, y=350)
+        SelectKeyCheck.place(x=5, y=101)
+        RandomKeyCheck.place(x=5, y=5)
+        SelectFileCheck.place(x=5, y=163)
+        SelectKeyEntry.place(x=18, y=123)
+        Encryption.place(x=10, y=77)
+        AES128Check.place(x=16, y=25)
+        AES192Check.place(x=16, y=44)
+        AES256Check.place(x=16, y=63)
+        AES352Check.place(x=16, y=82)
+    if True:
+        RSAkeyVar = IntVar()
+        RSAkeyVar.set(1024)
+        def validate(action, index, value_if_allowed, prior_value, text, validation_type, trigger_type, widget_name):
+            if value_if_allowed:
+                try:int(value_if_allowed);return True
+                except ValueError:
+                    if text == "":return True
+                    else:return False
+            else:return True
+        def ChangeRSASelection():
+            if int(RSAkeyVar.get()) == 0:
+                RSAkeylength.configure(state=NORMAL)
+            else:
+                RSAkeylength.configure(state=DISABLED)
+        vcmd = (root.register(validate),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+        RSAChangeSelection = IntVar()
+        RSAChangeSelection.set(1)
+        RandomRSAKeyCheck = Radiobutton(Asymmetric, text="Generate a random RSA key", value=1, variable=KeySelectVar, command=RSAChangeSelection)
+        RSA1024Check = Radiobutton(Asymmetric, text="RSA-1024 Key", value=1024, variable=RSAkeyVar, command=ChangeRSASelection)
+        RSA2048Check = Radiobutton(Asymmetric, text="RSA-2048 Key", value=2048, variable=RSAkeyVar, command=ChangeRSASelection)
+        RSA3072Check = Radiobutton(Asymmetric, text="RSA-3072 Key", value=3072, variable=RSAkeyVar, command=ChangeRSASelection)
+        RSA4096Check = Radiobutton(Asymmetric, text="RSA-4096 Key", value=4096, variable=RSAkeyVar, command=ChangeRSASelection)
+        RSA8192Check = Radiobutton(Asymmetric, text="RSA-8192 Key", value=8192, variable=RSAkeyVar, command=ChangeRSASelection)
+        RSA16384Check = Radiobutton(Asymmetric, text="RSA-16384 Key", value=16384, variable=RSAkeyVar, command=ChangeRSASelection)
+        RSAcustomCheck = Radiobutton(Asymmetric, text="Custom RSA key length:", value=0, variable=RSAkeyVar, command=ChangeRSASelection) 
+        SelectRSAKeyCheck = Radiobutton(Asymmetric, text="Use this RSA key:", value=2, variable=KeySelectVar, command=RSAChangeSelection)
+        RSAkeyEntry = Text(Asymmetric, height=2, width=45, font=("Consolas",9), state=DISABLED)
+        RSAkeylength = Entry(Asymmetric, width=6, font=("Consolas",9), validate = 'key', validatecommand = vcmd, textvariable=RSAValue2, state=DISABLED)
+
+        RandomRSAKeyCheck.place(x=5, y=5)
+        RSA1024Check.place(x=16, y=25)
+        RSA2048Check.place(x=16, y=44)
+        RSA3072Check.place(x=16, y=63)
+        RSAcustomCheck.place(x=16, y=82)
+        RSA4096Check.place(x=125, y=25)
+        RSA8192Check.place(x=125, y=44)
+        RSA16384Check.place(x=125, y=63)
+        RSAkeylength.place(x=170, y=83)
+        SelectRSAKeyCheck.place(x=5, y=101)
+    if True: #Sub-Menus
+        enterMenu.add_command(label = "Encryption", command=EncryptPage, accelerator="Ctrl+E", underline=0)
+        enterMenu.add_command(label = "File Encryption", accelerator="Ctrl+F", underline=0)
+        enterMenu.add_command(label = "Decryption", command=DecryptPage, accelerator="Ctrl+D", underline=0)
+        enterMenu.add_command(label = "Key Generator", accelerator="Ctrl+K", underline=0)
+        enterMenu.add_command(label = "Logs", accelerator="Ctrl+L", underline=0)
+        enterMenu.add_separator()
+        enterMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=CheckUpdates, underline=10)
+        enterMenu.add_separator()
+        enterMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda:root.destroy())
+        InfoVar = IntVar(); WarningVar = IntVar(); ErrorVar = IntVar(); InfoVar.set(1); WarningVar.set(1); ErrorVar.set(1)
+        viewMenu.add_checkbutton(label = "Show info message dialogs", accelerator="Ctrl+Alt+I", onvalue=1, offvalue=0, variable=InfoVar, underline=5)
+        viewMenu.add_checkbutton(label = "Show warning message dialogs", accelerator="Ctrl+Alt+W", onvalue=1, offvalue=0, variable=WarningVar, underline=5)
+        viewMenu.add_checkbutton(label = "Show error message dialogs", accelerator="Ctrl+Alt+E", onvalue=1, offvalue=0, variable=ErrorVar, underline=5)
+        viewMenu.add_separator()
+        if True: #Transparency sub-menu
+            transMenu.add_radiobutton(label = "%20", value=20, variable=Alpha, command=lambda:changeAlpha(20), accelerator="Ctrl+Alt+2")
+            transMenu.add_radiobutton(label = "%40", value=40, variable=Alpha, command=lambda:changeAlpha(40), accelerator="Ctrl+Alt+4")
+            transMenu.add_radiobutton(label = "%60", value=60, variable=Alpha, command=lambda:changeAlpha(60), accelerator="Ctrl+Alt+6")
+            transMenu.add_radiobutton(label = "%80", value=80, variable=Alpha, command=lambda:changeAlpha(80), accelerator="Ctrl+Alt+8")
+            transMenu.add_radiobutton(label = "%90", value=90, variable=Alpha, command=lambda:changeAlpha(90), accelerator="Ctrl+Alt+9")
+            transMenu.add_radiobutton(label = "Opaque", value=100, variable=Alpha, command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+1")
+            transMenu.add_separator()
+            transMenu.add_command(label = "Reset opacity", command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+O", underline=6)
+            viewMenu.add_cascade(menu=transMenu, label = "Window opacity")
+        viewMenu.add_separator()
+        if True: #Language sub-menu
+            langMenu.add_radiobutton(label = "English [Coming Soon]")
+            langMenu.add_radiobutton(label = "Türkçe [Yakında Geliyor]", state=DISABLED)
+            langMenu.add_radiobutton(label = "Deutsche [Kommt Bald]", state=DISABLED)
+            langMenu.add_radiobutton(label = "中国人 [即将推出]", state=DISABLED)
+            langMenu.add_separator()
+            langMenu.add_command(label = "Reset language to default", accelerator="Ctrl+Alt+L")
+            viewMenu.add_cascade(menu=langMenu, label ="Language")
+        menu.add_cascade(label = "Main", menu=enterMenu)
+        menu.add_cascade(label = "Preferences", menu=viewMenu)
+        menu.add_command(label = "Help", command=HelpPage)
+    logTextWidget.config(state=NORMAL)
+    logTextWidget.insert(INSERT, "ROOT: Created menu.\n")
+    logTextWidget.config(state=DISABLED)
+    if True: #File encryption frame
+        FileEncryptFileSelect = Button(FileEncryptFrame, text = "Open a file...", width=15)
+        FileEncryptPreviewBox = Text(FileEncryptFrame, height=10, width=48, state=DISABLED, font = ("Consolas", 9))
+        FileEncryptScrollbar = Scrollbar(FileEncryptFrame, command=FileEncryptPreviewBox.yview)
+        FileEncryptPreviewBox.config(yscrollcommand=FileEncryptScrollbar.set)
+        FileEncryptPreviewCheck = Checkbutton(FileEncryptFrame, text="Preview file")
+        FileEncryptFileEntry = Entry(FileEncryptFrame, width=50, font=("Consolas",9))
+        FileEncryptEntryLabel = Label(FileEncryptFrame, text="File location:")
+        FileEncryptPreviewLabel = Label(FileEncryptFrame, text="File preview:")
+        FileEncryptShowPreview = Checkbutton(FileEncryptFrame, text="Show file preview")
+        FileEncryptWarningButton = Button(FileEncryptFrame, text="Warning!", width=18)
+        FileEncryptFileStatus = Label(FileEncryptFrame, text="Status: [No file selected]")
+
+        FileEncryptEntryLabel.place(x=8, y=2)
+        FileEncryptFileEntry.place(x=10, y=22)
+        FileEncryptFileSelect.place(x=9, y=47)
+        FileEncryptPreviewBox.place(x=10, y=93)
+        FileEncryptPreviewCheck.place(x=10, y=300)
+        FileEncryptScrollbar.place(x=349, y=93, height=145)
+        FileEncryptPreviewLabel.place(x=8, y=72)
+        FileEncryptShowPreview.place(x=252, y=71)
+        FileEncryptWarningButton.place(x=249, y=47)
+        FileEncryptFileStatus.place(x=113, y=50)
     TextToEncryptLabel = Label(EncryptFrame, text = "Plain text:")
     showCharCheck = Checkbutton(EncryptFrame, text = "Hide characters", variable = showCharState, onvalue = 1, offvalue = 0, command = toggleHideChar)
     if showChar == False:
-        encryptedTextEntry = Entry(EncryptFrame, width = 50, show = "●")
-        decryptedTextEntry = Entry(DecryptFrame, width = 50, show = "●", state=DISABLED)
+        encryptedTextEntry = Entry(EncryptFrame, width = 50, show = "●", font=("Consolas",9))
+        decryptedTextEntry = Entry(DecryptFrame, width = 50, show = "●", state=DISABLED, font=("Consolas",9))
     else:
-        encryptedTextEntry = Entry(EncryptFrame, width = 50)
-        decryptedTextEntry = Entry(DecryptFrame, width = 50, state=DISABLED)
+        encryptedTextEntry = Entry(EncryptFrame, width = 50, font=("Consolas",9))
+        decryptedTextEntry = Entry(DecryptFrame, width = 50, state=DISABLED, font=("Consolas",9))
         TextToEncryptLabel.place(x=8, y=2)
-    # Log page widgets
-    LogClearButton = Button(LogFrame, text = "Clear", width=15)
-    LogSaveButton = Button(LogFrame, text = "Save as...", width=15)
-    LogSavePreset = Button(LogFrame, text = "Save to 'Encrypt-n-Decrypt.log'", width=28)
-    LogClearButton.place(x=9, y=330)
-    LogSavePreset.place(x=601, y=330)
-    LogSaveButton.place(x=494, y=330)
-    # Main widgets
+    if True: #Log frame
+        LogClearButton = Button(LogFrame, text = "Clear", width=15)
+        LogSaveButton = Button(LogFrame, text = "Save as...", width=15)
+        LogSavePreset = Button(LogFrame, text = "Save to 'Encrypt-n-Decrypt.log'", width=28)
+        LogClearButton.place(x=9, y=330)
+        LogSavePreset.place(x=601, y=330)
+        LogSaveButton.place(x=494, y=330)
     encryButton = Button(EncryptFrame, text = "Encrypt", width=15, command=Encrypt)
     checkButton = Button(EncryptFrame, text = "Check encryption", width=20, command=CheckEncrypt)
     copyButton = Button(EncryptFrameLabel, text = "Copy", width=10, command=Copy)
@@ -1147,30 +1172,46 @@ if True:
     scrollbar2.place(x=376, y=5, height=88)
     scrollbar3.place(x=376, y=355, height=88)
     scrollbar4.place(x=376, y=215, height=88)
-    # Pop-up tooltips
-    createToolTip(StatusLabelAES, "This label indicates the validity of the key you entered below.")
-    createToolTip(checkButton, "Press this button to check if selected encryption options and key are working.")
-    createToolTip(CheckBase64Encoding, "Select this checkbutton to disable base64 encoding requirement if you cannot decrypt encrypted text in another program.")
-    createToolTip(ToleranceLabel, "This label indicates the tolerance of length of the RSA key that is going to be generated.")
-    createToolTip(encryButton, "Press this button to encrypt entered text with selected options and selected key.")
-    createToolTip(copyButton, "Press this button to copy the output (encrypted text) into clipboard.")
-    createToolTip(clearButton, "Press this button to clear the output.")
-    createToolTip(TextToEncryptLabel, "Write the text you want to encrypt below.")
-    createToolTip(SelectKeyCheck, "If you want to use your key that was already generated, select this radiobutton and enter your key below.")
-    createToolTip(AES128Check, "AES-128 key is a 16 characters long base64 encoded AES key. Currently secure against normal computers but unsecure against powerful quantum computers.\nAlso AES-128 keys will be unsecure for normal computers too in the future.  An AES-128 key has 2¹²⁸ of possible combinations.")
-    createToolTip(AES192Check, "AES-192 key is a 24 characters long base64 encoded AES key. Ideal for most of encryptions and currently secure against super computers and quantum computers.\nBut while quantum computers are being more powerful, AES-192 keys will be unsecure against quantum computers in the future. An AES-192 key has 2¹⁹² of possible combinations.")
-    createToolTip(AES256Check, "AES-256 key is a 32 characters long base64 encoded AES key. Impossible to crack with normal computers and highly secure against quantum computers.\nIt will take about billions of years to brute-force an AES-256 key with a normal computer as an AES-256 key has 2²⁵⁶ of possible combinations.\nIn theory, AES-256 key is 2¹²⁸ times stronger than AES-128 key.")
-    createToolTip(AES352Check, "Legacy Fernet key is a 44 characters long base64 encoded key. In fact, Fernet key is a 32 characters long AES-256 key but after encoding key turns into 44 characters long key.\nFernet key is as secure as AES-256 key. Also Fernet key allows user to define a diffirent encryption time when encrypting and allows to extract encrypted time when decrypting.")
-    def Loop(): # Loop function that will loop forever every 200 miliseconds by default.
+    if True: # Tooltips
+        createToolTip(StatusLabelAES, "This label indicates the validity of the key you entered below.")
+        createToolTip(checkButton, "Press this button to check if selected encryption options and key are working.")
+        createToolTip(CheckBase64Encoding, "Select this checkbutton to disable base64 encoding requirement if you cannot decrypt encrypted text in another program.")
+        createToolTip(ToleranceLabel, "This label indicates the tolerance of length of the RSA key that is going to be generated.")
+        createToolTip(encryButton, "Press this button to encrypt entered text with selected options and selected key.")
+        createToolTip(copyButton, "Press this button to copy the output (encrypted text) into clipboard.")
+        createToolTip(clearButton, "Press this button to clear the output.")
+        createToolTip(TextToEncryptLabel, "Write the text you want to encrypt below.")
+        createToolTip(SelectKeyCheck, "If you want to use your key that was already generated, select this radiobutton and enter your key below.")
+        createToolTip(AES128Check, "AES-128 key is a 16 characters long base64 encoded AES key. Currently secure against normal computers but unsecure against powerful quantum computers.\nAlso AES-128 keys will be unsecure for normal computers too in the future.  An AES-128 key has 2¹²⁸ of possible combinations.")
+        createToolTip(AES192Check, "AES-192 key is a 24 characters long base64 encoded AES key. Ideal for most of encryptions and currently secure against super computers and quantum computers.\nBut while quantum computers are being more powerful, AES-192 keys will be unsecure against quantum computers in the future. An AES-192 key has 2¹⁹² of possible combinations.")
+        createToolTip(AES256Check, "AES-256 key is a 32 characters long base64 encoded AES key. Impossible to crack with normal computers and highly secure against quantum computers.\nIt will take about billions of years to brute-force an AES-256 key with a normal computer as an AES-256 key has 2²⁵⁶ of possible combinations.\nIn theory, AES-256 key is 2¹²⁸ times stronger than AES-128 key.")
+        createToolTip(AES352Check, "Legacy Fernet key is a 44 characters long base64 encoded key. In fact, Fernet key is a 32 characters long AES-256 key but after encoding key turns into 44 characters long key.\nFernet key is as secure as AES-256 key. Also Fernet key allows user to define a diffirent encryption time when encrypting and allows to extract encrypted time when decrypting.")
+    def Loop():
         root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
-        if BenchVar.get() == 1 and KeySelectVar.get() == 1:Encrypt();root.after(1, Loop)
+        if BenchVar.get() == 1 and KeySelectVar.get() == 1:
+            Encrypt()
+            root.after(1, Loop)
         elif BenchVar.get() == 1 and KeySelectVar.get() == 2:
             value = KeyValue.get()
             if len(value) == 16 or len(value) == 24 or len(value) == 32 or len(value) == 44:
-                plaintext = bytes("TEST", 'utf-8');iv = Random.new().read(AES.block_size);iv_int = int(binascii.hexlify(iv), 16);ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
-                try:aes = AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr);ciphertext = aes.encrypt(plaintext)
-                except:root.after(200, Loop)
-                else:Encrypt();root.after(1, Loop)
-            else:root.after(200, Loop)
-        else:root.after(200, Loop)
+                plaintext = bytes("TEST", 'utf-8')
+                iv = Random.new().read(AES.block_size)
+                iv_int = int(binascii.hexlify(iv), 16) 
+                ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+                try:
+                    aes = AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
+                    ciphertext = aes.encrypt(plaintext)
+                except:
+                    root.after(200, Loop)
+                else:
+                    Encrypt()
+                    root.after(1, Loop)
+            else:
+                root.after(200, Loop)
+        else:
+            root.after(200, Loop)
     Loop();root.mainloop();exit()
+except Exception as e:
+    logTextWidget.config(state=NORMAL)
+    logTextWidget.insert(INSERT, "ERROR: Unexpected & unknown error occured. {}\n".format(e))
+    logTextWidget.config(state=DISABLED)
