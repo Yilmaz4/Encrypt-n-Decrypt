@@ -51,11 +51,6 @@ try:
                             choice = input("Your choice: ")
                             choice = int(choice)
                             if choice == 1 or choice == 2 or choice == 3 or choice == 4:
-                                root = Tk()
-                                root.withdraw()
-                                files = [("Encrypt'n'Decrypt key file","*.key"),("Text document","*.txt"),("All files","*.*")]
-                                keyFileToSave = asksaveasfilename(initialfile="Encryption Key.key", filetypes=files, defaultextension="*.key")
-                                root.destroy()
                                 break
                             else:
                                 print("ERROR: Your choice must 1, 2, 3 or 4. Numbers are shown in top.")

@@ -207,40 +207,41 @@ def CheckUpdates():
         ProgressBar.configure(maximum=int(chunkSize))
         downloadProgress.set(0)
         downloadedSize = 0
-        def RootMainLoop():
-            update.update()
-            update.after(200, RootMainLoop())
         try:
             ProgressLabel.configure(text="Download progress: Starting download operation . . .")
             update.update()
             file = open(downloadPath, mode='wb')
+            downloadedContent = ""
             for chunk in range(0, int(size), int(chunkSize)):
                 try:
-                    root.after(100, RootMainLoop())
                     downloadURL = get(Version.json()["assets"][int(Asset)]["browser_download_url"], headers={"Range":"bytes={}-{}".format(chunk, chunk+chunkSize-1)})
-                except:
+                except Exception as e:
                     messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub server connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
                     try:os.remove(downloadPath)
                     except:pass
                     break
+                update.update()
+                downloadedContent = bytes(str(downloadedContent), "utf-8") + downloadURL.content
+                update.update()
                 downloadedSize = downloadedSize + len(downloadURL.content)
+                update.update()
                 downloadProgress.set(downloadProgress.get()+len(downloadURL.content))
+                update.update()
                 ProgressLabel.configure(text="Download progress: {:.1f} MB ({:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize), int(size)/MBFACTOR))
+                update.update()
                 ProgressBar.configure(maximum=size)
                 update.update()
-                try:
-                    file.write(downloadURL.content)
-                except:
-                    if not is_admin():
-                        messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: File write operation failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
-                        try:os.remove(downloadPath)
-                        except:pass
-                        break
-                    else:
-                        messagebox.showerror("ERR_INVALID_PATH","An error occured while trying to write downloaded data to '{}' path. Path may be invalid or inaccessible. Please select another path.")
-                        try:os.remove(downloadPath)
-                        except:pass
-                        break
+            try:
+                file.write(downloadedContent)
+            except Exception as e:
+                if not is_admin():
+                    messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: File write operation failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
+                    try:os.remove(downloadPath)
+                    except:pass
+                else:
+                    messagebox.showerror("ERR_INVALID_PATH","An error occured while trying to write downloaded data to '{}' path. Path may be invalid or inaccessible. Please select another path.")
+                    try:os.remove(downloadPath)
+                    except:pass
         except Exception as e:
             if not is_admin():
                 messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: File write operation failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
@@ -781,10 +782,6 @@ if True:
             SelectKeyEntry.config(state=NORMAL)
             AES352Check.config(state=DISABLED)
             KeyEntryHideChar.config(state=NORMAL)
-            if len(value) == 44:
-                CheckBase64Encoding.config(state=DISABLED)
-            else:
-                CheckBase64Encoding.config(state=NORMAL)
         elif KeySelectVar.get() == 1:
             SelectKeyEntry.config(state=DISABLED)
             AES128Check.config(state=NORMAL)
@@ -792,10 +789,6 @@ if True:
             AES256Check.config(state=NORMAL)
             AES352Check.config(state=NORMAL)
             KeyEntryHideChar.config(state=DISABLED)
-            if len(value) == 44:
-                CheckBase64Encoding.config(state=DISABLED)
-            else:
-                CheckBase64Encoding.config(state=DISABLED)
         elif KeySelectVar.get() == 3:
             AES128Check.config(state=DISABLED)
             AES192Check.config(state=DISABLED)
@@ -803,10 +796,6 @@ if True:
             SelectKeyEntry.config(state=DISABLED)
             AES352Check.config(state=DISABLED)
             KeyEntryHideChar.config(state=DISABLED)
-            if len(value) == 44:
-                CheckBase64Encoding.config(state=DISABLED)
-            else:
-                CheckBase64Encoding.config(state=DISABLED)
     def OverrideTime():
         if OverrideTimeVar.get() == 1:
             HourEntry.config(state=NORMAL)
@@ -848,13 +837,11 @@ if True:
             except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
             else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
         elif len(value) >= 44: # Fernet Key
-            CheckBase64Encoding.configure(state=DISABLED)
             try:
                 fernet = Fernet(bytes(value, 'utf-8'));fernet.encrypt(b"abc")
                 StatusLabelAES.configure(foreground="green", text="Validity: Valid Fernet key")
             except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid Fernet key")
         else:
-            CheckBase64Encoding.configure(state=NORMAL)
             StatusLabelAES.configure(foreground="red", text="Validity: Invalid")
     def limitRSAEntry(*args): # Unused in final code
         if int(RSAkeylength.get()) % 1024 == 0:ToleranceLabel.configure(foreground="green", text="±0")
@@ -938,27 +925,31 @@ if True:
     SelectKeyCheck = Radiobutton(KeySelectFrame, text="Use this key:", value=2, variable=KeySelectVar, command=ChangeKeySelection)
     SelectFileCheck = Radiobutton(KeySelectFrame, text="Use this key file:", value=3, variable= KeySelectVar, command=ChangeKeySelection)
     SelectKeyEntry = Entry(KeySelectFrame, width=46, font=("Consolas",9), state=DISABLED, textvariable=KeyValue)
-    AES128Check = Radiobutton(KeySelectFrame, text="AES-128 Key (16 characters long)", value=128, variable=RandomKeyVar)
-    AES192Check = Radiobutton(KeySelectFrame, text="AES-192 Key (24 characters long)", value=192, variable=RandomKeyVar)
-    AES256Check = Radiobutton(KeySelectFrame, text="AES-256 Key (32 characters long)", value=256, variable=RandomKeyVar)
-    AES352Check = Radiobutton(KeySelectFrame, text="Legacy Fernet Key (44 characters long)", value=352, variable=RandomKeyVar)
+    AES128Check = Radiobutton(KeySelectFrame, text="AES-128 Key", value=128, variable=RandomKeyVar)
+    AES192Check = Radiobutton(KeySelectFrame, text="AES-192 Key", value=192, variable=RandomKeyVar)
+    AES256Check = Radiobutton(KeySelectFrame, text="AES-256 Key", value=256, variable=RandomKeyVar)
+    AES352Check = Radiobutton(KeySelectFrame, text="Legacy Fernet Key", value=352, variable=RandomKeyVar)
+    TripleDESCheck = Radiobutton(KeySelectFrame, text="3DES (Triple DES) Key", value=3, variable=RandomKeyVar)
+    TwoFishCheck = Radiobutton(KeySelectFrame, text="Twofish Key", value=4, variable=RandomKeyVar)
     KeyEntryHideChar = Checkbutton(KeySelectFrame, text="Hide characters", onvalue=1, offvalue=0, variable=KeyHideCharVar, state=DISABLED)
     FastModeCheck = Radiobutton(OtherOptionsFrame, text="Fast mode (Bypass check)", value=1, variable=Mode)
     SecureModeCheck = Radiobutton(OtherOptionsFrame, text="Secure mode (Check)", value=2, variable=Mode)
-    KeyEntryHideChar.place(x=244, y=102)
+    KeyEntryHideChar.place(x=244, y=82)
     FastModeCheck.place(x=5, y=22)
     SecureModeCheck.place(x=214, y=22)
     OverrideCheck.place(x=5, y=0)
     OtherOptionsFrame.place(x=10, y=350)
-    SelectKeyCheck.place(x=5, y=101)
+    SelectKeyCheck.place(x=5, y=82)
     RandomKeyCheck.place(x=5, y=5)
     SelectFileCheck.place(x=5, y=163)
-    SelectKeyEntry.place(x=18, y=123)
+    SelectKeyEntry.place(x=18, y=104)
     Encryption.place(x=10, y=77)
     AES128Check.place(x=16, y=25)
     AES192Check.place(x=16, y=44)
     AES256Check.place(x=16, y=63)
-    AES352Check.place(x=16, y=82)
+    AES352Check.place(x=125, y=25)
+    TripleDESCheck.place(x=125, y=44)
+    TwoFishCheck.place(x=125, y=63)
     RSAkeyVar = IntVar()
     RSAkeyVar.set(1024)
     def validate(action, index, value_if_allowed, prior_value, text, validation_type, trigger_type, widget_name):
@@ -1063,11 +1054,11 @@ if True:
     TextToEncryptLabel = Label(EncryptFrame, text = "Plain text:")
     showCharCheck = Checkbutton(EncryptFrame, text = "Hide characters", variable = showCharState, onvalue = 1, offvalue = 0, command = toggleHideChar)
     if showChar == False:
-        encryptedTextEntry = Entry(EncryptFrame, width = 50, show = "●")
-        decryptedTextEntry = Entry(DecryptFrame, width = 50, show = "●", state=DISABLED)
+        encryptedTextEntry = Entry(EncryptFrame, width = 50, show = "●", font=("Consolas",9))
+        decryptedTextEntry = Entry(DecryptFrame, width = 50, show = "●", state=DISABLED, font=("Consolas",9))
     else:
-        encryptedTextEntry = Entry(EncryptFrame, width = 50)
-        decryptedTextEntry = Entry(DecryptFrame, width = 50, state=DISABLED)
+        encryptedTextEntry = Entry(EncryptFrame, width = 50, font=("Consolas",9))
+        decryptedTextEntry = Entry(DecryptFrame, width = 50, state=DISABLED, font=("Consolas",9))
         TextToEncryptLabel.place(x=8, y=2)
     # Log page widgets
     LogClearButton = Button(LogFrame, text = "Clear", width=15)
@@ -1096,8 +1087,13 @@ if True:
     RSAprivateLabel = Label(EncryptFrameLabel, text="RSA Private Key: (Asymmetric Encryption)")
     StatusLabelAES = Label(KeySelectFrame, text="Validity: [Blank]", foreground="gray")
     ToleranceLabel = Label(Asymmetric, text="±0", foreground="gray")
-    CheckBase64Encoding = Checkbutton(KeySelectFrame, text="Allow non-base64.urlsafe encoded keys", onvalue=1, offvalue=0, variable=Base64Check, state=DISABLED, command=limitKeyEntry)
     encoding = StringVar();encoding.set("UTF-8")
+    CopyAESbutton = Button(EncryptFrameLabel, width = 10)
+    ClearAESbutton = Button(EncryptFrameLabel, width = 9)
+    CopyPubKeybutton = Button(EncryptFrameLabel, width = 10)
+    ClearPubKeybutton = Button(EncryptFrameLabel, width = 9)
+    CopyPrivKeybutton = Button(EncryptFrameLabel, width = 10)
+    ClearPrivKeybutton = Button(EncryptFrameLabel, width = 9)
     SelectEncoding = Combobox(EncryptFrame, width=7, textvariable=encoding, state="readonly", values=("UTF-8","UTF-16","UTF-32","ANSI"))
     scrollbar = Scrollbar(LogFrame)
     scrollbar2 = Scrollbar(EncryptFrameLabel)
@@ -1121,8 +1117,7 @@ if True:
     encryptedTextWidget.place(x=9, y=5)
     RSApublicKeyWidget.place(x=9, y=215)
     RSAprivateKeyWidget.place(x=9, y=355)
-    StatusLabelAES.place(x=92, y=102)
-    CheckBase64Encoding.place(x=16, y=144)
+    StatusLabelAES.place(x=92, y=83)
     AESkeyEntry.place(x=9, y=145)
     AESkeyLabel.place(x=8, y=125)
     RSApublicLabel.place(x=8, y=194)
@@ -1147,10 +1142,10 @@ if True:
     scrollbar2.place(x=376, y=5, height=88)
     scrollbar3.place(x=376, y=355, height=88)
     scrollbar4.place(x=376, y=215, height=88)
+    CopyAESbutton.place(x=100, y=100)
     # Pop-up tooltips
     createToolTip(StatusLabelAES, "This label indicates the validity of the key you entered below.")
     createToolTip(checkButton, "Press this button to check if selected encryption options and key are working.")
-    createToolTip(CheckBase64Encoding, "Select this checkbutton to disable base64 encoding requirement if you cannot decrypt encrypted text in another program.")
     createToolTip(ToleranceLabel, "This label indicates the tolerance of length of the RSA key that is going to be generated.")
     createToolTip(encryButton, "Press this button to encrypt entered text with selected options and selected key.")
     createToolTip(copyButton, "Press this button to copy the output (encrypted text) into clipboard.")
