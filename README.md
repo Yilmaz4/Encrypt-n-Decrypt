@@ -5,7 +5,7 @@
 [![GitHub Download Count](https://img.shields.io/github/downloads/Yilmaz4/Encrypt-n-Decrypt/total.svg?style=plastic)]()
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-Yes-0000ff.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 [![Open Source?](https://img.shields.io/badge/Open%20Source%3F-Of%20Course%21%20%E2%9D%A4-4b0082.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
-[![Stable?](https://img.shields.io/badge/Release-v0%2E2%2E2%20%7C%20Stable-9400d3.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+[![Stable?](https://img.shields.io/badge/Release-Stable-9400d3.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 
 Hello everyone, this project is my second Python project and first project that I published in GitHub. This program can encrypt and decrypt plain texts with `cryptography.fernet` symmetric key encryption. Program uses *Python 3.7.9*. First version of program (v0.1) is compatible with all OS's including Linux and MacOS except Windows XP and below but later versions currently only compatible with Windows OS's except Windows XP and below. Windows XP and below is not compatible with program because the Python version that program uses does not support them.
 
