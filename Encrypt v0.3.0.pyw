@@ -15,8 +15,8 @@ else:
     from tkinter.ttk import *
 
 from ttkthemes import ThemedStyle
-import pyperclip, os, base64, binascii, struct, time, typing, collections, warnings
-from sys import exit, path, platform
+import pyperclip, os, base64, binascii, struct, time, typing, collections, fuckit
+from sys import exit, platform, exc_info
 
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Util import Counter
@@ -194,7 +194,7 @@ appWidth=800;appHeight=550;version="v0.2.0";build="Build 15";root=Tk();root.titl
 style.set_theme("plastik")"""
 MainScreen=ttk.Notebook(root,width=380,height=340);LogFrame=Frame(MainScreen);logTextWidget=Text(LogFrame,height=22,width=107,font=("Consolas",9),state=DISABLED)
 logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ROOT: Created root, started mainloop.\n");logTextWidget.config(state=DISABLED)
-menu=Menu(root);root.config(menu=menu);enterMenu=Menu(menu,tearoff=0);viewMenu=Menu(menu,tearoff=0);helpMenu=Menu(menu,tearoff=0);transMenu=Menu(viewMenu,tearoff=0);langMenu=Menu(viewMenu,tearoff=0);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT,"ROOT: Registered menu entries.\n");logTextWidget.config(state=DISABLED);root.wm_iconbitmap("Ico.ico")
+menu=Menu(root);root.config(menu=menu);enterMenu=Menu(menu,tearoff=0);viewMenu=Menu(menu,tearoff=0);titleMenu=Menu(viewMenu,tearoff=0);helpMenu=Menu(menu,tearoff=0);transMenu=Menu(viewMenu,tearoff=0);langMenu=Menu(viewMenu,tearoff=0);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT,"ROOT: Registered menu entries.\n");logTextWidget.config(state=DISABLED);root.wm_iconbitmap("Ico.ico")
 def CheckUpdates():
     def Asset0DownloadBrowser():openweb(Version.json()["assets"][0]["browser_download_url"])
     def Asset1DownloadBrowser():openweb(Version.json()["assets"][1]["browser_download_url"])
@@ -400,7 +400,7 @@ def GenerateAES(Length):
         elif random>=25 and random<30:key+=str(choice(digits))
         elif random>=30:key+=str(choice("!'^+%&/()=?_<>#${[]}\|__--$__--"))
     return key
-if True:
+try:
     def ShutDown():root.destroy()
     showCharState = IntVar(value=0);deshowCharState = IntVar(value=0);showChar = True;genPassword = IntVar();genPassword.set(16);Base64Check = IntVar();Base64Check.set(0);ToolTipActive = False
     class ToolTip(object):
@@ -425,7 +425,8 @@ if True:
             except:root.after_cancel(task)
     def createToolTip(widget, text):
         global task;toolTip = ToolTip(widget)
-        def enter(event):global task;task = root.after(1000, toolTip.showtip, text, widget, event)
+        def enter(event):
+            if not ToolTipVar.get() == 0:global task;task = root.after(1000, toolTip.showtip, text, widget, event)
         def leave(event):toolTip.hidetip(widget)
         def press(event):toolTip.hidetip(widget)
         widget.bind('<Enter>',enter);widget.bind('<Leave>',leave);widget.bind('<Button-1>',press)
@@ -757,7 +758,7 @@ if True:
     logTextWidget.config(state=NORMAL)
     logTextWidget.insert(INSERT, "ROOT: Created main menu.\n")
     logTextWidget.config(state=DISABLED)
-    Menu = Menu(root)
+    #Menu = Menu(root)
     EncryptFrame = Frame(MainScreen)
     DecryptFrame = Frame(MainScreen)
     AboutFrame = Frame(MainScreen)
@@ -921,16 +922,18 @@ if True:
     DateSeparator.place(x=272, y=0)
     DateSeparator2.place(x=301, y=0)
     BenchmarkCheck.place(x=5, y=44)
+    def ChangeAESselection():
+        pass
     RandomKeyCheck = Radiobutton(KeySelectFrame, text="Generate a random key", value=1, variable=KeySelectVar, command=ChangeKeySelection)
     SelectKeyCheck = Radiobutton(KeySelectFrame, text="Use this key:", value=2, variable=KeySelectVar, command=ChangeKeySelection)
     SelectFileCheck = Radiobutton(KeySelectFrame, text="Use this key file:", value=3, variable= KeySelectVar, command=ChangeKeySelection)
     SelectKeyEntry = Entry(KeySelectFrame, width=46, font=("Consolas",9), state=DISABLED, textvariable=KeyValue)
-    AES128Check = Radiobutton(KeySelectFrame, text="AES-128 Key", value=128, variable=RandomKeyVar)
-    AES192Check = Radiobutton(KeySelectFrame, text="AES-192 Key", value=192, variable=RandomKeyVar)
-    AES256Check = Radiobutton(KeySelectFrame, text="AES-256 Key", value=256, variable=RandomKeyVar)
-    AES352Check = Radiobutton(KeySelectFrame, text="Legacy Fernet Key", value=352, variable=RandomKeyVar)
-    TripleDESCheck = Radiobutton(KeySelectFrame, text="3DES (Triple DES) Key", value=3, variable=RandomKeyVar)
-    TwoFishCheck = Radiobutton(KeySelectFrame, text="Twofish Key", value=4, variable=RandomKeyVar)
+    AES128Check = Radiobutton(KeySelectFrame, text="AES-128 Key", value=128, variable=RandomKeyVar, command=ChangeAESselection)
+    AES192Check = Radiobutton(KeySelectFrame, text="AES-192 Key", value=192, variable=RandomKeyVar, command=ChangeAESselection)
+    AES256Check = Radiobutton(KeySelectFrame, text="AES-256 Key", value=256, variable=RandomKeyVar, command=ChangeAESselection)
+    AES352Check = Radiobutton(KeySelectFrame, text="Legacy Fernet Key", value=352, variable=RandomKeyVar, command=ChangeAESselection)
+    TripleDESCheck = Radiobutton(KeySelectFrame, text="3DES (Triple DES) Key", value=3, variable=RandomKeyVar, command=ChangeAESselection)
+    TwoFishCheck = Radiobutton(KeySelectFrame, text="Twofish Key", value=4, variable=RandomKeyVar, command=ChangeAESselection)
     KeyEntryHideChar = Checkbutton(KeySelectFrame, text="Hide characters", onvalue=1, offvalue=0, variable=KeyHideCharVar, state=DISABLED)
     FastModeCheck = Radiobutton(OtherOptionsFrame, text="Fast mode (Bypass check)", value=1, variable=Mode)
     SecureModeCheck = Radiobutton(OtherOptionsFrame, text="Secure mode (Check)", value=2, variable=Mode)
@@ -943,7 +946,7 @@ if True:
     RandomKeyCheck.place(x=5, y=5)
     SelectFileCheck.place(x=5, y=163)
     SelectKeyEntry.place(x=18, y=104)
-    Encryption.place(x=10, y=77)
+    Encryption.place(x=10, y=130)
     AES128Check.place(x=16, y=25)
     AES192Check.place(x=16, y=44)
     AES256Check.place(x=16, y=63)
@@ -990,7 +993,7 @@ if True:
     SelectRSAKeyCheck.place(x=5, y=101)
     # Menu-bar
     enterMenu.add_command(label = "Encryption", command=EncryptPage, accelerator="Ctrl+E", underline=0)
-    enterMenu.add_command(label = "File Encryption", accelerator="Ctrl+F", underline=0)
+    #enterMenu.add_command(label = "File Encryption", accelerator="Ctrl+F", underline=0)
     enterMenu.add_command(label = "Decryption", command=DecryptPage, accelerator="Ctrl+D", underline=0)
     enterMenu.add_command(label = "Key Generator", accelerator="Ctrl+K", underline=0)
     enterMenu.add_command(label = "Logs", accelerator="Ctrl+L", underline=0)
@@ -998,11 +1001,31 @@ if True:
     enterMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=CheckUpdates, underline=10)
     enterMenu.add_separator()
     enterMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda:root.destroy())
-    InfoVar = IntVar(); WarningVar = IntVar(); ErrorVar = IntVar(); InfoVar.set(1); WarningVar.set(1); ErrorVar.set(1)
+    InfoVar = IntVar();WarningVar = IntVar();ErrorVar = IntVar();InfoVar.set(1);WarningVar.set(1);ErrorVar.set(1);ToolTipVar = IntVar();ToolTipVar.set(1)
     # View menu
+    viewMenu.add_checkbutton(label = "Show tooltips on hover", accelerator="Ctrl+Alt+T", onvalue=1, offvalue=0, variable=ToolTipVar, underline=5)
+    viewMenu.add_separator()
     viewMenu.add_checkbutton(label = "Show info message dialogs", accelerator="Ctrl+Alt+I", onvalue=1, offvalue=0, variable=InfoVar, underline=5)
     viewMenu.add_checkbutton(label = "Show warning message dialogs", accelerator="Ctrl+Alt+W", onvalue=1, offvalue=0, variable=WarningVar, underline=5)
     viewMenu.add_checkbutton(label = "Show error message dialogs", accelerator="Ctrl+Alt+E", onvalue=1, offvalue=0, variable=ErrorVar, underline=5)
+    viewMenu.add_separator()
+    # Title bar sub-menu
+    titleMenu.add_checkbutton(label = "Show program name in titlebar")
+    titleMenu.add_checkbutton(label = "Show program version in titlebar")
+    titleMenu.add_checkbutton(label = "Show program build number in titlebar")
+    titleMenu.add_checkbutton(label = "Show time in titlebar")
+    titleMenu.add_checkbutton(label = "Show date in titlebar")
+    titleMenu.add_separator()
+    speedMenu = Menu(titleMenu, tearoff=0)
+    UpdateValue = IntVar();UpdateValue.set(200)
+    speedMenu.add_radiobutton(label = "Fast", value=50, variable=UpdateValue)
+    speedMenu.add_radiobutton(label = "Moderate", value=200, variable=UpdateValue)
+    speedMenu.add_radiobutton(label = "Slow", value=800, variable=UpdateValue)
+    speedMenu.add_radiobutton(label = "Paused", value=0, variable=UpdateValue)
+    speedMenu.add_separator()
+    speedMenu.add_command(label = "Update now")
+    titleMenu.add_cascade(menu=speedMenu, label = "Titlebar update rate")
+    viewMenu.add_cascade(menu=titleMenu, label = "Window titlebar configuration")
     viewMenu.add_separator()
     # Transparency sub-menu
     transMenu.add_radiobutton(label = "%20", value=20, variable=Alpha, command=lambda:changeAlpha(20), accelerator="Ctrl+Alt+2")
@@ -1014,7 +1037,7 @@ if True:
     transMenu.add_separator()
     transMenu.add_command(label = "Reset opacity", command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+O", underline=6)
     # End transparency sub-menu
-    viewMenu.add_cascade(menu=transMenu, label = "Window opacity")
+    viewMenu.add_cascade(menu=transMenu, label = "Window opacity configuration")
     viewMenu.add_separator()
     # Language sub-menu
     langMenu.add_radiobutton(label = "English [Coming Soon]")
@@ -1029,37 +1052,25 @@ if True:
     menu.add_cascade(label = "Main", menu=enterMenu)
     menu.add_cascade(label = "Preferences", menu=viewMenu)
     menu.add_command(label = "Help", command=HelpPage)
-    # File encryption widgets
-    FileEncryptFileSelect = Button(FileEncryptFrame, text = "Open a file...", width=15)
-    FileEncryptPreviewBox = Text(FileEncryptFrame, height=10, width=48, state=DISABLED, font = ("Consolas", 9))
-    FileEncryptScrollbar = Scrollbar(FileEncryptFrame, command=FileEncryptPreviewBox.yview)
-    FileEncryptPreviewBox.config(yscrollcommand=FileEncryptScrollbar.set)
-    FileEncryptPreviewCheck = Checkbutton(FileEncryptFrame, text="Preview file")
-    FileEncryptFileEntry = Entry(FileEncryptFrame, width=50, font=("Consolas",9))
-    FileEncryptEntryLabel = Label(FileEncryptFrame, text="File location:")
-    FileEncryptPreviewLabel = Label(FileEncryptFrame, text="File preview:")
-    FileEncryptShowPreview = Checkbutton(FileEncryptFrame, text="Show file preview")
-    FileEncryptWarningButton = Button(FileEncryptFrame, text="Warning!", width=18)
-    FileEncryptFileStatus = Label(FileEncryptFrame, text="Status: [No file selected]")
-    FileEncryptEntryLabel.place(x=8, y=2)
-    FileEncryptFileEntry.place(x=10, y=22)
-    FileEncryptFileSelect.place(x=9, y=47)
-    FileEncryptPreviewBox.place(x=10, y=93)
-    FileEncryptPreviewCheck.place(x=10, y=300)
-    FileEncryptScrollbar.place(x=349, y=93, height=145)
-    FileEncryptPreviewLabel.place(x=8, y=72)
-    FileEncryptShowPreview.place(x=252, y=71)
-    FileEncryptWarningButton.place(x=249, y=47)
-    FileEncryptFileStatus.place(x=113, y=50)
-    TextToEncryptLabel = Label(EncryptFrame, text = "Plain text:")
+    WhatToEncrypt = IntVar()
+    WhatToEncrypt.set(1)
+    TextToEncryptLabel = Radiobutton(EncryptFrame, text = "Plain text:", value=1, variable=WhatToEncrypt)
+    FileToEncryptLabel = Radiobutton(EncryptFrame, text = "File:", value=2, variable=WhatToEncrypt)
     showCharCheck = Checkbutton(EncryptFrame, text = "Hide characters", variable = showCharState, onvalue = 1, offvalue = 0, command = toggleHideChar)
+    BrowseFileButton = Button(EncryptFrame, text = "Browse...", width=14)
     if showChar == False:
-        encryptedTextEntry = Entry(EncryptFrame, width = 50, show = "●", font=("Consolas",9))
-        decryptedTextEntry = Entry(DecryptFrame, width = 50, show = "●", state=DISABLED, font=("Consolas",9))
-    else:
-        encryptedTextEntry = Entry(EncryptFrame, width = 50, font=("Consolas",9))
-        decryptedTextEntry = Entry(DecryptFrame, width = 50, state=DISABLED, font=("Consolas",9))
+        encryptedTextEntry = Entry(EncryptFrame, width = 48, show = "●", font=("Consolas",9))
+        decryptedTextEntry = Entry(DecryptFrame, width = 48, show = "●", state=DISABLED, font=("Consolas",9))
         TextToEncryptLabel.place(x=8, y=2)
+        FileToEncryptLabel.place(x=8, y=46)
+    else:
+        encryptedTextEntry = Entry(EncryptFrame, width = 48, font=("Consolas",9))
+        decryptedTextEntry = Entry(DecryptFrame, width = 48, state=DISABLED, font=("Consolas",9))
+        TextToEncryptLabel.place(x=8, y=2)
+        FileToEncryptLabel.place(x=8, y=46)
+    FilePathEntry = Entry(EncryptFrame, width = 48, font=("Consolas",9))
+    FilePathEntry.place(x=24, y=66)
+    BrowseFileButton.place(x=24, y=91)
     # Log page widgets
     LogClearButton = Button(LogFrame, text = "Clear", width=15)
     LogSaveButton = Button(LogFrame, text = "Save as...", width=15)
@@ -1111,9 +1122,9 @@ if True:
     Text = "This program can encrypt and decrypt plain texts and files with AES-128, AES-192, AES-256, Fernet and RSA encryption standarts. AES-128 key is a 16 characters long and base64.urlsafe encoded key, AES-192 key is a 24 characters long and base64.urlsafe encoded key and AES-256 key is a 32 characters long and base64.urlsafe encoded key. RSA keys are base64.urlsafe encoded keys that in any length longer than 128 characters. Program can generate a fresh random AES or RSA key or can use a pre-generated key. In RSA encryption, Public Key is used to encrypt the data and Private Key is required to decrypt the cipher (Encrypted data). Public key can be extracted from Private key. 1024-bit RSA encryption can take 1 second to 10 seconds and 8196-bit RSA encryption can take 1 minute to 12 minutes depending on your computer. AES encryptions are way faster than RSA encryption. Fernet encryption (Legacy Fernet Key) also includes ability to change encryption time. That means you can encrypt your data with a fake date. But AES and RSA doesn't support this. Also you can select Fast mode to encrypt the data faster but bypass encyrption check.\n\nIf you are having problems with program, below information might be helpful to resolve problems:\n\nERR_ENCRYPTER_NOT_WORKING_PROPERLY: This error indicates that encrypter is not working properly even 'abc' text encryption failed. Try encrypting again after restarting the program. If problem persists, please report this problem to me.\n\nERR_INVALID_ENCRYPTION_KEY: This error occures when you selected to enter an encryption key and entered a non-encryption key. Please be sure you entered a AES-128, AES-192, AES-256, Fernet or RSA key that is bigger than 1024-bit; if the key you entered is one of them, be sure it's base64.urlsafe encoded.\n\nERR_UNENCRYPTABLE_TEXT: This error indicates that text you entered to encrypt is not encryptable or includes a illegal character for selected encoding system. Please try another text to encyrpt.\n\nERR_UNABLE_TO_CLEAR: This error pops-up when an unknown error occures while trying to clear the cipher or key from output. Only solution is probably restarting the program. If problem persists, please report this problem to me.\n\nERR_UNABLE_TO_DECRYPT: This errorVersion: {} Build 14\nAuthor: Yılmaz Alpaslan\ngithub.com\Yilmaz4\Encrypt-n-Decrypt".format(version)
     about.insert(INSERT, Text)
     about.configure(state=DISABLED)
-    SelectEncoding.place(x=301, y=49)
+    SelectEncoding.place(x=301, y=461)
     scrollbar.place(x=762, y=10, height=312)
-    encryptedTextEntry.place(x=10, y=22)
+    encryptedTextEntry.place(x=24, y=22)
     encryptedTextWidget.place(x=9, y=5)
     RSApublicKeyWidget.place(x=9, y=215)
     RSAprivateKeyWidget.place(x=9, y=355)
@@ -1122,8 +1133,8 @@ if True:
     AESkeyLabel.place(x=8, y=125)
     RSApublicLabel.place(x=8, y=194)
     RSAprivateLabel.place(x=8, y=334)
-    checkButton.place(x=116, y=48)
-    encryButton.place(x=9, y=48)
+    checkButton.place(x=116, y=460)
+    encryButton.place(x=9, y=460)
     showCharCheck.place(x=261, y=1)
     copyButton.place(x=8, y=100)
     clearButton.place(x=85, y=100)
@@ -1156,16 +1167,31 @@ if True:
     createToolTip(AES192Check, "AES-192 key is a 24 characters long base64 encoded AES key. Ideal for most of encryptions and currently secure against super computers and quantum computers.\nBut while quantum computers are being more powerful, AES-192 keys will be unsecure against quantum computers in the future. An AES-192 key has 2¹⁹² of possible combinations.")
     createToolTip(AES256Check, "AES-256 key is a 32 characters long base64 encoded AES key. Impossible to crack with normal computers and highly secure against quantum computers.\nIt will take about billions of years to brute-force an AES-256 key with a normal computer as an AES-256 key has 2²⁵⁶ of possible combinations.\nIn theory, AES-256 key is 2¹²⁸ times stronger than AES-128 key.")
     createToolTip(AES352Check, "Legacy Fernet key is a 44 characters long base64 encoded key. In fact, Fernet key is a 32 characters long AES-256 key but after encoding key turns into 44 characters long key.\nFernet key is as secure as AES-256 key. Also Fernet key allows user to define a diffirent encryption time when encrypting and allows to extract encrypted time when decrypting.")
-    def Loop(): # Loop function that will loop forever every 200 miliseconds by default.
-        root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
-        if BenchVar.get() == 1 and KeySelectVar.get() == 1:Encrypt();root.after(1, Loop)
-        elif BenchVar.get() == 1 and KeySelectVar.get() == 2:
-            value = KeyValue.get()
-            if len(value) == 16 or len(value) == 24 or len(value) == 32 or len(value) == 44:
-                plaintext = bytes("TEST", 'utf-8');iv = Random.new().read(AES.block_size);iv_int = int(binascii.hexlify(iv), 16);ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
-                try:aes = AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr);ciphertext = aes.encrypt(plaintext)
-                except:root.after(200, Loop)
-                else:Encrypt();root.after(1, Loop)
-            else:root.after(200, Loop)
-        else:root.after(200, Loop)
+    def Loop(calledBy=0): # Loop function that will loop forever every 200 miliseconds by default.
+        value = KeyValue.get()
+        if calledBy == 1 and BenchVar.get() == 1 and (KeySelectVar.get() == 1 or (KeySelectVar.get() == 2 and (len(value) == 16 or len(value) == 24 or len(value) == 32 or len(value) == 44))):
+            pass
+        else:
+            if not UpdateValue.get() == 0:root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
+            if BenchVar.get() == 1 and KeySelectVar.get() == 1:Encrypt();root.after(1, Loop)
+            elif BenchVar.get() == 1 and KeySelectVar.get() == 2:
+                if len(value) == 16 or len(value) == 24 or len(value) == 32 or len(value) == 44:
+                    plaintext = bytes("TEST", 'utf-8');iv = Random.new().read(AES.block_size);iv_int = int(binascii.hexlify(iv), 16);ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+                    try:aes = AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr);ciphertext = aes.encrypt(plaintext)
+                    except:
+                        if not UpdateValue.get() == 0:root.after(UpdateValue.get(), Loop)
+                    else:Encrypt();root.after(1, Loop)
+                else:
+                    if not UpdateValue.get() == 0:root.after(UpdateValue.get(), Loop)
+            else:
+                if not UpdateValue.get() == 0:root.after(UpdateValue.get(), Loop)
+    speedMenu.entryconfig(0, command=lambda:Loop(1))
+    speedMenu.entryconfig(1, command=lambda:Loop(1))
+    speedMenu.entryconfig(2, command=lambda:Loop(1))
+    speedMenu.entryconfig(3, command=lambda:Loop(1))
+    speedMenu.entryconfig(5, command=lambda:Loop(1))
     Loop();root.mainloop();exit()
+except Exception as e:
+    exc_type, exc_obj, exc_tb = exc_info()
+    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    messagebox.showerror("UNEXPECTED_ERROR_OCCURED","{} error occured at line {} in file '{}'\n\nError details: {}\n\nProgram will be terminated.".format(exc_type, exc_tb.tb_lineno, fname, e))
