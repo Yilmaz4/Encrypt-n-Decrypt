@@ -1,22 +1,13 @@
-if __import__("sys").version_info.major == 2:
-    from sys import exit
-    print("Python 2.x is not supported due to incompatible syntax. Please use Python 3.x instead.")
-    choice = str(input("Do you still want to run the code? [Y|N]: "))
-    if choice == "Y":
-        from Tkinter import *
-        from Tkinter.commondialog import Dialog
-        from ttk import *
-    else:
-        exit()
-else:
+import pyperclip, os, base64, binascii, struct, time, typing, collections
+from sys import exit, platform, exc_info
+
+if not __import__("sys").version_info.major == 2:
     from tkinter import *
     from tkinter.commondialog import Dialog
     from tkinter import ttk
     from tkinter.ttk import *
-
-from ttkthemes import ThemedStyle
-import pyperclip, os, base64, binascii, struct, time, typing, collections, fuckit
-from sys import exit, platform, exc_info
+else:
+    exit()
 
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Util import Counter
@@ -38,7 +29,6 @@ from random import randint, choice
 from string import ascii_letters, digits
 from markdown import markdown
 from tkinterweb import HtmlFrame
-from PIL import Image, ImageTk
 from getpass import getuser
 from ctypes import windll
 from zipfile import ZipFile
@@ -1058,6 +1048,7 @@ try:
     FileToEncryptLabel = Radiobutton(EncryptFrame, text = "File:", value=2, variable=WhatToEncrypt)
     showCharCheck = Checkbutton(EncryptFrame, text = "Hide characters", variable = showCharState, onvalue = 1, offvalue = 0, command = toggleHideChar)
     BrowseFileButton = Button(EncryptFrame, text = "Browse...", width=14)
+    CheckFileButton = Button(EncryptFrame, text = "Check file", width=14)
     if showChar == False:
         encryptedTextEntry = Entry(EncryptFrame, width = 48, show = "●", font=("Consolas",9))
         decryptedTextEntry = Entry(DecryptFrame, width = 48, show = "●", state=DISABLED, font=("Consolas",9))

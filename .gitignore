@@ -4,6 +4,18 @@ __pycache__/
 
 *.so
 
+pyinstaller.exe
+pyinstaller32.exe
+tes1.py
+test.py
+test2.py
+test3.py
+test5.py
+toast.py
+progressbardemo.py
+Encrypt v0.3.0 Beta.py
+Encrypt v0.3.0.py
+
 .Python
 .vscode/
 blob_storage/
