@@ -1,12 +1,13 @@
 # About Encrypt'n'Decrypt:
-[![made-with-python](https://img.shields.io/badge/Made%20With-Python%203%2E7%2E9-ff0000.svg?style=plastic)](https://www.python.org/)
-[![made-for-windows](https://img.shields.io/badge/Made%20For-%E2%8A%9E%20Windows-ff4f00.svg?style=plastic)](https://www.python.org/)
-[![GitHub license](https://img.shields.io/badge/License-MIT-ff9200?style=plastic)](https://github.com/Yilmaz4/Encrypt-n-Decrypt/blob/master/LICENSE)
-[![Maintaner](https://img.shields.io/badge/Maintainer-Yilmaz4-ffff00?style=plastic)](https://GitHub.com/Yilmaz4)
-[![GitHub Download Count](https://img.shields.io/github/downloads/Yilmaz4/Encrypt-n-Decrypt/total.svg?style=plastic)]()
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-Yes-0000ff.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
-[![Open Source?](https://img.shields.io/badge/Open%20Source%3F-Of%20Course%21%20%E2%9D%A4-4b0082.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
-[![Stable?](https://img.shields.io/badge/Release-v0%2E2%2E2%20%7C%20Stable-9400d3.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+[![made-with-python](https://img.shields.io/badge/Made%20With-Python%203%2E7%2E9-396F9E.svg?style=plastic)](https://www.python.org/)
+[![made-for-windows](https://img.shields.io/badge/Made%20For-Windows-00A4E3.svg?style=plastic)](https://www.python.org/)
+[![GitHub license](https://img.shields.io/badge/License-MIT-A10000?style=plastic)](https://github.com/Yilmaz4/Encrypt-n-Decrypt/blob/master/LICENSE)
+[![Maintaner](https://img.shields.io/badge/Maintainer-Yilmaz4-ff7b00?style=plastic)](https://GitHub.com/Yilmaz4)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-Yes-00b20b.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+[![Open Source?](https://img.shields.io/badge/Open%20Source%3F-Of%20Course%21%20%E2%9D%A4-3C9E44.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+[![Stable?](https://img.shields.io/badge/Release-v0%2E2%2E2%20%7C%20Stable-009e0a.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+
+[//]: <> (009e0a Stable | ffc700 Prerelease | ff0000 Beta)
 
 Hello everyone, this project is my second Python project and first project that I published in GitHub. This program can encrypt and decrypt plain texts with `cryptography.fernet` symmetric key encryption. Program uses *Python 3.7.9*. First version of program (v0.1) is compatible with all OS's including Linux and MacOS except Windows XP and below but later versions currently only compatible with Windows OS's except Windows XP and below. Windows XP and below is not compatible with program because the Python version that program uses does not support them.
 
