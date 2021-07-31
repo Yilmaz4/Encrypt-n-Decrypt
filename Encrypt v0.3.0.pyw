@@ -6,16 +6,14 @@ if not __import__("sys").version_info.major == 2:
     from tkinter.commondialog import Dialog
     from tkinter import ttk
     from tkinter.ttk import *
-else:
-    exit()
+else:exit()
 
-from Crypto.Cipher import AES, PKCS1_OAEP
+from Crypto.Cipher import AES, PKCS1_OAEP, DES3
 from Crypto.Util import Counter
 from Crypto import Random
 from Crypto.PublicKey import RSA
 
 from cryptography import utils
-
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import _get_backend
 from cryptography.hazmat.primitives import hashes, padding
@@ -198,18 +196,23 @@ def CheckUpdates():
         downloadProgress.set(0)
         downloadedSize = 0
         try:
-            ProgressLabel.configure(text="Download progress: Starting download operation . . .")
+            ProgressLabel.configure(text="Download progress: Creating the file in specified location . . .")
             update.update()
             file = open(downloadPath, mode='wb')
             downloadedContent = ""
+            ProgressLabel.configure(text="Download progress: Getting ready for download operation . . .")
+            update.update()
             for chunk in range(0, int(size), int(chunkSize)):
                 try:
+                    ProgressLabel.configure(text="Download progress: {:.1f} MB ({:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize), int(size)/MBFACTOR))
+                    update.update()
                     downloadURL = get(Version.json()["assets"][int(Asset)]["browser_download_url"], headers={"Range":"bytes={}-{}".format(chunk, chunk+chunkSize-1)})
                 except Exception as e:
                     messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub server connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
                     try:os.remove(downloadPath)
                     except:pass
                     break
+                ProgressLabel.configure(text="Download progress: {:.1f} MB ({:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize), int(size)/MBFACTOR))
                 update.update()
                 downloadedContent = bytes(str(downloadedContent), "utf-8") + downloadURL.content
                 update.update()
@@ -217,7 +220,6 @@ def CheckUpdates():
                 update.update()
                 downloadProgress.set(downloadProgress.get()+len(downloadURL.content))
                 update.update()
-                ProgressLabel.configure(text="Download progress: {:.1f} MB ({:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize), int(size)/MBFACTOR))
                 update.update()
                 ProgressBar.configure(maximum=size)
                 update.update()
@@ -430,53 +432,41 @@ try:
             choice=messagebox.askyesno("Entered key length is longer than 8196.","Entered key length is longer than 8196. Longer than 8196 key generations can cause program to stop responding. Are you sure want to continute?")
             if choice==True:keylength=keylength/1024;keylength=(96*8)*keylength;key=base64.urlsafe_b64encode(os.urandom(int(keylength)));return key
         else:keylength=keylength/128;keylength=keylength*96;key=base64.urlsafe_b64encode(os.urandom(int(keylength)));return key
-    def Encrypt():
-        global encryptedTextEntry, encryptedTextWidget, key, KeySelectVar
-        def FernetEncryption(key):
-            try:fernet = Fernet(key)
-            except:logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: An error occured while trying to define entered key into Fernet.\n");logTextWidget.config(state=DISABLED);messagebox.showerror("ERR_UNABLE_TO_DEFINE_KEY","An error occured while trying to define entered key into Fernet. Key might invalid for Fernet. Please write a valid AES-128, AES-192, AES-256 or legacy Fernet. If key is already one of them, please check you entered right.")
-            textEncrypt = encryptedTextEntry.get();encryptedText = fernet.encrypt(textEncrypt.encode())
-            if Mode.get() == 2:
-                decryptedText = fernet.decrypt(encryptedText).decode()
-                if textEncrypt == decryptedText:encryptedTextWidget.configure(state=NORMAL, fg="black");encryptedTextWidget.delete('1.0', END);encryptedTextWidget.insert(INSERT, encryptedText);encryptedTextWidget.configure(state=DISABLED);AESkeyEntry.configure(state=NORMAL);AESkeyEntry.delete('1.0', END);AESkeyEntry.insert('1.0', key);AESkeyEntry.configure(state=DISABLED);RSApublicKeyWidget.configure(state=NORMAL);RSApublicKeyWidget.delete('1.0', END);RSApublicKeyWidget.configure(state=DISABLED);RSAprivateKeyWidget.configure(state=NORMAL);RSAprivateKeyWidget.delete('1.0', END);RSAprivateKeyWidget.configure(state=DISABLED);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using legacy Fernet key.\n");logTextWidget.config(state=DISABLED)
-                else:
-                    tryText="abc";trykey=Fernet.generate_key();tryfernet=Fernet(trykey);tryEncryptedText = tryfernet.encrypt(tryText.encode());tryDecryptedText = tryfernet.decrypt(tryEncryptedText).decode()
-                    if tryText == tryDecryptedText:logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "WARNING: Entered text is not encryptable.\n");logTextWidget.config(state=DISABLED);messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Entered text is not encryptable. Please report this text to me.")
-                    else:logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: An problem occured in encrypter.\n");logTextWidget.config(state=DISABLED);messagebox.showerror("ERR_ENCRYPTER_NOT_WORKING_PROPERLY","There is a problem occured in encrypter. Both entered text and 'abc' text failed encryption. Please try again and if problem persists, please report this problem to me.")
-            elif Mode.get() == 1:encryptedTextWidget.configure(state=NORMAL, fg="black");encryptedTextWidget.delete('1.0', END);encryptedTextWidget.insert(INSERT, encryptedText);encryptedTextWidget.configure(state=DISABLED);AESkeyEntry.configure(state=NORMAL);AESkeyEntry.delete('1.0', END);AESkeyEntry.insert('1.0', key);AESkeyEntry.configure(state=DISABLED);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using legacy Fernet key without checking.\n");logTextWidget.config(state=DISABLED)
-        def RSAEncryption(public, private, plaintext):
-            try:ciphertext=PKCS1_OAEP.new(public).encrypt(bytes(plaintext,encoding.get()))
-            except ValueError:messagebox.showwarning("ERR_PLAIN_TEXT_IS_TOO_LONG","The text you entered to encrypt is too long with {} encoding for RSA-{} asymmetric encryption. Please select a longer RSA key to encrypt this data like RSA-{} or RSA-{} or select another encoding.".format(encoding.get(), RSAkeyVar.get(), RSAkeyVar.get()*2, RSAkeyVar.get()*4))
-            cipher=base64.urlsafe_b64encode(ciphertext).decode()
-            if cipher=="":cipher="[Blank]"
-            if Mode.get()==2:
-                output=PKCS1_OAEP.new(RSA.import_key(private)).decrypt(ciphertext).decode(encoding.get())
-                if output == encryptedTextEntry.get():encryptedTextWidget.configure(state=NORMAL, fg="black");encryptedTextWidget.delete('1.0', END);encryptedTextWidget.insert(INSERT, cipher);encryptedTextWidget.configure(state=DISABLED);RSApublicKeyWidget.configure(state=NORMAL);RSApublicKeyWidget.delete('1.0', END);RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode());RSApublicKeyWidget.configure(state=DISABLED);RSAprivateKeyWidget.configure(state=NORMAL);RSAprivateKeyWidget.delete('1.0', END);RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode());RSAprivateKeyWidget.configure(state=DISABLED);AESkeyEntry.configure(state=NORMAL);AESkeyEntry.delete('1.0', END);AESkeyEntry.configure(state=DISABLED);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using RSA-{} symmetric key encryption.\n".format(RSAkeyVar.get()));logTextWidget.config(state=DISABLED)
-                else:pass
-            elif Mode.get()==1:encryptedTextWidget.configure(state=NORMAL);encryptedTextWidget.delete('1.0',END);encryptedTextWidget.insert(INSERT, cipher);encryptedTextWidget.configure(state=DISABLED);RSApublicKeyWidget.configure(state=NORMAL);RSApublicKeyWidget.delete('1.0', END);RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode());RSApublicKeyWidget.configure(state=DISABLED);RSAprivateKeyWidget.configure(state=NORMAL);RSAprivateKeyWidget.delete('1.0', END);RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode());RSAprivateKeyWidget.configure(state=DISABLED);AESkeyEntry.configure(state=NORMAL);AESkeyEntry.delete('1.0', END);AESkeyEntry.configure(state=DISABLED);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using RSA-{} symmetric key encryption without checking.\n".format(RSAkeyVar.get()));logTextWidget.config(state=DISABLED)
-        def AESencryption(key,plaintext=encryptedTextEntry.get()):
-            global cipher,Mode,encryptedTextWidget
-            plaintext = bytes(plaintext, encoding.get())
-            iv = Random.new().read(AES.block_size)
-            iv_int = int(binascii.hexlify(iv), 16) 
-            ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
-            try:
-                aes = AES.new(key, AES.MODE_CTR, counter=ctr)
-                ciphertext = aes.encrypt(plaintext)
-                cipher = base64.urlsafe_b64encode(ciphertext).decode()
-            except:
-                logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, "ERROR: An error occured while trying to define entered key into AES.\n")
-                logTextWidget.config(state=DISABLED)
-                messagebox.showerror("ERR_UNABLE_TO_DEFINE_KEY","An error occured while trying to define entered key into AES. Key might invalid for AES (Advanced Encryption Standard). Please write a valid AES-128, AES-192, AES-256 or legacy Fernet. If key is already one of them, please check you entered right.")
-            if cipher == "":
-                cipher = "[Blank]"
-            if Mode.get() == 2:
+    def Encrypt(event=None):
+        if MainScreen.tab(MainScreen.select(), "text") == "Encryption":
+            global encryptedTextEntry, encryptedTextWidget, key, KeySelectVar
+            def RSAencryption(public, private, plaintext):
+                try:ciphertext=PKCS1_OAEP.new(public).encrypt(bytes(plaintext,"utf-8"))
+                except ValueError:messagebox.showwarning("ERR_PLAIN_TEXT_IS_TOO_LONG","The text you entered to encrypt is too long with {} encoding for RSA-{} asymmetric encryption. Please select a longer RSA key to encrypt this data like RSA-{} or RSA-{}".format("utf-8", RSAkeyVar.get(), RSAkeyVar.get()*2, RSAkeyVar.get()*4))
+                cipher=base64.urlsafe_b64encode(ciphertext).decode()
+                if cipher=="":cipher="[Blank]"
+                if Mode.get()==2:
+                    output=PKCS1_OAEP.new(RSA.import_key(private)).decrypt(ciphertext).decode("utf-8")
+                    if output == encryptedTextEntry.get():encryptedTextWidget.configure(state=NORMAL, fg="black");encryptedTextWidget.delete('1.0', END);encryptedTextWidget.insert(INSERT, cipher);encryptedTextWidget.configure(state=DISABLED);RSApublicKeyWidget.configure(state=NORMAL);RSApublicKeyWidget.delete('1.0', END);RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode());RSApublicKeyWidget.configure(state=DISABLED);RSAprivateKeyWidget.configure(state=NORMAL);RSAprivateKeyWidget.delete('1.0', END);RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode());RSAprivateKeyWidget.configure(state=DISABLED);AESkeyEntry.configure(state=NORMAL);AESkeyEntry.delete('1.0', END);AESkeyEntry.configure(state=DISABLED);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using RSA-{} symmetric key encryption.\n".format(RSAkeyVar.get()));logTextWidget.config(state=DISABLED)
+                    else:pass
+                elif Mode.get()==1:encryptedTextWidget.configure(state=NORMAL);encryptedTextWidget.delete('1.0',END);encryptedTextWidget.insert(INSERT, cipher);encryptedTextWidget.configure(state=DISABLED);RSApublicKeyWidget.configure(state=NORMAL);RSApublicKeyWidget.delete('1.0', END);RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode());RSApublicKeyWidget.configure(state=DISABLED);RSAprivateKeyWidget.configure(state=NORMAL);RSAprivateKeyWidget.delete('1.0', END);RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode());RSAprivateKeyWidget.configure(state=DISABLED);AESkeyEntry.configure(state=NORMAL);AESkeyEntry.delete('1.0', END);AESkeyEntry.configure(state=DISABLED);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using RSA-{} symmetric key encryption without checking.\n".format(RSAkeyVar.get()));logTextWidget.config(state=DISABLED)
+            def AESencryption(key,plaintext=encryptedTextEntry.get()):
+                global cipher,Mode,encryptedTextWidget
+                plaintext = bytes(plaintext, "utf-8")
+                iv = Random.new().read(AES.block_size)
+                iv_int = int(binascii.hexlify(iv), 16) 
+                ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+                try:
+                    aes = AES.new(key, AES.MODE_CTR, counter=ctr)
+                    ciphertext = aes.encrypt(plaintext)
+                    cipher = base64.urlsafe_b64encode(ciphertext).decode()
+                except:
+                    logTextWidget.config(state=NORMAL)
+                    logTextWidget.insert(INSERT, "ERROR: An error occured while trying to define entered key into AES.\n")
+                    logTextWidget.config(state=DISABLED)
+                    messagebox.showerror("ERR_UNABLE_TO_DEFINE_KEY","An error occured while trying to define entered key into AES. Key might invalid for AES (Advanced Encryption Standard). Please write a valid AES-128, AES-192, AES-256 or legacy Fernet. If key is already one of them, please check you entered right.")
+                if cipher == "":
+                    cipher = "[Blank]"
                 iv_int = int(binascii.hexlify(iv), 16)
                 ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
                 aes = AES.new(key, AES.MODE_CTR, counter=ctr)
                 plaintext = aes.decrypt(ciphertext)
-                if plaintext.decode(encoding.get()) == encryptedTextEntry.get():
+                if plaintext.decode("utf-8") == encryptedTextEntry.get():
                     encryptedTextWidget.configure(state=NORMAL)
                     encryptedTextWidget.delete('1.0', END)
                     encryptedTextWidget.insert(INSERT, cipher)
@@ -499,7 +489,7 @@ try:
                     logTextWidget.config(state=DISABLED)
                 else:
                     AESencryption(key, "abc")
-                    if plaintext.decode(encoding.get()) == encryptedTextEntry.get():
+                    if plaintext.decode("utf-8") == encryptedTextEntry.get():
                         logTextWidget.config(state=NORMAL)
                         logTextWidget.insert(INSERT, "WARNING: Entered text is not encryptable.\n")
                         logTextWidget.config(state=DISABLED)
@@ -509,53 +499,41 @@ try:
                         logTextWidget.insert(INSERT, "ERROR: An problem occured in encrypter.\n")
                         logTextWidget.config(state=DISABLED)
                         messagebox.showerror("ERR_ENCRYPTER_NOT_WORKING_PROPERLY","There is a problem occured in encrypter. Both entered text and 'abc' text failed encryption. Please try again and if problem persists, please report this problem to me.")
-            elif Mode.get() == 1:
-                encryptedTextWidget.configure(state=NORMAL)
-                encryptedTextWidget.delete('1.0', END)
-                encryptedTextWidget.insert(INSERT, cipher)
-                encryptedTextWidget.configure(state=DISABLED)
-                AESkeyEntry.configure(state=NORMAL)
-                AESkeyEntry.delete('1.0', END)
-                AESkeyEntry.insert('1.0', key)
-                AESkeyEntry.configure(state=DISABLED)
-                logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using AES-{} symmetric key encryption without checking.\n".format(len(key)*8))
-                logTextWidget.config(state=DISABLED)
-        if Encryption.index(Encryption.select()) == 0:
-            if KeySelectVar.get() == 1:
-                if RandomKeyVar.get() < 352:
-                    AESencryption(bytes(GenerateAES(int(RandomKeyVar.get()/8)), 'utf-8'))
-                elif RandomKeyVar.get() == 352:
-                    key = Fernet.generate_key()
-                    FernetEncryption(key)
-            elif KeySelectVar.get() == 2:
-                key = bytes(SelectKeyEntry.get(), "utf-8")
-                if len(key.decode()) == 16 or len(key.decode()) == 24 or len(key.decode()) == 32:
-                    AESencryption(key, encryptedTextEntry.get())
-                elif len(key.decode()) == 44:
-                    FernetEncryption(key)
-                else:
+            def TripleDESencryption(key,plaintext=encryptedTextEntry.get()):
+                iv = Random.new().read(DES3.block_size)
+                cipher_encrypt = DES3.new(key, DES3.MODE_OFB, iv)
+                raw_encrypted_text = cipher_encrypt.encrypt(plaintext.encode("utf-8"))
+                encrypted_text = base64.urlsafe_b64encode(raw_encrypted_text).decode("utf-8")
+                if encrypted_text == "":encrypted_text = "[Blank]"
+                cipher = DES3.new(key, DES3.MODE_OFB, iv)
+                decrypted_text = cipher.decrypt(raw_encrypted_text).decode("utf-8")
+                if plaintext == decrypted_text:
+                    encryptedTextWidget.configure(state=NORMAL)
+                    encryptedTextWidget.delete('1.0', END)
+                    encryptedTextWidget.insert(INSERT, encrypted_text)
+                    if encrypted_text == "[Blank]":encryptedTextWidget.configure(state=DISABLED, fg="gray")
+                    else:encryptedTextWidget.configure(state=DISABLED, fg="black")
+                    AESkeyEntry.configure(state=NORMAL)
+                    AESkeyEntry.delete('1.0', END)
+                    AESkeyEntry.insert('1.0', key)
+                    AESkeyEntry.configure(state=DISABLED)
+                    RSApublicKeyWidget.configure(state=NORMAL)
+                    RSApublicKeyWidget.delete('1.0', END)
+                    RSApublicKeyWidget.configure(state=DISABLED)
+                    RSAprivateKeyWidget.configure(state=NORMAL)
+                    RSAprivateKeyWidget.delete('1.0', END)
+                    RSAprivateKeyWidget.configure(state=DISABLED)
                     logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, "ERROR: Invalid key for encryption. Encryption key must be url_safe base64 encoded AES-128, AES-192, AES-256 or legacy Fernet key.\n")
+                    logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using 3DES-{} symmetric key encryption.\n".format(len(key)*8))
                     logTextWidget.config(state=DISABLED)
-                    messagebox.showwarning("ERR_INVALID_ENCRYPTION_KEY","This key is invalid for AES (Advanced Encryption Standard) encryption. Please write a url_safe base64 encoded AES-128, AES-192, AES-256 or legacy Fernet key. If key is already one of them, please check you entered right.")
-        elif Encryption.index(Encryption.select()) == 1:
-            if RSAkeyVar.get() != 0:
-                if RSAkeyVar.get() > 4096:
-                    if messagebox.askyesno("Selected key size is too big!","Selected RSA key size is too big. This size of RSA key generation can cause program to stop working. Are you sure want to continue?"):
-                        privateKey = RSA.generate(int(RSAkeyVar.get()))
                 else:
-                    privateKey = RSA.generate(int(RSAkeyVar.get()))
-            else:
-                if RSAkeyVar.get() > 4096:
-                    if messagebox.showwarning("Selected key size is too big!","Selected RSA key size is too big. This size of RSA key generation can cause program to stop working. Are you sure want to continue?"):
-                        privateKey = RSA.generate(int(RSAkeylength.get()))
-                else:
-                    privateKey = RSA.generate(int(RSAkeylength.get()))
-            try:
-                publicKey = privateKey.publickey()
-                RSAEncryption(publicKey, privateKey.exportKey(), encryptedTextEntry.get())
-            except UnboundLocalError:
+                    pass
+            if Encryption.index(Encryption.select()) == 0:
+                if AlgSel.get() == 1:
+                    AESencryption(key=GenerateAES(int(RandomKeyVar.get()/8)).encode("utf-8"))
+                elif AlgSel.get() == 2:
+                    TripleDESencryption(key=GenerateAES(int(TripleVar.get()/8)))
+            elif Encryption.index(Encryption.select()) == 1:
                 pass
     def Copy():
         global encryptedTextWidget
@@ -767,49 +745,42 @@ try:
         except:
             value = "TemporaryValue"
         if KeySelectVar.get() == 2:
+            AESCheck.configure(state=DISABLED)
+            TripleDESCheck.config(state=DISABLED)
+            Triple128Check.config(state=DISABLED)
+            Triple192Check.config(state=DISABLED)
             AES128Check.config(state=DISABLED)
             AES192Check.config(state=DISABLED)
             AES256Check.config(state=DISABLED)
             SelectKeyEntry.config(state=NORMAL)
-            AES352Check.config(state=DISABLED)
             KeyEntryHideChar.config(state=NORMAL)
         elif KeySelectVar.get() == 1:
-            SelectKeyEntry.config(state=DISABLED)
-            AES128Check.config(state=NORMAL)
-            AES192Check.config(state=NORMAL)
-            AES256Check.config(state=NORMAL)
-            AES352Check.config(state=NORMAL)
+            AESCheck.configure(state=NORMAL)
+            TripleDESCheck.config(state=NORMAL)
+            SelectKeyEntry.config(state=NORMAL)
+            if AlgSel.get() == 1:
+                AES128Check.config(state=NORMAL)
+                AES192Check.config(state=NORMAL)
+                AES256Check.config(state=NORMAL)
+                Triple128Check.config(state=DISABLED)
+                Triple192Check.config(state=DISABLED)
+            else:
+                AES128Check.config(state=DISABLED)
+                AES192Check.config(state=DISABLED)
+                AES256Check.config(state=DISABLED)
+                Triple128Check.config(state=NORMAL)
+                Triple192Check.config(state=NORMAL)
             KeyEntryHideChar.config(state=DISABLED)
         elif KeySelectVar.get() == 3:
+            AESCheck.configure(state=DISABLED)
+            TripleDESCheck.config(state=DISABLED)
+            Triple128Check.config(state=DISABLED)
+            Triple192Check.config(state=DISABLED)
             AES128Check.config(state=DISABLED)
             AES192Check.config(state=DISABLED)
             AES256Check.config(state=DISABLED)
             SelectKeyEntry.config(state=DISABLED)
-            AES352Check.config(state=DISABLED)
             KeyEntryHideChar.config(state=DISABLED)
-    def OverrideTime():
-        if OverrideTimeVar.get() == 1:
-            HourEntry.config(state=NORMAL)
-            MinuteEntry.config(state=NORMAL)
-            SecondEntry.config(state=NORMAL)
-            DayEntry.config(state=NORMAL)
-            MonthEntry.config(state=NORMAL)
-            YearEntry.config(state=NORMAL)
-            DateSeparator.config(state=NORMAL)
-            DateSeparator2.config(state=NORMAL)
-            HourSeparator.config(state=NORMAL)
-            HourSeparator2.config(state=NORMAL)
-        elif OverrideTimeVar.get() == 0:
-            HourEntry.config(state=DISABLED)
-            MinuteEntry.config(state=DISABLED)
-            SecondEntry.config(state=DISABLED)
-            DayEntry.config(state=DISABLED)
-            MonthEntry.config(state=DISABLED)
-            YearEntry.config(state=DISABLED)
-            DateSeparator.config(state=DISABLED)
-            DateSeparator2.config(state=DISABLED)
-            HourSeparator.config(state=DISABLED)
-            HourSeparator2.config(state=DISABLED)
     def limitKeyEntry(*args):
         global value;value = KeyValue.get()
         if len(value) > 44: KeyValue.set(value[:44])
@@ -817,59 +788,19 @@ try:
         if len(value) == 0:StatusLabelAES.configure(foreground="gray", text="Validity: [Blank]")
         elif len(value) == 16: # AES-128
             try:AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
-            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
-            else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
+            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-128 Key")
+            else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-128 Key")
         elif len(value) == 24: # AES-192
             try:AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
-            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
-            else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
+            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-192 Key")
+            else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-192 Key")
         elif len(value) == 32: # AES-256
             try:AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
             except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
             else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
-        elif len(value) >= 44: # Fernet Key
-            try:
-                fernet = Fernet(bytes(value, 'utf-8'));fernet.encrypt(b"abc")
-                StatusLabelAES.configure(foreground="green", text="Validity: Valid Fernet key")
-            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid Fernet key")
         else:
             StatusLabelAES.configure(foreground="red", text="Validity: Invalid")
-    def limitRSAEntry(*args): # Unused in final code
-        if int(RSAkeylength.get()) % 1024 == 0:ToleranceLabel.configure(foreground="green", text="±0")
-        elif int(RSAkeylength.get()) % 1024 > 0 and int(RSAkeylength.get()) % 1024 < 150:ToleranceLabel.configure(foreground="#ff7400", text="±{}".format(int(RSAkeylength.get()) % 1024))
-        elif int(RSAkeylength.get()) % 1024 > 150:ToleranceLabel.configure(foreground="red", text="±{}".format(int(RSAkeylength.get()) % 1024))
-        elif int(RSAkeylength.get()) == "":ToleranceLabel.configure(foreground="gray", text="±0")
     KeyValue = StringVar();KeyValue.trace('w', limitKeyEntry)
-    RSAValue2 = StringVar();RSAValue2.trace('w', limitRSAEntry)
-    def limitHourEntry(*args):
-        value = Hour.get()
-        if len(value) > 2: Hour.set(value[:2])
-        if len(value) > 1:MinuteEntry.focus()
-    Hour = StringVar();Hour.trace('w', limitHourEntry)
-    def limitMinuteEntry(*args):
-        value = Minute.get()
-        if len(value) > 2: Minute.set(value[:2])
-        if len(value) > 1:SecondEntry.focus()
-    Minute = StringVar();Minute.trace('w', limitMinuteEntry)
-    def limitSecondEntry(*args):
-        value = Second.get()
-        if len(value) > 2: Second.set(value[:2])
-        if len(value) > 1:DayEntry.focus()
-    Second = StringVar();Second.trace('w', limitSecondEntry)
-    def limitDayEntry(*args):
-        value = Day.get()
-        if len(value) > 2: Day.set(value[:2])
-        if len(value) > 1:MonthEntry.focus()
-    Day = StringVar();Day.trace('w', limitDayEntry)
-    def limitMonthEntry(*args):
-        value = Month.get()
-        if len(value) > 2:Month.set(value[:2])
-        if len(value) > 1:YearEntry.focus()
-    Month = StringVar();Month.trace('w', limitMonthEntry)
-    def limitYearEntry(*args):
-        value = Year.get()
-        if len(value) > 4:Year.set(value[:4])
-    Year = StringVar();Year.trace('w', limitYearEntry)
     Mode = IntVar();Mode.set(2)
     Encryption = ttk.Notebook(EncryptFrame, width=355, height=220)
     KeySelectFrame = Frame(Encryption)
@@ -877,74 +808,59 @@ try:
     Encryption.add(KeySelectFrame, text="Symmetric Key Encryption")
     Encryption.add(Asymmetric, text="Asymmetric Key Encryption")
     EncryptFrameLabel = LabelFrame(EncryptFrame, text="Output", height=506, width=403)
-    MainScreen.add(EncryptFrame, text="Text Encryption")
-    MainScreen.add(FileEncryptFrame, text="File Encryption")
+    MainScreen.add(EncryptFrame, text="Encryption")
     MainScreen.add(DecryptFrame, text="Decryption")
-    MainScreen.add(PasswordGeneration, text="Key Generator")
     MainScreen.add(LogFrame, text="Logs")
     MainScreen.add(AboutFrame, text="Help & About")
     MainScreen.pack(fill=BOTH, expand=1, pady=4, padx=4, side=TOP)
     EncryptFrameLabel.place(x=377, y=4)
     KeyHideCharVar = IntVar()
     KeyHideCharVar.set(0)
-    OtherOptionsFrame = LabelFrame(EncryptFrame, text="Other options", height=100, width=357)
-    OverrideCheck = Checkbutton(OtherOptionsFrame, text="Override encryption time:", onvalue=1, offvalue=0, variable=OverrideTimeVar, command=OverrideTime)
-    HourEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Hour)
-    MinuteEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Minute)
-    SecondEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Second)
-    DayEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Day)
-    MonthEntry = Entry(OtherOptionsFrame, width=2, font=("Consolas",9), state=DISABLED, textvariable=Month)
-    YearEntry = Entry(OtherOptionsFrame, width=4, font=("Consolas",9), state=DISABLED, textvariable=Year)
-    HourSeparator = Label(OtherOptionsFrame, text=":", state=DISABLED)
-    HourSeparator2 = Label(OtherOptionsFrame, text=":", state=DISABLED)
-    DateSeparator = Label(OtherOptionsFrame, text="/", state=DISABLED)
-    DateSeparator2 = Label(OtherOptionsFrame, text="/", state=DISABLED)
-    BenchVar = IntVar();BenchVar.set(0)
-    BenchmarkCheck = Checkbutton(OtherOptionsFrame, text="Benchmark", onvalue=1, offvalue=0, variable=BenchVar)
-    HourEntry.place(x=165, y=0)
-    MinuteEntry.place(x=192, y=0)
-    SecondEntry.place(x=219, y=0)
-    DayEntry.place(x=252, y=0)
-    MonthEntry.place(x=281, y=0)
-    YearEntry.place(x=312, y=0)
-    HourSeparator.place(x=185, y=0)
-    HourSeparator2.place(x=212, y=0)
-    DateSeparator.place(x=272, y=0)
-    DateSeparator2.place(x=301, y=0)
-    BenchmarkCheck.place(x=5, y=44)
+    AlgSel = IntVar()
+    AlgSel.set(1)
+    TripleVar = IntVar()
+    TripleVar.set(192)
     def ChangeAESselection():
         pass
+    def ChangeAlgSelection():
+        if AlgSel.get() == 1:
+            AES128Check.configure(state=NORMAL)
+            AES192Check.configure(state=NORMAL)
+            AES256Check.configure(state=NORMAL)
+            Triple128Check.configure(state=DISABLED)
+            Triple192Check.configure(state=DISABLED)
+        else:
+            AES128Check.configure(state=DISABLED)
+            AES192Check.configure(state=DISABLED)
+            AES256Check.configure(state=DISABLED)
+            Triple128Check.configure(state=NORMAL)
+            Triple192Check.configure(state=NORMAL)
     RandomKeyCheck = Radiobutton(KeySelectFrame, text="Generate a random key", value=1, variable=KeySelectVar, command=ChangeKeySelection)
+    AESCheck = Radiobutton(KeySelectFrame, text="AES (Advanced Encryption Standard)", value=1, variable=AlgSel, command=ChangeAlgSelection)
+    AES128Check = Radiobutton(KeySelectFrame, text="AES-128 Key (16 characters long)", value=128, variable=RandomKeyVar, command=ChangeAESselection)
+    AES192Check = Radiobutton(KeySelectFrame, text="AES-192 Key (24 characters long)", value=192, variable=RandomKeyVar, command=ChangeAESselection)
+    AES256Check = Radiobutton(KeySelectFrame, text="AES-256 Key (32 characters long)", value=256, variable=RandomKeyVar, command=ChangeAESselection)
+    TripleDESCheck = Radiobutton(KeySelectFrame, text="3DES (Triple Data Encryption Standard)", value=2, variable=AlgSel, command=ChangeAlgSelection)
+    Triple128Check = Radiobutton(KeySelectFrame, text="3DES-128 Key (16 characters long)", state=DISABLED, variable=TripleVar, value=128)
+    Triple192Check = Radiobutton(KeySelectFrame, text="3DES-192 Key (24 characters long)", state=DISABLED, variable=TripleVar, value=192)
     SelectKeyCheck = Radiobutton(KeySelectFrame, text="Use this key:", value=2, variable=KeySelectVar, command=ChangeKeySelection)
     SelectFileCheck = Radiobutton(KeySelectFrame, text="Use this key file:", value=3, variable= KeySelectVar, command=ChangeKeySelection)
     SelectKeyEntry = Entry(KeySelectFrame, width=46, font=("Consolas",9), state=DISABLED, textvariable=KeyValue)
-    AES128Check = Radiobutton(KeySelectFrame, text="AES-128 Key", value=128, variable=RandomKeyVar, command=ChangeAESselection)
-    AES192Check = Radiobutton(KeySelectFrame, text="AES-192 Key", value=192, variable=RandomKeyVar, command=ChangeAESselection)
-    AES256Check = Radiobutton(KeySelectFrame, text="AES-256 Key", value=256, variable=RandomKeyVar, command=ChangeAESselection)
-    AES352Check = Radiobutton(KeySelectFrame, text="Legacy Fernet Key", value=352, variable=RandomKeyVar, command=ChangeAESselection)
-    TripleDESCheck = Radiobutton(KeySelectFrame, text="3DES (Triple DES) Key", value=3, variable=RandomKeyVar, command=ChangeAESselection)
-    TwoFishCheck = Radiobutton(KeySelectFrame, text="Twofish Key", value=4, variable=RandomKeyVar, command=ChangeAESselection)
     KeyEntryHideChar = Checkbutton(KeySelectFrame, text="Hide characters", onvalue=1, offvalue=0, variable=KeyHideCharVar, state=DISABLED)
-    FastModeCheck = Radiobutton(OtherOptionsFrame, text="Fast mode (Bypass check)", value=1, variable=Mode)
-    SecureModeCheck = Radiobutton(OtherOptionsFrame, text="Secure mode (Check)", value=2, variable=Mode)
-    KeyEntryHideChar.place(x=244, y=82)
-    FastModeCheck.place(x=5, y=22)
-    SecureModeCheck.place(x=214, y=22)
-    OverrideCheck.place(x=5, y=0)
-    OtherOptionsFrame.place(x=10, y=350)
-    SelectKeyCheck.place(x=5, y=82)
+    KeyEntryHideChar.place(x=244, y=158)
+    #OtherOptionsFrame.place(x=10, y=350)
+    SelectKeyCheck.place(x=5, y=158)
     RandomKeyCheck.place(x=5, y=5)
-    SelectFileCheck.place(x=5, y=163)
-    SelectKeyEntry.place(x=18, y=104)
+    AESCheck.place(x=16, y=25)
+    AES128Check.place(x=27, y=44)
+    AES192Check.place(x=27, y=63)
+    AES256Check.place(x=27, y=82)
+    TripleDESCheck.place(x=16, y=101)
+    Triple128Check.place(x=27, y=120)
+    Triple192Check.place(x=27, y=139)
+    #SelectFileCheck.place(x=5, y=163)
+    SelectKeyEntry.place(x=18, y=183)
     Encryption.place(x=10, y=130)
-    AES128Check.place(x=16, y=25)
-    AES192Check.place(x=16, y=44)
-    AES256Check.place(x=16, y=63)
-    AES352Check.place(x=125, y=25)
-    TripleDESCheck.place(x=125, y=44)
-    TwoFishCheck.place(x=125, y=63)
-    RSAkeyVar = IntVar()
-    RSAkeyVar.set(1024)
     def validate(action, index, value_if_allowed, prior_value, text, validation_type, trigger_type, widget_name):
         if value_if_allowed:
             try:int(value_if_allowed);return True
@@ -952,38 +868,9 @@ try:
                 if text == "":return True
                 else:return False
         else:return True
-    def ChangeRSASelection():
-        if int(RSAkeyVar.get()) == 0:
-            RSAkeylength.configure(state=NORMAL)
-        else:
-            RSAkeylength.configure(state=DISABLED)
     vcmd = (root.register(validate),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
-    RSAChangeSelection = IntVar()
-    RSAChangeSelection.set(1)
-    RandomRSAKeyCheck = Radiobutton(Asymmetric, text="Generate a random RSA key", value=1, variable=KeySelectVar, command=RSAChangeSelection)
-    RSA1024Check = Radiobutton(Asymmetric, text="RSA-1024 Key", value=1024, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSA2048Check = Radiobutton(Asymmetric, text="RSA-2048 Key", value=2048, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSA3072Check = Radiobutton(Asymmetric, text="RSA-3072 Key", value=3072, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSA4096Check = Radiobutton(Asymmetric, text="RSA-4096 Key", value=4096, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSA8192Check = Radiobutton(Asymmetric, text="RSA-8192 Key", value=8192, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSA16384Check = Radiobutton(Asymmetric, text="RSA-16384 Key", value=16384, variable=RSAkeyVar, command=ChangeRSASelection)
-    RSAcustomCheck = Radiobutton(Asymmetric, text="Custom RSA key length:", value=0, variable=RSAkeyVar, command=ChangeRSASelection) 
-    SelectRSAKeyCheck = Radiobutton(Asymmetric, text="Use this RSA key:", value=2, variable=KeySelectVar, command=RSAChangeSelection)
-    RSAkeyEntry = Text(Asymmetric, height=2, width=45, font=("Consolas",9), state=DISABLED)
-    RSAkeylength = Entry(Asymmetric, width=6, font=("Consolas",9), validate = 'key', validatecommand = vcmd, textvariable=RSAValue2, state=DISABLED)
-    RandomRSAKeyCheck.place(x=5, y=5)
-    RSA1024Check.place(x=16, y=25)
-    RSA2048Check.place(x=16, y=44)
-    RSA3072Check.place(x=16, y=63)
-    RSAcustomCheck.place(x=16, y=82)
-    RSA4096Check.place(x=125, y=25)
-    RSA8192Check.place(x=125, y=44)
-    RSA16384Check.place(x=125, y=63)
-    RSAkeylength.place(x=170, y=83)
-    SelectRSAKeyCheck.place(x=5, y=101)
     # Menu-bar
     enterMenu.add_command(label = "Encryption", command=EncryptPage, accelerator="Ctrl+E", underline=0)
-    #enterMenu.add_command(label = "File Encryption", accelerator="Ctrl+F", underline=0)
     enterMenu.add_command(label = "Decryption", command=DecryptPage, accelerator="Ctrl+D", underline=0)
     enterMenu.add_command(label = "Key Generator", accelerator="Ctrl+K", underline=0)
     enterMenu.add_command(label = "Logs", accelerator="Ctrl+L", underline=0)
@@ -1044,11 +931,24 @@ try:
     menu.add_command(label = "Help", command=HelpPage)
     WhatToEncrypt = IntVar()
     WhatToEncrypt.set(1)
-    TextToEncryptLabel = Radiobutton(EncryptFrame, text = "Plain text:", value=1, variable=WhatToEncrypt)
-    FileToEncryptLabel = Radiobutton(EncryptFrame, text = "File:", value=2, variable=WhatToEncrypt)
+    def ChangeWhatTo():
+        if WhatToEncrypt.get() == 1:
+            encryptedTextEntry.configure(state=NORMAL)
+            FilePathEntry.configure(state=DISABLED)
+            BrowseFileButton.configure(state=DISABLED)
+            ClearFileButton.configure(state=DISABLED)
+        else:
+            encryptedTextEntry.configure(state=DISABLED)
+            FilePathEntry.configure(state=NORMAL)
+            BrowseFileButton.configure(state=NORMAL)
+            ClearFileButton.configure(state=NORMAL)
+    def BrowseFileToEncrypt():
+        pass
+    TextToEncryptLabel = Radiobutton(EncryptFrame, text = "Plain text:", value=1, variable=WhatToEncrypt, command=ChangeWhatTo)
+    FileToEncryptLabel = Radiobutton(EncryptFrame, text = "File:", value=2, variable=WhatToEncrypt, command=ChangeWhatTo)
     showCharCheck = Checkbutton(EncryptFrame, text = "Hide characters", variable = showCharState, onvalue = 1, offvalue = 0, command = toggleHideChar)
-    BrowseFileButton = Button(EncryptFrame, text = "Browse...", width=14)
-    CheckFileButton = Button(EncryptFrame, text = "Check file", width=14)
+    BrowseFileButton = Button(EncryptFrame, text = "Browse...", width=14, state=DISABLED, command=BrowseFileToEncrypt)
+    ClearFileButton = Button(EncryptFrame, text = "Clear", width=12, state=DISABLED)
     if showChar == False:
         encryptedTextEntry = Entry(EncryptFrame, width = 48, show = "●", font=("Consolas",9))
         decryptedTextEntry = Entry(DecryptFrame, width = 48, show = "●", state=DISABLED, font=("Consolas",9))
@@ -1059,9 +959,11 @@ try:
         decryptedTextEntry = Entry(DecryptFrame, width = 48, state=DISABLED, font=("Consolas",9))
         TextToEncryptLabel.place(x=8, y=2)
         FileToEncryptLabel.place(x=8, y=46)
-    FilePathEntry = Entry(EncryptFrame, width = 48, font=("Consolas",9))
+    FilePathEntry = Entry(EncryptFrame, width = 48, font=("Consolas",9), state=DISABLED)
+    ClearFileButton.config(command=lambda:FilePathEntry.delete(0, END))
     FilePathEntry.place(x=24, y=66)
     BrowseFileButton.place(x=24, y=91)
+    ClearFileButton.place(x=126, y=91)
     # Log page widgets
     LogClearButton = Button(LogFrame, text = "Clear", width=15)
     LogSaveButton = Button(LogFrame, text = "Save as...", width=15)
@@ -1089,14 +991,12 @@ try:
     RSAprivateLabel = Label(EncryptFrameLabel, text="RSA Private Key: (Asymmetric Encryption)")
     StatusLabelAES = Label(KeySelectFrame, text="Validity: [Blank]", foreground="gray")
     ToleranceLabel = Label(Asymmetric, text="±0", foreground="gray")
-    encoding = StringVar();encoding.set("UTF-8")
     CopyAESbutton = Button(EncryptFrameLabel, width = 10)
     ClearAESbutton = Button(EncryptFrameLabel, width = 9)
     CopyPubKeybutton = Button(EncryptFrameLabel, width = 10)
     ClearPubKeybutton = Button(EncryptFrameLabel, width = 9)
     CopyPrivKeybutton = Button(EncryptFrameLabel, width = 10)
     ClearPrivKeybutton = Button(EncryptFrameLabel, width = 9)
-    SelectEncoding = Combobox(EncryptFrame, width=7, textvariable=encoding, state="readonly", values=("UTF-8","UTF-16","UTF-32","ANSI"))
     scrollbar = Scrollbar(LogFrame)
     scrollbar2 = Scrollbar(EncryptFrameLabel)
     scrollbar3 = Scrollbar(EncryptFrameLabel)
@@ -1110,16 +1010,15 @@ try:
     scrollbar3.config(command=RSAprivateKeyWidget.yview)
     scrollbar4.config(command=RSApublicKeyWidget.yview)
     about = Text(AboutFrame, height = 28, width = 127, font = ("Segoe UI", 9), wrap=WORD)
-    Text = "This program can encrypt and decrypt plain texts and files with AES-128, AES-192, AES-256, Fernet and RSA encryption standarts. AES-128 key is a 16 characters long and base64.urlsafe encoded key, AES-192 key is a 24 characters long and base64.urlsafe encoded key and AES-256 key is a 32 characters long and base64.urlsafe encoded key. RSA keys are base64.urlsafe encoded keys that in any length longer than 128 characters. Program can generate a fresh random AES or RSA key or can use a pre-generated key. In RSA encryption, Public Key is used to encrypt the data and Private Key is required to decrypt the cipher (Encrypted data). Public key can be extracted from Private key. 1024-bit RSA encryption can take 1 second to 10 seconds and 8196-bit RSA encryption can take 1 minute to 12 minutes depending on your computer. AES encryptions are way faster than RSA encryption. Fernet encryption (Legacy Fernet Key) also includes ability to change encryption time. That means you can encrypt your data with a fake date. But AES and RSA doesn't support this. Also you can select Fast mode to encrypt the data faster but bypass encyrption check.\n\nIf you are having problems with program, below information might be helpful to resolve problems:\n\nERR_ENCRYPTER_NOT_WORKING_PROPERLY: This error indicates that encrypter is not working properly even 'abc' text encryption failed. Try encrypting again after restarting the program. If problem persists, please report this problem to me.\n\nERR_INVALID_ENCRYPTION_KEY: This error occures when you selected to enter an encryption key and entered a non-encryption key. Please be sure you entered a AES-128, AES-192, AES-256, Fernet or RSA key that is bigger than 1024-bit; if the key you entered is one of them, be sure it's base64.urlsafe encoded.\n\nERR_UNENCRYPTABLE_TEXT: This error indicates that text you entered to encrypt is not encryptable or includes a illegal character for selected encoding system. Please try another text to encyrpt.\n\nERR_UNABLE_TO_CLEAR: This error pops-up when an unknown error occures while trying to clear the cipher or key from output. Only solution is probably restarting the program. If problem persists, please report this problem to me.\n\nERR_UNABLE_TO_DECRYPT: This errorVersion: {} Build 14\nAuthor: Yılmaz Alpaslan\ngithub.com\Yilmaz4\Encrypt-n-Decrypt".format(version)
-    about.insert(INSERT, Text)
+    AboutText = "This program can encrypt and decrypt plain texts and files with both symmetric key encryption and asymmetric key encryption algorithms. AES-128 key is a 16 characters long and base64.urlsafe encoded key, AES-192 key is a 24 characters long and base64.urlsafe encoded key and AES-256 key is a 32 characters long and base64.urlsafe encoded key. RSA keys are base64.urlsafe encoded keys that in any length longer than 128 characters. Program can generate a fresh random AES or RSA key or can use a pre-generated key. In RSA encryption, Public Key is used to encrypt the data and Private Key is required to decrypt the cipher (Encrypted data). Public key can be extracted from Private key. 1024-bit RSA encryption can take 1 second to 10 seconds and 8196-bit RSA encryption can take 1 minute to 12 minutes depending on your computer. AES encryptions are way faster than RSA encryption. Fernet encryption (Legacy Fernet Key) also includes ability to change encryption time. That means you can encrypt your data with a fake date. But AES and RSA doesn't support this. Also you can select Fast mode to encrypt the data faster but bypass encyrption check.\n\nIf you are having problems with program, below information might be helpful to resolve problems:\n\nERR_ENCRYPTER_NOT_WORKING_PROPERLY: This error indicates that encrypter is not working properly even 'abc' text encryption failed. Try encrypting again after restarting the program. If problem persists, please report this problem to me.\n\nERR_INVALID_ENCRYPTION_KEY: This error occures when you selected to enter an encryption key and entered a non-encryption key. Please be sure you entered a AES-128, AES-192, AES-256, Fernet or RSA key that is bigger than 1024-bit; if the key you entered is one of them, be sure it's base64.urlsafe encoded.\n\nERR_UNENCRYPTABLE_TEXT: This error indicates that text you entered to encrypt is not encryptable or includes a illegal character for selected encoding system. Please try another text to encyrpt.\n\nERR_UNABLE_TO_CLEAR: This error pops-up when an unknown error occures while trying to clear the cipher or key from output. Only solution is probably restarting the program. If problem persists, please report this problem to me.\n\nERR_UNABLE_TO_DECRYPT: This errorVersion: {} Build 14\nAuthor: Yılmaz Alpaslan\ngithub.com\Yilmaz4\Encrypt-n-Decrypt".format(version)
+    about.insert(INSERT, AboutText)
     about.configure(state=DISABLED)
-    SelectEncoding.place(x=301, y=461)
     scrollbar.place(x=762, y=10, height=312)
     encryptedTextEntry.place(x=24, y=22)
     encryptedTextWidget.place(x=9, y=5)
     RSApublicKeyWidget.place(x=9, y=215)
     RSAprivateKeyWidget.place(x=9, y=355)
-    StatusLabelAES.place(x=92, y=83)
+    StatusLabelAES.place(x=92, y=159)
     AESkeyEntry.place(x=9, y=145)
     AESkeyLabel.place(x=8, y=125)
     RSApublicLabel.place(x=8, y=194)
@@ -1154,33 +1053,25 @@ try:
     createToolTip(clearButton, "Press this button to clear the output.")
     createToolTip(TextToEncryptLabel, "Write the text you want to encrypt below.")
     createToolTip(SelectKeyCheck, "If you want to use your key that was already generated, select this radiobutton and enter your key below.")
-    createToolTip(AES128Check, "AES-128 key is a 16 characters long base64 encoded AES key. Currently secure against normal computers but unsecure against powerful quantum computers.\nAlso AES-128 keys will be unsecure for normal computers too in the future.  An AES-128 key has 2¹²⁸ of possible combinations.")
+    createToolTip(AES128Check, "AES-128 key is a 16 characters long base64 encoded AES key. Currently secure against normal computers but unsecure against powerful quantum computers.\nAs an AES-128 key will also be unsecure even against normal computers in near future, it is not recommended for important encryptions. An AES-128 key has 2¹²⁸ of possible combinations.")
     createToolTip(AES192Check, "AES-192 key is a 24 characters long base64 encoded AES key. Ideal for most of encryptions and currently secure against super computers and quantum computers.\nBut while quantum computers are being more powerful, AES-192 keys will be unsecure against quantum computers in the future. An AES-192 key has 2¹⁹² of possible combinations.")
     createToolTip(AES256Check, "AES-256 key is a 32 characters long base64 encoded AES key. Impossible to crack with normal computers and highly secure against quantum computers.\nIt will take about billions of years to brute-force an AES-256 key with a normal computer as an AES-256 key has 2²⁵⁶ of possible combinations.\nIn theory, AES-256 key is 2¹²⁸ times stronger than AES-128 key.")
-    createToolTip(AES352Check, "Legacy Fernet key is a 44 characters long base64 encoded key. In fact, Fernet key is a 32 characters long AES-256 key but after encoding key turns into 44 characters long key.\nFernet key is as secure as AES-256 key. Also Fernet key allows user to define a diffirent encryption time when encrypting and allows to extract encrypted time when decrypting.")
-    def Loop(calledBy=0): # Loop function that will loop forever every 200 miliseconds by default.
-        value = KeyValue.get()
-        if calledBy == 1 and BenchVar.get() == 1 and (KeySelectVar.get() == 1 or (KeySelectVar.get() == 2 and (len(value) == 16 or len(value) == 24 or len(value) == 32 or len(value) == 44))):
-            pass
-        else:
-            if not UpdateValue.get() == 0:root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
-            if BenchVar.get() == 1 and KeySelectVar.get() == 1:Encrypt();root.after(1, Loop)
-            elif BenchVar.get() == 1 and KeySelectVar.get() == 2:
-                if len(value) == 16 or len(value) == 24 or len(value) == 32 or len(value) == 44:
-                    plaintext = bytes("TEST", 'utf-8');iv = Random.new().read(AES.block_size);iv_int = int(binascii.hexlify(iv), 16);ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
-                    try:aes = AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr);ciphertext = aes.encrypt(plaintext)
-                    except:
-                        if not UpdateValue.get() == 0:root.after(UpdateValue.get(), Loop)
-                    else:Encrypt();root.after(1, Loop)
-                else:
-                    if not UpdateValue.get() == 0:root.after(UpdateValue.get(), Loop)
-            else:
-                if not UpdateValue.get() == 0:root.after(UpdateValue.get(), Loop)
-    speedMenu.entryconfig(0, command=lambda:Loop(1))
-    speedMenu.entryconfig(1, command=lambda:Loop(1))
-    speedMenu.entryconfig(2, command=lambda:Loop(1))
-    speedMenu.entryconfig(3, command=lambda:Loop(1))
-    speedMenu.entryconfig(5, command=lambda:Loop(1))
+    # Key bindings (shortcuts)
+    def GoToEncryption():
+        pass
+    def GoToDecryption():
+        pass
+    root.bind('<Control_L>e', GoToEncryption)
+    root.bind('<Control_L>e', GoToEncryption)
+    root.bind('<Return>', Encrypt)
+    def Loop(): # Loop function that will loop forever every 200 miliseconds by default.
+        root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
+        if not UpdateValue.get() == 0:root.after(UpdateValue.get(), Loop)
+    speedMenu.entryconfig(0, command=lambda:Loop())
+    speedMenu.entryconfig(1, command=lambda:Loop())
+    speedMenu.entryconfig(2, command=lambda:Loop())
+    speedMenu.entryconfig(3, command=lambda:Loop())
+    speedMenu.entryconfig(5, command=lambda:Loop())
     Loop();root.mainloop();exit()
 except Exception as e:
     exc_type, exc_obj, exc_tb = exc_info()
