@@ -30,6 +30,7 @@ from tkinterweb import HtmlFrame
 from getpass import getuser
 from ctypes import windll
 from zipfile import ZipFile
+from traceback import format_exc
 
 def is_admin():
     try:return windll.shell32.IsUserAnAdmin()
@@ -128,58 +129,9 @@ class messagebox():
         if s == ABORT:return False
         elif s == RETRY:return True
         elif s == IGNORE:return None
-class Fernet(object):
-    def __init__(self, key: bytes, backend=None):
-        backend = _get_backend(backend);key = base64.urlsafe_b64decode(key)
-        if len(key) != 32:raise ValueError("Fernet key must be 32 url-safe base64-encoded bytes.")
-        self._signing_key = key[:16];self._encryption_key = key[16:];self._backend = backend
-    @classmethod
-    def generate_key(cls) -> bytes:return base64.urlsafe_b64encode(os.urandom(32))
-    def encrypt(self, data: bytes) -> bytes:return self.encrypt_at_time(data, int(time.time()))
-    def encrypt_at_time(self, data: bytes, current_time: int) -> bytes:iv = os.urandom(16);return self._encrypt_from_parts(data, current_time, iv)
-    def _encrypt_from_parts(self, data: bytes, current_time: int, iv: bytes) -> bytes:utils._check_bytes("data", data);padder = padding.PKCS7(algorithms.AES.block_size).padder();padded_data = padder.update(data) + padder.finalize();encryptor = Cipher(algorithms.AES(self._encryption_key), modes.CBC(iv), self._backend).encryptor();ciphertext = encryptor.update(padded_data) + encryptor.finalize();basic_parts = (b"\x80" + struct.pack(">Q", current_time) + iv + ciphertext);h = HMAC(self._signing_key, hashes.SHA256(), backend=self._backend);h.update(basic_parts);hmac = h.finalize();return base64.urlsafe_b64encode(basic_parts + hmac)
-    def decrypt(self, token: bytes, ttl: typing.Optional[int] = None) -> bytes:
-        timestamp, data = Fernet._get_unverified_token_data(token)
-        if ttl is None:time_info = None
-        else:time_info = (ttl, int(time.time()))
-        return self._decrypt_data(data, timestamp, time_info)
-    def decrypt_at_time(
-        self, token: bytes, ttl: int, current_time: int) -> bytes:
-        if ttl is None:raise ValueError("decrypt_at_time() can only be used with a non-None ttl")
-        timestamp, data = Fernet._get_unverified_token_data(token);return self._decrypt_data(data, timestamp, (ttl, current_time))
-    def extract_timestamp(self, token: bytes) -> int:timestamp, data = Fernet._get_unverified_token_data(token);self._verify_signature(data);return timestamp
-    @staticmethod
-    def _get_unverified_token_data(token: bytes) -> typing.Tuple[int, bytes]:
-        utils._check_bytes("token", token)
-        try:data = base64.urlsafe_b64decode(token)
-        except (TypeError, binascii.Error):raise InvalidToken
-        if not data or data[0] != 0x80:raise InvalidToken
-        try:(timestamp,) = struct.unpack(">Q", data[1:9])
-        except struct.error:raise InvalidToken
-        return timestamp, data
-    def _verify_signature(self, data: bytes) -> None:
-        h = HMAC(self._signing_key, hashes.SHA256(), backend=self._backend);h.update(data[:-32])
-        try:h.verify(data[-32:])
-        except InvalidSignature:raise InvalidToken
-    def _decrypt_data(
-        self,
-        data: bytes,
-        timestamp: int,
-        time_info: typing.Optional[typing.Tuple[int, int]],) -> bytes:
-        if time_info is not None:
-            ttl, current_time = time_info
-            if timestamp + ttl < current_time:raise InvalidToken
-            if current_time + _MAX_CLOCK_SKEW < timestamp:raise InvalidToken
-        self._verify_signature(data);iv = data[9:25];ciphertext = data[25:-32];decryptor = Cipher(algorithms.AES(self._encryption_key), modes.CBC(iv), self._backend).decryptor();plaintext_padded = decryptor.update(ciphertext)
-        try:plaintext_padded += decryptor.finalize()
-        except ValueError:raise InvalidToken
-        unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder();unpadded = unpadder.update(plaintext_padded)
-        try:unpadded += unpadder.finalize()
-        except ValueError:raise InvalidToken
-        return unpadded
 appWidth=800;appHeight=550;version="v0.2.0";build="Build 15";root=Tk();root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")));root.resizable(width=FALSE, height=FALSE);root.geometry("{}x{}".format(appWidth, appHeight));root.attributes("-fullscreen", False);root.minsize(appWidth, appHeight)
-"""style = ThemedStyle(root)
-style.set_theme("plastik")"""
+#style = ThemedStyle(root)
+#style.set_theme("plastik")
 MainScreen=ttk.Notebook(root,width=380,height=340);LogFrame=Frame(MainScreen);logTextWidget=Text(LogFrame,height=22,width=107,font=("Consolas",9),state=DISABLED)
 logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ROOT: Created root, started mainloop.\n");logTextWidget.config(state=DISABLED)
 menu=Menu(root);root.config(menu=menu);enterMenu=Menu(menu,tearoff=0);viewMenu=Menu(menu,tearoff=0);titleMenu=Menu(viewMenu,tearoff=0);helpMenu=Menu(menu,tearoff=0);transMenu=Menu(viewMenu,tearoff=0);langMenu=Menu(viewMenu,tearoff=0);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT,"ROOT: Registered menu entries.\n");logTextWidget.config(state=DISABLED);root.wm_iconbitmap("Ico.ico")
@@ -223,8 +175,7 @@ def CheckUpdates():
                 update.update()
                 ProgressBar.configure(maximum=size)
                 update.update()
-            try:
-                file.write(downloadedContent)
+            try:file.write(downloadedContent)
             except Exception as e:
                 if not is_admin():
                     messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: File write operation failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
@@ -250,13 +201,11 @@ def CheckUpdates():
                 if DownloadPathEntry.get()[1:] == "\\":
                     try:os.mkdir(DownloadPathEntry.get())
                     except:pass
-                    with ZipFile("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:
-                        zip_ref.extractall(DownloadPathEntry.get())
+                    with ZipFile("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:zip_ref.extractall(DownloadPathEntry.get())
                 else:
                     try:os.mkdir(DownloadPathEntry.get()+"/")
                     except:pass
-                    with ZipFile("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:
-                        zip_ref.extractall(DownloadPathEntry.get())
+                    with ZipFile("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:zip_ref.extractall(DownloadPathEntry.get())
             ProgressLabel.configure(text="Download progress:");downloadProgress.set(0);finishTime = time.time();messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed sucsessfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
     def Asset0Download():
         if DownloadPathEntry.get()[1:] == "\\":AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
@@ -535,12 +484,69 @@ try:
                     TripleDESencryption(key=GenerateAES(int(TripleVar.get()/8)))
             elif Encryption.index(Encryption.select()) == 1:
                 pass
+    def SaveKey(key):
+        global cipher, Mode, encryptedTextWidget
+        key_to_use = GenerateAES(32)
+        plaintext = bytes(key, "utf-8")
+        iv = Random.new().read(AES.block_size)
+        iv_int = int(binascii.hexlify(iv), 16) 
+        ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+        aes = AES.new(bytes(key_to_use, "utf-8"), AES.MODE_CTR, counter=ctr)
+        ciphertext = aes.encrypt(plaintext)
+        cipher = base64.urlsafe_b64encode(ciphertext).decode()
+        iv_int = int(binascii.hexlify(iv), 16)
+        ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+        aes = AES.new(bytes(key_to_use, "utf-8"), AES.MODE_CTR, counter=ctr)
+        plaintext = aes.decrypt(ciphertext)
+        if plaintext.decode("utf-8") == key:
+            first_part = randint(0, len(cipher))
+            encrypted_key = cipher[:first_part] + key_to_use + cipher[first_part:]
+            with open("Encryption Key.key", encoding = 'utf-8', mode="w") as file:file.write(str(encrypted_key))
+            with open("Encryption Key.key", encoding = 'utf-8', mode="r") as file:
+                index = file.read();index = str(index);where = -1
+                for i in range(0, len(index)):
+                    where += 1
+                    key_to_try = index[where:where+32]
+                    iv_int = int(binascii.hexlify(iv), 16)
+                    ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+                    try:aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CTR, counter=ctr)
+                    except:continue
+                    else:
+                        try:output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")))
+                        except Exception as e:continue
+                        else:
+                            try:
+                                if output_key.decode("utf-8") == key:break
+                            except:continue
+    def GetKey(path):
+        with open(path, encoding = 'utf-8', mode="r") as file:
+            index = file.read();index = str(index);where = -1
+            for i in range(0, len(index)):
+                where += 1
+                key_to_try = index[where:where+32]
+                iv = Random.new().read(AES.block_size)
+                iv_int = int(binascii.hexlify(iv), 16)
+                ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+                try:aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CTR, counter=ctr)
+                except:continue
+                else:
+                    try:output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")))
+                    except Exception as e:continue
+                    else:
+                        try:
+                            if len(output_key) == 16 or len(output_key) == 24 or len(output_key) == 32:break
+                        except:continue
+            if len(output_key) == 16 or len(output_key) == 24 or len(output_key) == 32:return output_key
+            else:
+                with open(path, encoding = 'utf-8', mode="r") as file:
+                    if len(file.read()) == 16 or len(file.read()) == 24 or len(file.read()) == 32:return file.read()
+                    else:return False
     def Copy():
         global encryptedTextWidget
         pyperclip.copy(encryptedTextWidget.get('1.0', END))
         copyed = pyperclip.paste()
         if copyed == (encryptedTextWidget.get('1.0', END)):
-            messagebox.showinfo(" Copied.","Encrypted text copied to clipboard sucsessfully.")
+            messagebox.showinfo("Copied.","Encrypted text copied to clipboard sucsessfully.")
     def Clear():
         global encryptedTextWidget
         try:
@@ -553,67 +559,9 @@ try:
             logTextWidget.config(state=DISABLED)
             messagebox.showerror("ERR_UNABLE_TO_CLEAR","An unknown error occured while trying to clear output. Please try again and if problem persists, please report this problem to me.")
     def CheckEncrypt():
-        global encryptedTextEntry
-        try:
-            textEncrypt = encryptedTextEntry.get()
-            key = Fernet.generate_key()
-            fernet = Fernet(key)
-            encryptedText = fernet.encrypt(textEncrypt.encode())
-            decryptedText = fernet.decrypt(encryptedText).decode()
-        except:
-            logTextWidget.config(state=NORMAL)
-            logTextWidget.insert(INSERT, "ERROR: An error occured when trying to check encrypter.\n")
-            logTextWidget.config(state=DISABLED)
-            messagebox.showerror("ERR_UNABLE_TO_ENCRYPT","An unknown error occured while trying to check encrypter. Please try again and if problem persists, please report this problem to me.")
-            ShutDown()
-        if textEncrypt == decryptedText:
-            logTextWidget.config(state=NORMAL)
-            logTextWidget.insert(INSERT, "SUCSESS: Checked encrypter sucsessfully.\n")
-            logTextWidget.config(state=DISABLED)
-            messagebox.showinfo("Sucsess","Checked encrypter sucsessfully. Encrypter is working properly.")
-        else:
-            tryText = "abc"
-            trykey = Fernet.generate_key()
-            tryfernet = Fernet(trykey)
-            tryEncryptedText = tryfernet.encrypt(tryText.encode())
-            tryDecryptedText = tryfernet.decrypt(tryEncryptedText).decode()
-            if tryText == tryDecryptedText:
-                logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, "WARNING: Entered text is not encryptable.\n")
-                logTextWidget.config(state=DISABLED)
-                messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Entered text is not encryptable. Please report this text to me.")
-            else:
-                logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, "ERROR: An problem occured in encrypter.\n")
-                logTextWidget.config(state=DISABLED)
-                messagebox.showwarning("ERR_ENCRYPTER_NOT_WORKING_PROPERLY","")
+        pass
     def CheckDecrypt():
-        global decryptedTextWidget
-        try:
-            textEncryptget = decryptedTextWidget.get('1.0',END)
-            textEncrypt = bytes(textEncryptget, 'utf-8')
-            key = load_key()
-            fernet = Fernet(key)
-            try:
-                try:
-                    decryptedText = fernet.decrypt(textEncrypt).decode()
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, "SUCSESS: Checked decrypter sucsessfully. Decrypter is working properly.\n")
-                    logTextWidget.config(state=DISABLED)
-                    messagebox.showinfo("Sucsess.","Checked decrypter sucsessfully. Decrypter is working properly.")
-                except:
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, "ERROR: Decryption failed probably because of wrong key.\n")
-                    logTextWidget.config(state=DISABLED)
-                    messagebox.showinfo("ERR_WRONG_KEY","The key inside 'Encryption Key.key' is not the right key to decrypt this data.")
-            except:
-                logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, "ERROR: Checked decrypter. Decrypter is not working properly.\n")
-                logTextWidget.config(state=DISABLED)
-                messagebox.showerror("ERR_UNABLE_TO_DECRYPT","An unknown error occured in decrypter. Please try again.")
-        except:
-            print("ERROR: An error occured when trying to decrypt.")
-            messagebox.showerror("ERR_UNABLE_TO_DECRYPT","Şifre çözücüde bir hata meydana geldi. Lütfen programı yeniden başlatıp tekrar deneyin.")
+        pass
     def load_key():
         try:
             return open("Encryption Key.key", "rb").read()
@@ -623,51 +571,9 @@ try:
             logTextWidget.config(state=DISABLED)
             messagebox.showerror("ERR_UNABLE_TO_READ_FILE","An error occured while trying to get the key from 'Encryption Key.key' file. The file may be missing, corrupt or inaccessable. Please try again; if problem persists, try to run the program as administrator.")
     def FileEncrypt(file, key):
-        fernet = Fernet(bytes(key, 'utf-8'))
-        with open(file, "rb") as file:
-            file_data = file.read()
-        encrypted_data = fernet.encrypt(file_data)
-        with open(file, "wb") as file:
-            file.write(encrypted_data)
+        pass
     def Decrypt():
-        global decryptedTextEntry, decryptedTextWidget, decryptedText, Fail
-        Fail = False
-        try:
-            textEncryptget = decryptedTextWidget.get('1.0',END)
-            textEncrypt = bytes(textEncryptget, 'utf-8')
-            key = load_key()
-            fernet = Fernet(key)
-        except:
-            logTextWidget.config(state=NORMAL)
-            logTextWidget.insert(INSERT, "ERROR: An error occured while trying to use the key inside file.\n")
-            logTextWidget.config(state=DISABLED)
-            messagebox.showerror("ERR_UNABLE_TO_DECRYPT","An error occured while trying to load the key inside 'Encryption Key.key'. Please try again.")
-            Fail = True
-        try:
-            decryptedText = fernet.decrypt(textEncrypt).decode()
-        except:
-            logTextWidget.config(state=NORMAL)
-            logTextWidget.insert(INSERT, "ERROR: Decryption failed probably because of wrong key.\n")
-            logTextWidget.config(state=DISABLED)
-            messagebox.showinfo("ERR_WRONG_KEY","The key inside 'Encryption Key.key' is not the right key to decrypt this data.")
-            Fail = True
-        if decryptedText != "":
-            try:
-                decryptedTextEntry.configure(state=NORMAL)
-                decryptedTextEntry.delete(0, END)
-                decryptedTextEntry.insert(0, decryptedText)
-                decryptedTextEntry.configure(state=DISABLED)
-            except NameError:
-                decryptedTextEntry.configure(state=DISABLED)
-        else:
-            decryptedTextEntry.configure(state=NORMAL)
-            decryptedTextEntry.delete(0, END)
-            decryptedTextEntry.insert(0, decryptedText+"(Blank)")
-            decryptedTextEntry.configure(state=DISABLED)
-        if Fail != True:
-            logTextWidget.config(state=NORMAL)
-            logTextWidget.insert(INSERT, "SUCSESS: Entered encrypted text sucsessfully decrypted.\n")
-            logTextWidget.config(state=DISABLED)
+        pass
     def deCopy():
         global decryptedTextEntry
         pyperclip.copy(decryptedTextEntry.get())
@@ -682,33 +588,6 @@ try:
             print("ERROR: An error occured when trying to clear output text. Program will be terminated.")
             messagebox.showerror(" Hata: ERR_UNABLE_TO_CLEAR","Programda bir hata meydana geldi. Lütfen programı yeniden başlatıp tekrar deneyin.")
             ShutDown()
-    def dePaste():
-        global decryptedTextWidget
-        try:
-            paste = pyperclip.paste()
-            decryptedTextWidget.configure(state=NORMAL)
-            decryptedTextWidget.delete('1.0',END)
-            textEncrypt = bytes(paste, 'utf-8')
-            decryptedTextWidget.insert(INSERT, textEncrypt)
-        except:
-            print("INFO: There is no copyed text in clipboard.")
-            messagebox.showinfo(" Kopyalanmış yazı yok.","Şu anda kopyaladığınız bir yazı ya da şifre yok. Lütfen tekrar kopyalamayı deneyin.")
-    def toggledeHideChar():
-        global decryptedTextWidget
-        if showCharState.get() == 1:
-            showChar = False
-            OldText = encryptedTextEntry.get()
-            decryptedTextWidget.place_forget()
-            decryptedTextWidget = Entry(EncryptFrame, width = 58, show = "*")
-            decryptedTextWidget.insert(0,"{}".format(OldText))
-            decryptedTextWidget.place(x=10, y=10)
-        else:
-            showChar = True
-            OldText = encryptedTextEntry.get()
-            decryptedTextWidget.place_forget()
-            decryptedTextWidget = Entry(EncryptFrame, width = 58)
-            decryptedTextWidget.insert(0,"{}".format(OldText))
-            decryptedTextWidget.place(x=10, y=10)
     def EncryptPage():MainScreen.select(0)
     def DecryptPage():MainScreen.select(2)
     def HelpPage():MainScreen.select(5)
@@ -802,7 +681,7 @@ try:
             StatusLabelAES.configure(foreground="red", text="Validity: Invalid")
     KeyValue = StringVar();KeyValue.trace('w', limitKeyEntry)
     Mode = IntVar();Mode.set(2)
-    Encryption = ttk.Notebook(EncryptFrame, width=355, height=220)
+    Encryption = ttk.Notebook(EncryptFrame, width=355, height=300)
     KeySelectFrame = Frame(Encryption)
     Asymmetric = Frame(Encryption)
     Encryption.add(KeySelectFrame, text="Symmetric Key Encryption")
@@ -847,6 +726,12 @@ try:
     SelectFileCheck = Radiobutton(KeySelectFrame, text="Use this key file:", value=3, variable= KeySelectVar, command=ChangeKeySelection)
     SelectKeyEntry = Entry(KeySelectFrame, width=46, font=("Consolas",9), state=DISABLED, textvariable=KeyValue)
     KeyEntryHideChar = Checkbutton(KeySelectFrame, text="Hide characters", onvalue=1, offvalue=0, variable=KeyHideCharVar, state=DISABLED)
+    KeyFileBrowseButton = Button(KeySelectFrame, text="Browse key file...", width=19)
+    KeyEntryPasteButton = Button(KeySelectFrame, text="Paste", width=12)
+    KeyEntryClearButton = Button(KeySelectFrame, text="Clear", width=10)
+    KeyEntryClearButton.place(x=106, y=209)
+    KeyEntryPasteButton.place(x=17, y=209)
+    KeyFileBrowseButton.place(x=240, y=209)
     KeyEntryHideChar.place(x=244, y=158)
     #OtherOptionsFrame.place(x=10, y=350)
     SelectKeyCheck.place(x=5, y=158)
@@ -869,6 +754,11 @@ try:
                 else:return False
         else:return True
     vcmd = (root.register(validate),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+    # Decrypt frame
+    TextToDecryptLabel = Label(DecryptFrame, text = "Encrypted text:")
+    TextToDecryptEntry = Text(DecryptFrame, width=44, height=6)
+    TextToDecryptLabel.place(x=7, y=2)
+    TextToDecryptEntry.place(x=10, y=23)
     # Menu-bar
     enterMenu.add_command(label = "Encryption", command=EncryptPage, accelerator="Ctrl+E", underline=0)
     enterMenu.add_command(label = "Decryption", command=DecryptPage, accelerator="Ctrl+D", underline=0)
@@ -980,23 +870,16 @@ try:
     RSApublicKeyWidget = Text(EncryptFrameLabel, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="white", relief=SUNKEN)
     RSAprivateKeyWidget = Text(EncryptFrameLabel, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="white", relief=SUNKEN)
     AESkeyEntry = Text(EncryptFrameLabel, width=54, height=1, state=DISABLED, font=("Consolas",9), relief=SUNKEN)
-    decryButton = Button(DecryptFrame, text = "Decrypt", width=22, command=Decrypt)
-    decheckButton = Button(DecryptFrame, text = "Check decryption", width=20, command=CheckDecrypt)
-    decopyButton = Button(DecryptFrame, text = "Copy", width=10, command=deCopy)
-    declearButton = Button(DecryptFrame, text = "Clear", width=9, command=deClear)
-    depasteButton = Button(DecryptFrame, text = "Paste", width=9, command=dePaste)
-    decryptedTextWidget = Text(DecryptFrame, height = 6, width = 58, font = ("Segoe UI", 9))
     AESkeyLabel = Label(EncryptFrameLabel, text="AES/Fernet Key: (Symmetric Encryption)")
     RSApublicLabel = Label(EncryptFrameLabel, text="RSA Public Key: (Asymmetric Encryption)")
     RSAprivateLabel = Label(EncryptFrameLabel, text="RSA Private Key: (Asymmetric Encryption)")
     StatusLabelAES = Label(KeySelectFrame, text="Validity: [Blank]", foreground="gray")
-    ToleranceLabel = Label(Asymmetric, text="±0", foreground="gray")
-    CopyAESbutton = Button(EncryptFrameLabel, width = 10)
-    ClearAESbutton = Button(EncryptFrameLabel, width = 9)
-    CopyPubKeybutton = Button(EncryptFrameLabel, width = 10)
-    ClearPubKeybutton = Button(EncryptFrameLabel, width = 9)
-    CopyPrivKeybutton = Button(EncryptFrameLabel, width = 10)
-    ClearPrivKeybutton = Button(EncryptFrameLabel, width = 9)
+    CopyAESbutton = Button(EncryptFrameLabel, width = 10, text="Copy")
+    ClearAESbutton = Button(EncryptFrameLabel, width = 9, text="Clear")
+    CopyPubKeybutton = Button(EncryptFrameLabel, width = 10, text="Copy")
+    ClearPubKeybutton = Button(EncryptFrameLabel, width = 9, text="Clear")
+    CopyPrivKeybutton = Button(EncryptFrameLabel, width = 10, text="Copy")
+    ClearPrivKeybutton = Button(EncryptFrameLabel, width = 9, text="Clear")
     scrollbar = Scrollbar(LogFrame)
     scrollbar2 = Scrollbar(EncryptFrameLabel)
     scrollbar3 = Scrollbar(EncryptFrameLabel)
@@ -1009,6 +892,10 @@ try:
     scrollbar2.config(command=encryptedTextWidget.yview)
     scrollbar3.config(command=RSAprivateKeyWidget.yview)
     scrollbar4.config(command=RSApublicKeyWidget.yview)
+    CopyAESbutton.place(x=8, y=170)
+    ClearAESbutton.place(x=85, y=170)
+    CopyPubKeybutton.place(x=8, y=309)
+    ClearPubKeybutton.place(x=85, y=309)
     about = Text(AboutFrame, height = 28, width = 127, font = ("Segoe UI", 9), wrap=WORD)
     AboutText = "This program can encrypt and decrypt plain texts and files with both symmetric key encryption and asymmetric key encryption algorithms. AES-128 key is a 16 characters long and base64.urlsafe encoded key, AES-192 key is a 24 characters long and base64.urlsafe encoded key and AES-256 key is a 32 characters long and base64.urlsafe encoded key. RSA keys are base64.urlsafe encoded keys that in any length longer than 128 characters. Program can generate a fresh random AES or RSA key or can use a pre-generated key. In RSA encryption, Public Key is used to encrypt the data and Private Key is required to decrypt the cipher (Encrypted data). Public key can be extracted from Private key. 1024-bit RSA encryption can take 1 second to 10 seconds and 8196-bit RSA encryption can take 1 minute to 12 minutes depending on your computer. AES encryptions are way faster than RSA encryption. Fernet encryption (Legacy Fernet Key) also includes ability to change encryption time. That means you can encrypt your data with a fake date. But AES and RSA doesn't support this. Also you can select Fast mode to encrypt the data faster but bypass encyrption check.\n\nIf you are having problems with program, below information might be helpful to resolve problems:\n\nERR_ENCRYPTER_NOT_WORKING_PROPERLY: This error indicates that encrypter is not working properly even 'abc' text encryption failed. Try encrypting again after restarting the program. If problem persists, please report this problem to me.\n\nERR_INVALID_ENCRYPTION_KEY: This error occures when you selected to enter an encryption key and entered a non-encryption key. Please be sure you entered a AES-128, AES-192, AES-256, Fernet or RSA key that is bigger than 1024-bit; if the key you entered is one of them, be sure it's base64.urlsafe encoded.\n\nERR_UNENCRYPTABLE_TEXT: This error indicates that text you entered to encrypt is not encryptable or includes a illegal character for selected encoding system. Please try another text to encyrpt.\n\nERR_UNABLE_TO_CLEAR: This error pops-up when an unknown error occures while trying to clear the cipher or key from output. Only solution is probably restarting the program. If problem persists, please report this problem to me.\n\nERR_UNABLE_TO_DECRYPT: This errorVersion: {} Build 14\nAuthor: Yılmaz Alpaslan\ngithub.com\Yilmaz4\Encrypt-n-Decrypt".format(version)
     about.insert(INSERT, AboutText)
@@ -1029,13 +916,6 @@ try:
     copyButton.place(x=8, y=100)
     clearButton.place(x=85, y=100)
     about.place(x=10, y=10)
-    decryptedTextEntry.place(x=10, y=150)
-    decryptedTextWidget.place(x=10, y=10)
-    decheckButton.place(x=160, y=117)
-    decryButton.place(x=9, y=117)
-    decopyButton.place(x=10, y=178)
-    declearButton.place(x=87, y=178)
-    depasteButton.place(x=300, y=117)
     logTextWidget.place(x=10, y=10)
     logTextWidget.config(state=NORMAL)
     logTextWidget.insert(INSERT, "ROOT: Created and placed all widgets.\n")
@@ -1043,11 +923,9 @@ try:
     scrollbar2.place(x=376, y=5, height=88)
     scrollbar3.place(x=376, y=355, height=88)
     scrollbar4.place(x=376, y=215, height=88)
-    CopyAESbutton.place(x=100, y=100)
     # Pop-up tooltips
     createToolTip(StatusLabelAES, "This label indicates the validity of the key you entered below.")
     createToolTip(checkButton, "Press this button to check if selected encryption options and key are working.")
-    createToolTip(ToleranceLabel, "This label indicates the tolerance of length of the RSA key that is going to be generated.")
     createToolTip(encryButton, "Press this button to encrypt entered text with selected options and selected key.")
     createToolTip(copyButton, "Press this button to copy the output (encrypted text) into clipboard.")
     createToolTip(clearButton, "Press this button to clear the output.")
@@ -1076,4 +954,4 @@ try:
 except Exception as e:
     exc_type, exc_obj, exc_tb = exc_info()
     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-    messagebox.showerror("UNEXPECTED_ERROR_OCCURED","{} error occured at line {} in file '{}'\n\nError details: {}\n\nProgram will be terminated.".format(exc_type, exc_tb.tb_lineno, fname, e))
+    messagebox.showerror("UNEXPECTED_ERROR_OCCURED","{}".format(format_exc()))
