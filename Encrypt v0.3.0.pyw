@@ -6,7 +6,8 @@ if not __import__("sys").version_info.major == 2:
     from tkinter.commondialog import Dialog
     from tkinter import ttk
     from tkinter.ttk import *
-else:exit()
+else:
+    exit()
 
 from Crypto.Cipher import AES, PKCS1_OAEP, DES3
 from Crypto.Util import Counter
@@ -21,7 +22,6 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.hmac import HMAC
 
 from requests import get, head
-from urllib.request import urlretrieve
 from webbrowser import open as openweb
 from random import randint, choice
 from string import ascii_letters, digits
@@ -33,117 +33,218 @@ from zipfile import ZipFile
 from traceback import format_exc
 
 def is_admin():
-    try:return windll.shell32.IsUserAnAdmin()
-    except:return False
+    try:
+        return windll.shell32.IsUserAnAdmin()
+    except:
+        return False
 _MAX_CLOCK_SKEW = 60
-ERROR = "error";INFO = "info";QUESTION = "question";WARNING = "warning";ABORTRETRYIGNORE = "abortretryignore";OK = "ok";OKCANCEL = "okcancel";RETRYCANCEL = "retrycancel";YESNO = "yesno";YESNOCANCEL = "yesnocancel";ABORT = "abort";RETRY = "retry";IGNORE = "ignore";OK = "ok";CANCEL = "cancel";YES = "yes";NO = "no";_UNIXCONFDIR = '/etc';_ver_stages={'dev':10,'alpha':20,'a':20,'beta':30,'b':30,'c':40,'RC':50,'rc':50,'pl': 200, 'p': 200,};uname_result = collections.namedtuple("uname_result","system node release version machine processor");_uname_cache = None;_WIN32_CLIENT_RELEASES = {(5, 0): "2000",(5, 1): "XP",(5, 2): "2003Server",(5, None): "post2003",(6, 0): "Vista",(6, 1): "7",(6, 2): "8",(6, 3): "8.1",(6, None): "post8.1",(10, 0): "10",(10, None): "post10",}
-class Message(Dialog):command  = "tk_messageBox"
-try:DEV_NULL = os.devnull
+ERROR = "error"
+INFO = "info"
+QUESTION = "question"
+WARNING = "warning"
+ABORTRETRYIGNORE = "abortretryignore"
+OK = "ok"
+OKCANCEL = "okcancel"
+RETRYCANCEL = "retrycancel"
+YESNO = "yesno"
+YESNOCANCEL = "yesnocancel"
+ABORT = "abort"
+RETRY = "retry"
+IGNORE = "ignore"
+OK = "ok"
+CANCEL = "cancel"
+YES = "yes"
+NO = "no"
+_UNIXCONFDIR = '/etc'
+_ver_stages={'dev':10,'alpha':20,'a':20,'beta':30,'b':30,'c':40,'RC':50,'rc':50,'pl': 200, 'p': 200,}
+uname_result = collections.namedtuple("uname_result","system node release version machine processor")
+_uname_cache = None
+_WIN32_CLIENT_RELEASES = {(5, 0): "2000",(5, 1): "XP",(5, 2): "2003Server",(5, None): "post2003",(6, 0): "Vista",(6, 1): "7",(6, 2): "8",(6, 3): "8.1",(6, None): "post8.1",(10, 0): "10",(10, None): "post10",}
+class Message(Dialog):
+    command  = "tk_messageBox"
+try:
+    DEV_NULL = os.devnull
 except AttributeError:
-    if platform in ('dos', 'win32', 'win16'):DEV_NULL = 'NUL'
-    else:DEV_NULL = '/dev/null'
+    if platform in ('dos', 'win32', 'win16'):
+        DEV_NULL = 'NUL'
+    else:
+        DEV_NULL = '/dev/null'
 def _node(default=''):
-    try:import socket
-    except ImportError:return default
-    try:return socket.gethostname()
-    except OSError:return default
+    try:
+        import socket
+    except ImportError:
+        return default
+    try:
+        return socket.gethostname()
+    except OSError:
+        return default
 def win32_ver(release='', version='', csd='', ptype=''):
-    try:from sys import getwindowsversion
-    except ImportError:return release, version, csd, ptype
-    winver = getwindowsversion();maj, min, build = winver.platform_version or winver[:3];version = '{0}.{1}.{2}'.format(maj, min, build);release = (_WIN32_CLIENT_RELEASES.get((maj, min)) or _WIN32_CLIENT_RELEASES.get((maj, None)) or release)
+    try:
+        from sys import getwindowsversion
+    except ImportError:
+        return release, version, csd, ptype
+    winver = getwindowsversion()
+    maj, min, build = winver.platform_version or winver[:3]
+    version = '{0}.{1}.{2}'.format(maj, min, build)
+    release = (_WIN32_CLIENT_RELEASES.get((maj, min)) or _WIN32_CLIENT_RELEASES.get((maj, None)) or release)
     if winver[:2] == (maj, min):
-        try:csd = 'SP{}'.format(winver.service_pack_major)
+        try:
+            csd = 'SP{}'.format(winver.service_pack_major)
         except AttributeError:
-            if csd[:13] == 'Service Pack ':csd = 'SP' + csd[13:]
+            if csd[:13] == 'Service Pack ':
+                csd = 'SP' + csd[13:]
     try:
         import winreg
-    except ImportError:pass
+    except ImportError:
+        pass
     else:
         try:
             cvkey = r'SOFTWARE\Microsoft\Windows NT\CurrentVersion'
-            with winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, cvkey) as key:ptype = winreg.QueryValueEx(key, 'CurrentType')[0]
-        except OSError:pass
+            with winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, cvkey) as key:
+                ptype = winreg.QueryValueEx(key, 'CurrentType')[0]
+        except OSError:
+            pass
     return release, version, csd, ptype
 def uname():
     global _uname_cache;no_os_uname=0
-    if _uname_cache is not None:return _uname_cache
+    if _uname_cache is not None:
+        return _uname_cache
     processor=''
-    try:system, node, release, version, machine = os.uname()
-    except AttributeError:no_os_uname=1
+    try:
+        system, node, release, version, machine = os.uname()
+    except AttributeError:
+        no_os_uname=1
     if no_os_uname or not list(filter(None,(system,node,release,version,machine))):
-        if no_os_uname:system = platform;release='';version='';node=_node();machine=''
+        if no_os_uname:
+            system = platform
+            release=''
+            version=''
+            node=_node()
+            machine=''
         use_syscmd_ver=1
         if system=='win32':
             release,version,csd,ptype=win32_ver()
-            if release and version:use_syscmd_ver=0
+            if release and version:
+                use_syscmd_ver=0
             if not machine:
-                if "PROCESSOR_ARCHITEW6432" in os.environ:machine = os.environ.get("PROCESSOR_ARCHITEW6432",'')
-                else:machine = os.environ.get('PROCESSOR_ARCHITECTURE','')
-            if not processor:processor = os.environ.get('PROCESSOR_IDENTIFIER',machine)
+                if "PROCESSOR_ARCHITEW6432" in os.environ:
+                    machine = os.environ.get("PROCESSOR_ARCHITEW6432",'')
+                else:
+                    machine = os.environ.get('PROCESSOR_ARCHITECTURE','')
+            if not processor:
+                processor = os.environ.get('PROCESSOR_IDENTIFIER',machine)
         if system in ('win32', 'win16'):
             if not version:
-                if system=='win32':version='32bit'
-                else:version='16bit'
+                if system=='win32':
+                    version='32bit'
+                else:
+                    version='16bit'
             system='Windows'
-    if system=='unknown':system=''
-    if node=='unknown':node=''
-    if release=='unknown':release=''
-    if version=='unknown':version=''
-    if machine=='unknown':machine=''
-    if processor=='unknown':processor=''
-    if system=='Microsoft' and release=='Windows':system='Windows';release='Vista'
+    if system=='unknown':
+        system=''
+    if node=='unknown':
+        node=''
+    if release=='unknown':
+        release=''
+    if version=='unknown':
+        version=''
+    if machine=='unknown':
+        machine=''
+    if processor=='unknown':
+        processor=''
+    if system=='Microsoft' and release=='Windows':
+        system='Windows';release='Vista'
     _uname_cache=uname_result(system,node,release,version,machine,processor)
     return _uname_cache
 def _show(title=None, message=None, _icon=None, _type=None, **options):
-    if _icon and "icon" not in options:    options["icon"] = _icon
-    if _type and "type" not in options:    options["type"] = _type
-    if title:   options["title"] = title
-    if message: options["message"] = message
+    if _icon and "icon" not in options:
+        options["icon"] = _icon
+    if _type and "type" not in options:
+        options["type"] = _type
+    if title:
+        options["title"] = title
+    if message:
+        options["message"] = message
     res = Message(**options).show()
     if isinstance(res, bool):
-        if res:return YES
+        if res:
+            return YES
         return NO
     return str(res)
-class InvalidToken(Exception):pass
+class InvalidToken(Exception):
+    pass
 class messagebox():
     def showinfo(title=None, message=None, **options):
-        if InfoVar.get() == 1:return _show(title, message, INFO, OK, **options)
+        if InfoVar.get() == 1:
+            return _show(title, message, INFO, OK, **options)
     def showwarning(title=None, message=None, **options):
-        if WarningVar.get() == 1:return _show(title, message, WARNING, OK, **options)
+        if WarningVar.get() == 1:
+            return _show(title, message, WARNING, OK, **options)
     def showerror(title=None, message=None, **options):
-        if ErrorVar.get() == 1:return _show(title, message, ERROR, OK, **options)
-    def askquestion(title=None, message=None, **options):return _show(title, message, QUESTION, YESNO, **options)
-    def askokcancel(title=None, message=None, **options):s = _show(title, message, QUESTION, OKCANCEL, **options);return s == OK
+        if ErrorVar.get() == 1:
+            return _show(title, message, ERROR, OK, **options)
+    def askquestion(title=None, message=None, **options):
+        return _show(title, message, QUESTION, YESNO, **options)
+    def askokcancel(title=None, message=None, **options):
+        s = _show(title, message, QUESTION, OKCANCEL, **options);return s == OK
     def askyesno(title=None, message=None, **options):
         s = _show(title, message, QUESTION, YESNO, **options)
-        if s == YES:return True
-        else:return False
+        if s == YES:
+            return True
+        else:
+            return False
     def askyesnocancel(title=None, message=None, **options):
         s = _show(title, message, QUESTION, YESNOCANCEL, **options)
         s = str(s)
-        if s == CANCEL:return None
+        if s == CANCEL:
+            return None
         return s == YES
-    def askretrycancel(title=None, message=None, **options):s = _show(title, message, WARNING, RETRYCANCEL, **options);return s == RETRY
+    def askretrycancel(title=None, message=None, **options):
+        s = _show(title, message, WARNING, RETRYCANCEL, **options)
+        return s == RETRY
     def abortretryignore(title=None, message=None, **options):
         s = _show(title, message, WARNING, ABORTRETRYIGNORE, **options)
-        if s == ABORT:return False
-        elif s == RETRY:return True
-        elif s == IGNORE:return None
-appWidth=800;appHeight=550;version="v0.2.0";build="Build 15";root=Tk();root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")));root.resizable(width=FALSE, height=FALSE);root.geometry("{}x{}".format(appWidth, appHeight));root.attributes("-fullscreen", False);root.minsize(appWidth, appHeight)
-#style = ThemedStyle(root)
-#style.set_theme("plastik")
-MainScreen=ttk.Notebook(root,width=380,height=340);LogFrame=Frame(MainScreen);logTextWidget=Text(LogFrame,height=22,width=107,font=("Consolas",9),state=DISABLED)
-logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ROOT: Created root, started mainloop.\n");logTextWidget.config(state=DISABLED)
-menu=Menu(root);root.config(menu=menu);enterMenu=Menu(menu,tearoff=0);viewMenu=Menu(menu,tearoff=0);titleMenu=Menu(viewMenu,tearoff=0);helpMenu=Menu(menu,tearoff=0);transMenu=Menu(viewMenu,tearoff=0);langMenu=Menu(viewMenu,tearoff=0);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT,"ROOT: Registered menu entries.\n");logTextWidget.config(state=DISABLED);root.wm_iconbitmap("Ico.ico")
+        if s == ABORT:
+            return False
+        elif s == RETRY:
+            return True
+        elif s == IGNORE:
+            return None
+appWidth=800
+appHeight=550
+version="v0.3.0 [BETA]"
+build="Build 15"
+root=Tk()
+root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
+root.resizable(width=FALSE, height=FALSE)
+root.geometry("{}x{}".format(appWidth, appHeight))
+root.attributes("-fullscreen", False)
+root.minsize(appWidth, appHeight)
+root.wm_iconbitmap("Ico.ico")
+MainScreen=ttk.Notebook(root,width=380,height=340)
+LogFrame=Frame(MainScreen)
+logTextWidget=Text(LogFrame,height=22,width=107,font=("Consolas",9),state=DISABLED)
+menu=Menu(root)
+root.config(menu=menu)
+enterMenu=Menu(menu,tearoff=0)
+viewMenu=Menu(menu,tearoff=0)
+titleMenu=Menu(viewMenu,tearoff=0)
+helpMenu=Menu(menu,tearoff=0)
+transMenu=Menu(viewMenu,tearoff=0)
+langMenu=Menu(viewMenu,tearoff=0)
 def CheckUpdates():
-    def Asset0DownloadBrowser():openweb(Version.json()["assets"][0]["browser_download_url"])
-    def Asset1DownloadBrowser():openweb(Version.json()["assets"][1]["browser_download_url"])
+    def Asset0DownloadBrowser():
+        openweb(Version.json()["assets"][0]["browser_download_url"])
+    def Asset1DownloadBrowser():
+        openweb(Version.json()["assets"][1]["browser_download_url"])
     def AssetDownload(downloadPath, ProgressBar, downloadProgress, ProgressLabel, size, ExtractContent, Asset=0, chunkSize=2197318):
         startTime = time.time()
         size = int(size)
         MBFACTOR = float(1 << 20)
-        try:os.remove(downloadPath)
-        except:pass
+        try:
+            os.remove(downloadPath)
+        except:
+            pass
         ProgressBar.configure(maximum=int(chunkSize))
         downloadProgress.set(0)
         downloadedSize = 0
@@ -161,8 +262,10 @@ def CheckUpdates():
                     downloadURL = get(Version.json()["assets"][int(Asset)]["browser_download_url"], headers={"Range":"bytes={}-{}".format(chunk, chunk+chunkSize-1)})
                 except Exception as e:
                     messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub server connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
-                    try:os.remove(downloadPath)
-                    except:pass
+                    try:
+                        os.remove(downloadPath)
+                    except:
+                        pass
                     break
                 ProgressLabel.configure(text="Download progress: {:.1f} MB ({:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize), int(size)/MBFACTOR))
                 update.update()
@@ -172,60 +275,86 @@ def CheckUpdates():
                 update.update()
                 downloadProgress.set(downloadProgress.get()+len(downloadURL.content))
                 update.update()
-                update.update()
                 ProgressBar.configure(maximum=size)
                 update.update()
-            try:file.write(downloadedContent)
+            try:
+                file.write(downloadedContent)
             except Exception as e:
                 if not is_admin():
                     messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: File write operation failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
-                    try:os.remove(downloadPath)
-                    except:pass
+                    try:
+                        os.remove(downloadPath)
+                    except:
+                        pass
                 else:
                     messagebox.showerror("ERR_INVALID_PATH","An error occured while trying to write downloaded data to '{}' path. Path may be invalid or inaccessible. Please select another path.")
-                    try:os.remove(downloadPath)
-                    except:pass
+                    try:
+                        os.remove(downloadPath)
+                    except:
+                        pass
         except Exception as e:
             if not is_admin():
                 messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: File write operation failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
-                try:os.remove(downloadPath)
-                except:pass
+                try:
+                    os.remove(downloadPath)
+                except:
+                    pass
             else:
                 messagebox.showerror("ERR_INVALID_PATH","An error occured while trying to write downloaded data to '{}' path. Path may be invalid or inaccessible. Please select another path.")
-                try:os.remove(downloadPath)
-                except:pass
+                try:
+                    os.remove(downloadPath)
+                except:
+                    pass
         else:
             ProgressLabel.configure(text="Download progress: Finishing download operation...")
             update.update()
             if ExtractContent.get() == 1:
                 if DownloadPathEntry.get()[1:] == "\\":
-                    try:os.mkdir(DownloadPathEntry.get())
-                    except:pass
-                    with ZipFile("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:zip_ref.extractall(DownloadPathEntry.get())
+                    try:
+                        os.mkdir(DownloadPathEntry.get())
+                    except:
+                        pass
+                    with ZipFile("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:
+                        zip_ref.extractall(DownloadPathEntry.get())
                 else:
-                    try:os.mkdir(DownloadPathEntry.get()+"/")
-                    except:pass
+                    try:
+                        os.mkdir(DownloadPathEntry.get()+"/")
+                    except:
+                        pass
                     with ZipFile("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:zip_ref.extractall(DownloadPathEntry.get())
             ProgressLabel.configure(text="Download progress:");downloadProgress.set(0);finishTime = time.time();messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed sucsessfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
     def Asset0Download():
-        if DownloadPathEntry.get()[1:] == "\\":AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
-        else:AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
+        if DownloadPathEntry.get()[1:] == "\\":
+            AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
+        else:
+            AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
     def Asset1Download():
-        if DownloadPathEntry.get()[1:] == "\\":AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2, ExtractContent=ExtractContent)
-        else:AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2, ExtractContent=ExtractContent)
-    try:Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
-    except Exception as e:messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub API. Please check your internet connection and firewall settings.\n\nError details: {}".format(e));logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API connection failed ({})\n".format(e));logTextWidget.config(state=DISABLED)
+        if DownloadPathEntry.get()[1:] == "\\":
+            AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2, ExtractContent=ExtractContent)
+        else:
+            AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2, ExtractContent=ExtractContent)
+    try:
+        Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
+    except Exception as e:
+        messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub API. Please check your internet connection and firewall settings.\n\nError details: {}".format(e))
+        logTextWidget.config(state=NORMAL)
+        logTextWidget.insert(INSERT, "ERROR: GitHub API connection failed ({})\n".format(e))
+        logTextWidget.config(state=DISABLED)
     else:
         MBFACTOR = float(1 << 20)
-        try:response = head(Version.json()["assets"][0]["browser_download_url"], allow_redirects=True)
-        except KeyError as e:messagebox.showerror("ERR_API_LIMIT_EXCEED","An error occured while trying to connect to the GitHub API servers. GitHub API limit may be exceed as servers has only 5000 connections limit per hour and per IP adress. Please try again after 1 hours.");logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API limit exceed, connection failed. ({})\n".format(e));logTextWidget.config(state=DISABLED)
+        try:
+            response = head(Version.json()["assets"][0]["browser_download_url"], allow_redirects=True)
+        except KeyError as e:
+            messagebox.showerror("ERR_API_LIMIT_EXCEED","An error occured while trying to connect to the GitHub API servers. GitHub API limit may be exceed as servers has only 5000 connections limit per hour and per IP adress. Please try again after 1 hours.");logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "ERROR: GitHub API limit exceed, connection failed. ({})\n".format(e));logTextWidget.config(state=DISABLED)
         else:
             size = response.headers.get('content-length', 0)
             response2 = head(Version.json()["assets"][1]["browser_download_url"], allow_redirects=True)
             size2 = response2.headers.get('content-length', 0)
-            if Version.json()["tag_name"] == version:messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+            if Version.json()["tag_name"] == version:
+                messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
             else:
-                if version.replace("b","").replace("v","").replace(".","") > (Version.json()["tag_name"]).replace("b","").replace("v","").replace(".",""):messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+                if version.replace("b","").replace("v","").replace(".","") > (Version.json()["tag_name"]).replace("b","").replace("v","").replace(".",""):
+                    messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
                 else:
                     def TestDirectory():
                         pass
@@ -272,8 +401,10 @@ def CheckUpdates():
                     DownloadLink2.configure(state=DISABLED)
                     AssetSize = Label(DownloadLinks, text=("{:.2f} MB".format(int(size) / MBFACTOR)), foreground="#474747")
                     AssetSize2 = Label(DownloadLinks, text=("{:.2f} MB".format(int(size2) / MBFACTOR)), foreground="#474747")
-                    if response.headers.get('Last-Modified', 0)[:17][16] == " ":DateVariable = response.headers.get('Last-Modified', 0)[:16]
-                    else:DateVariable = response.headers.get('Last-Modified', 0)[:17]
+                    if response.headers.get('Last-Modified', 0)[:17][16] == " ":
+                        DateVariable = response.headers.get('Last-Modified', 0)[:16]
+                    else:
+                        DateVariable = response.headers.get('Last-Modified', 0)[:17]
                     Date = Label(DownloadLinks, text=DateVariable, foreground="gray")
                     Date2 = Label(DownloadLinks, text=DateVariable, foreground="gray")
                     downloadProgress = IntVar();downloadProgress.set(0)
@@ -337,21 +468,49 @@ def GenerateAES(Length):
     key = ""
     for i in range(Length):
         random = randint(1,32)
-        if random<25:key+=str(choice(ascii_letters))
-        elif random>=25 and random<30:key+=str(choice(digits))
-        elif random>=30:key+=str(choice("!'^+%&/()=?_<>#${[]}\|__--$__--"))
+        if random < 25:
+            key += str(choice(ascii_letters))
+        elif random >= 25 and random < 30:
+            key += str(choice(digits))
+        elif random >= 30:
+            key += str(choice("!'^+%&/()=?_<>#${[]}\|__--$__--"))
     return key
 try:
-    def ShutDown():root.destroy()
-    showCharState = IntVar(value=0);deshowCharState = IntVar(value=0);showChar = True;genPassword = IntVar();genPassword.set(16);Base64Check = IntVar();Base64Check.set(0);ToolTipActive = False
+    def ShutDown():
+        root.destroy()
+    showCharState = IntVar(value=0)
+    deshowCharState = IntVar(value=0)
+    showChar = True
+    genPassword = IntVar()
+    genPassword.set(16)
+    Base64Check = IntVar()
+    Base64Check.set(0)
+    ToolTipActive = False
     class ToolTip(object):
-        def __init__(self,widget):self.widget=widget;self.tipwindow=None;self.id=None;self.x=self.y = 0
+        def __init__(self,widget):
+            self.widget = widget
+            self.tipwindow = None
+            self.id = None
+            self.x = self.y = 0
         def showtip(self, text, widget, event):
-            global tw;self.text = text
-            if self.tipwindow or not self.text:return
-            x, y, cx, cy = self.widget.bbox("insert");x = x + root.winfo_pointerx() + 2;y = y + cy + root.winfo_pointery() + 15;self.tipwindow = tw = Toplevel(self.widget);tw.wm_overrideredirect(1);tw.wm_geometry("+%d+%d" % (x, y));tw.attributes("-alpha", 0);label = Label(tw, text=self.text, justify=LEFT, relief=SOLID, borderwidth=1, foreground="#6f6f6f", background="white");label.pack(ipadx=1);tw.attributes("-alpha", root.attributes("-alpha"))
-            try:tw.tk.call("::tk::unsupported::MacWindowStyle", "style", tw._w, "help", "noActivates")
-            except TclError:pass
+            global tw
+            self.text = text
+            if self.tipwindow or not self.text:
+                return
+            x, y, cx, cy = self.widget.bbox("insert")
+            x = x + root.winfo_pointerx() + 2
+            y = y + cy + root.winfo_pointery() + 15
+            self.tipwindow = tw = Toplevel(self.widget)
+            tw.wm_overrideredirect(1)
+            tw.wm_geometry("+%d+%d" % (x, y))
+            tw.attributes("-alpha", 0)
+            label = Label(tw, text=self.text, justify=LEFT, relief=SOLID, borderwidth=1, foreground="#6f6f6f", background="white")
+            label.pack(ipadx=1)
+            tw.attributes("-alpha", root.attributes("-alpha"))
+            try:
+                tw.tk.call("::tk::unsupported::MacWindowStyle", "style", tw._w, "help", "noActivates")
+            except TclError:
+                pass
         def hidetip(self, widget):
             try:
                 tw = self.tipwindow
@@ -360,43 +519,141 @@ try:
                 def fade_away():
                     alpha = tw.attributes("-alpha")
                     if alpha > 0:
-                        alpha -= .1;tw.attributes("-alpha", alpha);tw.after(10, fade_away)
-                    else:tw.destroy()
+                        alpha -= .1
+                        tw.attributes("-alpha", alpha)
+                        tw.after(10, fade_away)
+                    else:
+                        tw.destroy()
                 fade_away()
-            except:root.after_cancel(task)
+            except:
+                root.after_cancel(task)
     def createToolTip(widget, text):
-        global task;toolTip = ToolTip(widget)
+        global task
+        toolTip = ToolTip(widget)
         def enter(event):
-            if not ToolTipVar.get() == 0:global task;task = root.after(1000, toolTip.showtip, text, widget, event)
-        def leave(event):toolTip.hidetip(widget)
-        def press(event):toolTip.hidetip(widget)
-        widget.bind('<Enter>',enter);widget.bind('<Leave>',leave);widget.bind('<Button-1>',press)
+            if not ToolTipVar.get() == 0:
+                global task
+                task = root.after(1000, toolTip.showtip, text, widget, event)
+        def leave(event):
+            toolTip.hidetip(widget)
+        widget.bind('<Enter>', enter)
+        widget.bind('<Leave>', leave)
+        widget.bind('<Button-1>', leave)
     def toggleHideChar():
         global encryptedTextEntry
-        if showCharState.get()==1:showChar=False;OldText = encryptedTextEntry.get();encryptedTextEntry.place_forget();encryptedTextEntry = Entry(EncryptFrame, width = 50, show = "●", font=("Consolas",9));encryptedTextEntry.insert(0,"{}".format(OldText));encryptedTextEntry.place(x=10, y=22)
-        else:showChar=True;OldText=encryptedTextEntry.get();encryptedTextEntry.place_forget();encryptedTextEntry=Entry(EncryptFrame,width=50,font=("Consolas",9));encryptedTextEntry.insert(0,"{}".format(OldText));encryptedTextEntry.place(x=10, y=22)
+        if showCharState.get() == 1:
+            encryptedTextEntry.configure(show = "●")
+        else:
+            encryptedTextEntry.config(show = "")
     def GeneratePassword():
-        global key;keylength=int(genPassword.get())
-        if keylength>=8196:
-            choice=messagebox.askyesno("Entered key length is longer than 8196.","Entered key length is longer than 8196. Longer than 8196 key generations can cause program to stop responding. Are you sure want to continute?")
-            if choice==True:keylength=keylength/1024;keylength=(96*8)*keylength;key=base64.urlsafe_b64encode(os.urandom(int(keylength)));return key
-        else:keylength=keylength/128;keylength=keylength*96;key=base64.urlsafe_b64encode(os.urandom(int(keylength)));return key
-    def Encrypt(event=None):
+        global key
+        keylength = int(genPassword.get())
+        if keylength >= 8196:
+            choice = messagebox.askyesno("Entered key length is longer than 8196.","Entered key length is longer than 8196. Longer than 8196 key generations can cause program to stop responding. Are you sure want to continute?")
+            if choice:
+                keylength = keylength / 1024
+                keylength = (96 * 8) * keylength
+                key = base64.urlsafe_b64encode(os.urandom(int(keylength)))
+                return key
+        else:
+            keylength = keylength / 128
+            keylength = keylength * 96
+            key = base64.urlsafe_b64encode(os.urandom(int(keylength)))
+            return key
+    def RedirectEncryption(event=None):
+        pass
+    def FileEncrypt():
+        if AlgSel.get() == 1:
+            with open(FilePathEntry.get(), encoding="Latin-1", mode="r") as file:
+                index = file.read().encode()
+                key = GenerateAES(int(RandomKeyVar.get()/8)).encode("utf-8")
+                iv = Random.new().read(AES.block_size)
+                iv_int = int(binascii.hexlify(iv), 16) 
+                ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+                try:
+                    aes = AES.new(key, AES.MODE_CTR, counter=ctr)
+                except:
+                    logTextWidget.config(state=NORMAL)
+                    logTextWidget.insert(INSERT, "ERROR: An error occured while trying to define entered key into AES.\n")
+                    logTextWidget.config(state=DISABLED)
+                    messagebox.showerror("ERR_UNABLE_TO_DEFINE_KEY","An error occured while trying to define entered key into AES. Key might invalid for AES (Advanced Encryption Standard). Please write a valid AES-128, AES-192, AES-256 or legacy Fernet. If key is already one of them, please check you entered right.")
+                ciphertext = aes.encrypt(index)
+                cipher = base64.urlsafe_b64encode(ciphertext).decode()
+                if cipher == "":
+                    cipher = "[Blank]"
+                iv = Random.new().read(AES.block_size)
+                iv_int = int(binascii.hexlify(iv), 16)
+                ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+                aes = AES.new(key, AES.MODE_CTR, counter=ctr)
+                plaintext = aes.decrypt(ciphertext)
+                print(plaintext)
+                if plaintext == index:
+                    encryptedTextWidget.configure(state=NORMAL)
+                    encryptedTextWidget.delete('1.0', END)
+                    encryptedTextWidget.insert(INSERT, cipher)
+                    if cipher == "[Blank]":
+                        encryptedTextWidget.configure(state=DISABLED, fg="gray")
+                    else:
+                        encryptedTextWidget.configure(state=DISABLED, fg="black")
+                    AESkeyEntry.configure(state=NORMAL)
+                    AESkeyEntry.delete('1.0', END)
+                    AESkeyEntry.insert('1.0', key)
+                    AESkeyEntry.configure(state=DISABLED)
+                    RSApublicKeyWidget.configure(state=NORMAL)
+                    RSApublicKeyWidget.delete('1.0', END)
+                    RSApublicKeyWidget.configure(state=DISABLED)
+                    RSAprivateKeyWidget.configure(state=NORMAL)
+                    RSAprivateKeyWidget.delete('1.0', END)
+                    RSAprivateKeyWidget.configure(state=DISABLED)
+                    logTextWidget.config(state=NORMAL)
+                    logTextWidget.insert(INSERT, "SUCSESS: Specified file sucsessfully encrypted using AES-{} symmetric key encryption.\n".format(len(key)*8))
+                    logTextWidget.config(state=DISABLED)
+                else:
+                    logTextWidget.config(state=NORMAL)
+                    logTextWidget.insert(INSERT, "WARNING: Specified file is not encryptable.\n")
+                    logTextWidget.config(state=DISABLED)
+                    messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Specified file is not encryptable. Please report this text to me.")
+        if AlgSel.get() == 2:
+            with open(FilePathEntry.get(), encoding="Latin-1", mode="w") as file:
+                index = file.read()
+    def Encrypt():
         if MainScreen.tab(MainScreen.select(), "text") == "Encryption":
             global encryptedTextEntry, encryptedTextWidget, key, KeySelectVar
             def RSAencryption(public, private, plaintext):
-                try:ciphertext=PKCS1_OAEP.new(public).encrypt(bytes(plaintext,"utf-8"))
-                except ValueError:messagebox.showwarning("ERR_PLAIN_TEXT_IS_TOO_LONG","The text you entered to encrypt is too long with {} encoding for RSA-{} asymmetric encryption. Please select a longer RSA key to encrypt this data like RSA-{} or RSA-{}".format("utf-8", RSAkeyVar.get(), RSAkeyVar.get()*2, RSAkeyVar.get()*4))
-                cipher=base64.urlsafe_b64encode(ciphertext).decode()
-                if cipher=="":cipher="[Blank]"
+                try:
+                    ciphertext=PKCS1_OAEP.new(public).encrypt(bytes(plaintext,"utf-8"))
+                except ValueError:
+                    messagebox.showwarning("ERR_PLAIN_TEXT_IS_TOO_LONG","The text you entered to encrypt is too long with {} encoding for RSA-{} asymmetric encryption. Please select a longer RSA key to encrypt this data like RSA-{} or RSA-{}".format("utf-8", RSAkeyVar.get(), RSAkeyVar.get()*2, RSAkeyVar.get()*4))
+                cipher = base64.urlsafe_b64encode(ciphertext).decode()
+                if cipher == "":
+                    cipher="[Blank]"
                 if Mode.get()==2:
-                    output=PKCS1_OAEP.new(RSA.import_key(private)).decrypt(ciphertext).decode("utf-8")
-                    if output == encryptedTextEntry.get():encryptedTextWidget.configure(state=NORMAL, fg="black");encryptedTextWidget.delete('1.0', END);encryptedTextWidget.insert(INSERT, cipher);encryptedTextWidget.configure(state=DISABLED);RSApublicKeyWidget.configure(state=NORMAL);RSApublicKeyWidget.delete('1.0', END);RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode());RSApublicKeyWidget.configure(state=DISABLED);RSAprivateKeyWidget.configure(state=NORMAL);RSAprivateKeyWidget.delete('1.0', END);RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode());RSAprivateKeyWidget.configure(state=DISABLED);AESkeyEntry.configure(state=NORMAL);AESkeyEntry.delete('1.0', END);AESkeyEntry.configure(state=DISABLED);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using RSA-{} symmetric key encryption.\n".format(RSAkeyVar.get()));logTextWidget.config(state=DISABLED)
-                    else:pass
+                    output = PKCS1_OAEP.new(RSA.import_key(private)).decrypt(ciphertext).decode("utf-8")
+                    if output == encryptedTextEntry.get():
+                        encryptedTextWidget.configure(state=NORMAL, fg="black")
+                        encryptedTextWidget.delete('1.0', END)
+                        encryptedTextWidget.insert(INSERT, cipher)
+                        encryptedTextWidget.configure(state=DISABLED)
+                        RSApublicKeyWidget.configure(state=NORMAL)
+                        RSApublicKeyWidget.delete('1.0', END)
+                        RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode())
+                        RSApublicKeyWidget.configure(state=DISABLED)
+                        RSAprivateKeyWidget.configure(state=NORMAL)
+                        RSAprivateKeyWidget.delete('1.0', END)
+                        RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode())
+                        RSAprivateKeyWidget.configure(state=DISABLED)
+                        AESkeyEntry.configure(state=NORMAL)
+                        AESkeyEntry.delete('1.0', END)
+                        AESkeyEntry.configure(state=DISABLED)
+                        logTextWidget.config(state=NORMAL)
+                        logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using RSA-{} symmetric key encryption.\n".format(RSAkeyVar.get()))
+                        logTextWidget.config(state=DISABLED)
+                    else:
+                        pass
                 elif Mode.get()==1:encryptedTextWidget.configure(state=NORMAL);encryptedTextWidget.delete('1.0',END);encryptedTextWidget.insert(INSERT, cipher);encryptedTextWidget.configure(state=DISABLED);RSApublicKeyWidget.configure(state=NORMAL);RSApublicKeyWidget.delete('1.0', END);RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode());RSApublicKeyWidget.configure(state=DISABLED);RSAprivateKeyWidget.configure(state=NORMAL);RSAprivateKeyWidget.delete('1.0', END);RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode());RSAprivateKeyWidget.configure(state=DISABLED);AESkeyEntry.configure(state=NORMAL);AESkeyEntry.delete('1.0', END);AESkeyEntry.configure(state=DISABLED);logTextWidget.config(state=NORMAL);logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using RSA-{} symmetric key encryption without checking.\n".format(RSAkeyVar.get()));logTextWidget.config(state=DISABLED)
-            def AESencryption(key,plaintext=encryptedTextEntry.get()):
+            def AESencryption(key=None):
                 global cipher,Mode,encryptedTextWidget
-                plaintext = bytes(plaintext, "utf-8")
+                plaintext = bytes(encryptedTextEntry.get(), "utf-8")
                 iv = Random.new().read(AES.block_size)
                 iv_int = int(binascii.hexlify(iv), 16) 
                 ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
@@ -411,6 +668,7 @@ try:
                     messagebox.showerror("ERR_UNABLE_TO_DEFINE_KEY","An error occured while trying to define entered key into AES. Key might invalid for AES (Advanced Encryption Standard). Please write a valid AES-128, AES-192, AES-256 or legacy Fernet. If key is already one of them, please check you entered right.")
                 if cipher == "":
                     cipher = "[Blank]"
+                iv = Random.new().read(AES.block_size)
                 iv_int = int(binascii.hexlify(iv), 16)
                 ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
                 aes = AES.new(key, AES.MODE_CTR, counter=ctr)
@@ -437,31 +695,27 @@ try:
                     logTextWidget.insert(INSERT, "SUCSESS: Entered text sucsessfully encrypted using AES-{} symmetric key encryption.\n".format(len(key)*8))
                     logTextWidget.config(state=DISABLED)
                 else:
-                    AESencryption(key, "abc")
-                    if plaintext.decode("utf-8") == encryptedTextEntry.get():
-                        logTextWidget.config(state=NORMAL)
-                        logTextWidget.insert(INSERT, "WARNING: Entered text is not encryptable.\n")
-                        logTextWidget.config(state=DISABLED)
-                        messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Entered text is not encryptable. Please report this text to me.")
-                    else:
-                        logTextWidget.config(state=NORMAL)
-                        logTextWidget.insert(INSERT, "ERROR: An problem occured in encrypter.\n")
-                        logTextWidget.config(state=DISABLED)
-                        messagebox.showerror("ERR_ENCRYPTER_NOT_WORKING_PROPERLY","There is a problem occured in encrypter. Both entered text and 'abc' text failed encryption. Please try again and if problem persists, please report this problem to me.")
-            def TripleDESencryption(key,plaintext=encryptedTextEntry.get()):
+                    logTextWidget.config(state=NORMAL)
+                    logTextWidget.insert(INSERT, "WARNING: Entered text is not encryptable.\n")
+                    logTextWidget.config(state=DISABLED)
+                    messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Entered text is not encryptable. Please report this text to me.")
+            def TripleDESencryption(key=None,plaintext=encryptedTextEntry.get(),source=1):
                 iv = Random.new().read(DES3.block_size)
                 cipher_encrypt = DES3.new(key, DES3.MODE_OFB, iv)
                 raw_encrypted_text = cipher_encrypt.encrypt(plaintext.encode("utf-8"))
                 encrypted_text = base64.urlsafe_b64encode(raw_encrypted_text).decode("utf-8")
-                if encrypted_text == "":encrypted_text = "[Blank]"
+                if encrypted_text == "":
+                    encrypted_text = "[Blank]"
                 cipher = DES3.new(key, DES3.MODE_OFB, iv)
                 decrypted_text = cipher.decrypt(raw_encrypted_text).decode("utf-8")
                 if plaintext == decrypted_text:
                     encryptedTextWidget.configure(state=NORMAL)
                     encryptedTextWidget.delete('1.0', END)
                     encryptedTextWidget.insert(INSERT, encrypted_text)
-                    if encrypted_text == "[Blank]":encryptedTextWidget.configure(state=DISABLED, fg="gray")
-                    else:encryptedTextWidget.configure(state=DISABLED, fg="black")
+                    if encrypted_text == "[Blank]":
+                        encryptedTextWidget.configure(state=DISABLED, fg="gray")
+                    else:
+                        encryptedTextWidget.configure(state=DISABLED, fg="black")
                     AESkeyEntry.configure(state=NORMAL)
                     AESkeyEntry.delete('1.0', END)
                     AESkeyEntry.insert('1.0', key)
@@ -477,13 +731,17 @@ try:
                     logTextWidget.config(state=DISABLED)
                 else:
                     pass
-            if Encryption.index(Encryption.select()) == 0:
-                if AlgSel.get() == 1:
-                    AESencryption(key=GenerateAES(int(RandomKeyVar.get()/8)).encode("utf-8"))
-                elif AlgSel.get() == 2:
-                    TripleDESencryption(key=GenerateAES(int(TripleVar.get()/8)))
-            elif Encryption.index(Encryption.select()) == 1:
-                pass
+            if WhatToEncrypt.get() == 1:
+                if Encryption.index(Encryption.select()) == 0:
+                    if AlgSel.get() == 1:
+                        AESencryption(key=GenerateAES(int(RandomKeyVar.get()/8)).encode("utf-8"))
+                    elif AlgSel.get() == 2:
+                        TripleDESencryption(key=GenerateAES(int(TripleVar.get()/8)))
+                elif Encryption.index(Encryption.select()) == 1:
+                    pass
+            elif WhatToEncrypt.get() == 2:
+                if Encryption.index(Encryption.select()) == 0:
+                    FileEncrypt()
     def SaveKey(key):
         global cipher, Mode, encryptedTextWidget
         key_to_use = GenerateAES(32)
@@ -501,46 +759,66 @@ try:
         if plaintext.decode("utf-8") == key:
             first_part = randint(0, len(cipher))
             encrypted_key = cipher[:first_part] + key_to_use + cipher[first_part:]
-            with open("Encryption Key.key", encoding = 'utf-8', mode="w") as file:file.write(str(encrypted_key))
+            with open("Encryption Key.key", encoding = 'utf-8', mode="w") as file:
+                file.write(str(encrypted_key))
             with open("Encryption Key.key", encoding = 'utf-8', mode="r") as file:
-                index = file.read();index = str(index);where = -1
+                index = file.read()
+                index = str(index)
+                where = -1
                 for i in range(0, len(index)):
                     where += 1
                     key_to_try = index[where:where+32]
                     iv_int = int(binascii.hexlify(iv), 16)
                     ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
-                    try:aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CTR, counter=ctr)
-                    except:continue
+                    try:
+                        aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CTR, counter=ctr)
+                    except:
+                        continue
                     else:
-                        try:output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")))
-                        except Exception as e:continue
+                        try:
+                            output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")))
+                        except Exception as e:
+                            continue
                         else:
                             try:
-                                if output_key.decode("utf-8") == key:break
-                            except:continue
+                                if output_key.decode("utf-8") == key:
+                                    break
+                            except:
+                                continue
     def GetKey(path):
         with open(path, encoding = 'utf-8', mode="r") as file:
-            index = file.read();index = str(index);where = -1
+            index = file.read()
+            index = str(index)
+            where = -1
             for i in range(0, len(index)):
                 where += 1
                 key_to_try = index[where:where+32]
                 iv = Random.new().read(AES.block_size)
                 iv_int = int(binascii.hexlify(iv), 16)
                 ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
-                try:aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CTR, counter=ctr)
-                except:continue
+                try:
+                    aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CTR, counter=ctr)
+                except:
+                    continue
                 else:
-                    try:output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")))
-                    except Exception as e:continue
+                    try:
+                        output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")))
+                    except Exception as e:
+                        continue
                     else:
                         try:
-                            if len(output_key) == 16 or len(output_key) == 24 or len(output_key) == 32:break
-                        except:continue
-            if len(output_key) == 16 or len(output_key) == 24 or len(output_key) == 32:return output_key
+                            if len(output_key) == 16 or len(output_key) == 24 or len(output_key) == 32:
+                                break
+                        except:
+                            continue
+            if len(output_key) == 16 or len(output_key) == 24 or len(output_key) == 32:
+                return output_key
             else:
                 with open(path, encoding = 'utf-8', mode="r") as file:
-                    if len(file.read()) == 16 or len(file.read()) == 24 or len(file.read()) == 32:return file.read()
-                    else:return False
+                    if len(file.read()) == 16 or len(file.read()) == 24 or len(file.read()) == 32:
+                        return file.read()
+                    else:
+                        return False
     def Copy():
         global encryptedTextWidget
         pyperclip.copy(encryptedTextWidget.get('1.0', END))
@@ -562,40 +840,25 @@ try:
         pass
     def CheckDecrypt():
         pass
-    def load_key():
-        try:
-            return open("Encryption Key.key", "rb").read()
-        except:
-            logTextWidget.config(state=NORMAL)
-            logTextWidget.insert(INSERT, "ERROR: An error occured while trying to get the key from 'Encryption Key.key' file.\n")
-            logTextWidget.config(state=DISABLED)
-            messagebox.showerror("ERR_UNABLE_TO_READ_FILE","An error occured while trying to get the key from 'Encryption Key.key' file. The file may be missing, corrupt or inaccessable. Please try again; if problem persists, try to run the program as administrator.")
-    def FileEncrypt(file, key):
-        pass
     def Decrypt():
         pass
     def deCopy():
-        global decryptedTextEntry
-        pyperclip.copy(decryptedTextEntry.get())
-        messagebox.showinfo(" Kopyalandı.","Şifresi çözülmüş yazı başarıyla panoya kopyalandı.")
+        pass
     def deClear():
-        global decryptedTextEntry
-        try:
-            decryptedTextEntry.configure(state=NORMAL)
-            decryptedTextEntry.delete(0, END)
-            decryptedTextEntry.configure(state=DISABLED)
-        except:
-            print("ERROR: An error occured when trying to clear output text. Program will be terminated.")
-            messagebox.showerror(" Hata: ERR_UNABLE_TO_CLEAR","Programda bir hata meydana geldi. Lütfen programı yeniden başlatıp tekrar deneyin.")
-            ShutDown()
-    def EncryptPage():MainScreen.select(0)
-    def DecryptPage():MainScreen.select(2)
-    def HelpPage():MainScreen.select(5)
+        pass
+    def EncryptPage():
+        MainScreen.select(0)
+    def DecryptPage():
+        MainScreen.select(2)
+    def HelpPage():
+        MainScreen.select(5)
     Alpha = IntVar()
     Alpha.set(100)
     def changeAlpha(alpha):
-        if alpha != 100:alpha = '0.{}'.format(alpha)
-        else:alpha = 1;Alpha.set(100)
+        if alpha != 100:
+            alpha = '0.{}'.format(alpha)
+        else:
+            alpha = 1;Alpha.set(100)
         root.attributes("-alpha", float(alpha))
     logTextWidget.config(state=NORMAL)
     logTextWidget.insert(INSERT, "ROOT: Registered define commands.\n")
@@ -633,10 +896,13 @@ try:
             AES256Check.config(state=DISABLED)
             SelectKeyEntry.config(state=NORMAL)
             KeyEntryHideChar.config(state=NORMAL)
+            KeyEntryClearButton.config(state=NORMAL)
+            KeyEntryPasteButton.config(state=NORMAL)
+            KeyFileBrowseButton.config(state=NORMAL)
         elif KeySelectVar.get() == 1:
             AESCheck.configure(state=NORMAL)
             TripleDESCheck.config(state=NORMAL)
-            SelectKeyEntry.config(state=NORMAL)
+            SelectKeyEntry.config(state=DISABLED)
             if AlgSel.get() == 1:
                 AES128Check.config(state=NORMAL)
                 AES192Check.config(state=NORMAL)
@@ -650,37 +916,46 @@ try:
                 Triple128Check.config(state=NORMAL)
                 Triple192Check.config(state=NORMAL)
             KeyEntryHideChar.config(state=DISABLED)
-        elif KeySelectVar.get() == 3:
-            AESCheck.configure(state=DISABLED)
-            TripleDESCheck.config(state=DISABLED)
-            Triple128Check.config(state=DISABLED)
-            Triple192Check.config(state=DISABLED)
-            AES128Check.config(state=DISABLED)
-            AES192Check.config(state=DISABLED)
-            AES256Check.config(state=DISABLED)
-            SelectKeyEntry.config(state=DISABLED)
-            KeyEntryHideChar.config(state=DISABLED)
+            KeyEntryClearButton.config(state=DISABLED)
+            KeyEntryPasteButton.config(state=DISABLED)
+            KeyFileBrowseButton.config(state=DISABLED)
     def limitKeyEntry(*args):
-        global value;value = KeyValue.get()
-        if len(value) > 44: KeyValue.set(value[:44])
-        iv = Random.new().read(AES.block_size);iv_int = int(binascii.hexlify(iv), 16);ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
-        if len(value) == 0:StatusLabelAES.configure(foreground="gray", text="Validity: [Blank]")
+        global value
+        value = KeyValue.get()
+        if len(value) > 44:
+            KeyValue.set(value[:44])
+        iv = Random.new().read(AES.block_size)
+        iv_int = int(binascii.hexlify(iv), 16)
+        ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
+        if len(value) == 0:
+            StatusLabelAES.configure(foreground="gray", text="Validity: [Blank]")
         elif len(value) == 16: # AES-128
-            try:AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
-            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-128 Key")
-            else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-128 Key")
+            try:
+                AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
+            except:
+                StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-128 Key")
+            else:
+                StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-128 Key")
         elif len(value) == 24: # AES-192
-            try:AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
-            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-192 Key")
-            else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-192 Key")
+            try:
+                AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
+            except:
+                StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-192 Key")
+            else:
+                StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-192 Key")
         elif len(value) == 32: # AES-256
-            try:AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
-            except:StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
-            else:StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
+            try:
+                AES.new(bytes(value, 'utf-8'), AES.MODE_CTR, counter=ctr)
+            except:
+                StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
+            else:
+                StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
         else:
             StatusLabelAES.configure(foreground="red", text="Validity: Invalid")
-    KeyValue = StringVar();KeyValue.trace('w', limitKeyEntry)
-    Mode = IntVar();Mode.set(2)
+    KeyValue = StringVar()
+    KeyValue.trace('w', limitKeyEntry)
+    Mode = IntVar()
+    Mode.set(2)
     Encryption = ttk.Notebook(EncryptFrame, width=355, height=300)
     KeySelectFrame = Frame(Encryption)
     Asymmetric = Frame(Encryption)
@@ -726,12 +1001,12 @@ try:
     SelectFileCheck = Radiobutton(KeySelectFrame, text="Use this key file:", value=3, variable= KeySelectVar, command=ChangeKeySelection)
     SelectKeyEntry = Entry(KeySelectFrame, width=46, font=("Consolas",9), state=DISABLED, textvariable=KeyValue)
     KeyEntryHideChar = Checkbutton(KeySelectFrame, text="Hide characters", onvalue=1, offvalue=0, variable=KeyHideCharVar, state=DISABLED)
-    KeyFileBrowseButton = Button(KeySelectFrame, text="Browse key file...", width=19)
-    KeyEntryPasteButton = Button(KeySelectFrame, text="Paste", width=12)
-    KeyEntryClearButton = Button(KeySelectFrame, text="Clear", width=10)
-    KeyEntryClearButton.place(x=106, y=209)
-    KeyEntryPasteButton.place(x=17, y=209)
-    KeyFileBrowseButton.place(x=240, y=209)
+    KeyFileBrowseButton = Button(KeySelectFrame, text="Browse key file...", width=19, state=DISABLED)
+    KeyEntryPasteButton = Button(KeySelectFrame, text="Paste", width=12, state=DISABLED)
+    KeyEntryClearButton = Button(KeySelectFrame, text="Clear", width=10, state=DISABLED, command=lambda:SelectKeyEntry.delete(0, END))
+    KeyEntryClearButton.place(x=106, y=207)
+    KeyEntryPasteButton.place(x=17, y=207)
+    KeyFileBrowseButton.place(x=223, y=207)
     KeyEntryHideChar.place(x=244, y=158)
     #OtherOptionsFrame.place(x=10, y=350)
     SelectKeyCheck.place(x=5, y=158)
@@ -744,15 +1019,19 @@ try:
     Triple128Check.place(x=27, y=120)
     Triple192Check.place(x=27, y=139)
     #SelectFileCheck.place(x=5, y=163)
-    SelectKeyEntry.place(x=18, y=183)
+    SelectKeyEntry.place(x=18, y=181)
     Encryption.place(x=10, y=130)
     def validate(action, index, value_if_allowed, prior_value, text, validation_type, trigger_type, widget_name):
         if value_if_allowed:
-            try:int(value_if_allowed);return True
+            try:
+                int(value_if_allowed);return True
             except ValueError:
-                if text == "":return True
-                else:return False
-        else:return True
+                if text == "":
+                    return True
+                else:
+                    return False
+        else:
+            return True
     vcmd = (root.register(validate),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
     # Decrypt frame
     TextToDecryptLabel = Label(DecryptFrame, text = "Encrypted text:")
@@ -768,7 +1047,14 @@ try:
     enterMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=CheckUpdates, underline=10)
     enterMenu.add_separator()
     enterMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda:root.destroy())
-    InfoVar = IntVar();WarningVar = IntVar();ErrorVar = IntVar();InfoVar.set(1);WarningVar.set(1);ErrorVar.set(1);ToolTipVar = IntVar();ToolTipVar.set(1)
+    InfoVar = IntVar()
+    WarningVar = IntVar()
+    ErrorVar = IntVar()
+    InfoVar.set(1)
+    WarningVar.set(1)
+    ErrorVar.set(1)
+    ToolTipVar = IntVar()
+    ToolTipVar.set(1)
     # View menu
     viewMenu.add_checkbutton(label = "Show tooltips on hover", accelerator="Ctrl+Alt+T", onvalue=1, offvalue=0, variable=ToolTipVar, underline=5)
     viewMenu.add_separator()
@@ -784,7 +1070,8 @@ try:
     titleMenu.add_checkbutton(label = "Show date in titlebar")
     titleMenu.add_separator()
     speedMenu = Menu(titleMenu, tearoff=0)
-    UpdateValue = IntVar();UpdateValue.set(200)
+    UpdateValue = IntVar()
+    UpdateValue.set(200)
     speedMenu.add_radiobutton(label = "Fast", value=50, variable=UpdateValue)
     speedMenu.add_radiobutton(label = "Moderate", value=200, variable=UpdateValue)
     speedMenu.add_radiobutton(label = "Slow", value=800, variable=UpdateValue)
@@ -944,13 +1231,16 @@ try:
     root.bind('<Return>', Encrypt)
     def Loop(): # Loop function that will loop forever every 200 miliseconds by default.
         root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
-        if not UpdateValue.get() == 0:root.after(UpdateValue.get(), Loop)
+        if not UpdateValue.get() == 0:
+            root.after(UpdateValue.get(), Loop)
     speedMenu.entryconfig(0, command=lambda:Loop())
     speedMenu.entryconfig(1, command=lambda:Loop())
     speedMenu.entryconfig(2, command=lambda:Loop())
     speedMenu.entryconfig(3, command=lambda:Loop())
     speedMenu.entryconfig(5, command=lambda:Loop())
-    Loop();root.mainloop();exit()
+    Loop()
+    root.mainloop()
+    exit()
 except Exception as e:
     exc_type, exc_obj, exc_tb = exc_info()
     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
