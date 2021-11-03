@@ -79,8 +79,4 @@ from tkinter import Tk # Used to close tkinter window after save-as.
 ## Version status:
 >### Current stable release: `v0.2.2`
 >
->### Current beta release in development: `v0.2.3`
->
->### Current major release in development: `v0.3.0`
-
-I am planning to release `v0.2.3` next week and `v0.3.0` next month.
+>### Current release in development: `v0.3.0`
