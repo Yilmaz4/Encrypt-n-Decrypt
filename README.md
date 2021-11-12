@@ -2,9 +2,9 @@
 [![made-with-python](https://img.shields.io/badge/Made%20With-Python%203%2E7%2E9-396F9E.svg?style=plastic)](https://www.python.org/)
 [![made-for-windows](https://img.shields.io/badge/Made%20For-Windows-00A4E3.svg?style=plastic)](https://www.python.org/)
 [![GitHub license](https://img.shields.io/badge/License-MIT-A10000?style=plastic)](https://github.com/Yilmaz4/Encrypt-n-Decrypt/blob/master/LICENSE)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-Paused-orange.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-Yes-3C9E44.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 [![Open Source?](https://img.shields.io/badge/Open%20Source%3F-Of%20Course%21%20%E2%9D%A4-3C9E44.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
-[![Stable?](https://img.shields.io/badge/Release-v0%2E2%2E2%20%7C%20Stable-009e0a.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+[![Stable?](https://img.shields.io/badge/Release-v0%2E2%2E2%20%7C%20Stable-3C9E44.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 
 [//]: <> (009e0a Stable | ffc700 Prerelease | ff0000 Beta)
 
@@ -79,8 +79,4 @@ from tkinter import Tk # Used to close tkinter window after save-as.
 ## Version status:
 >### Current stable release: `v0.2.2`
 >
->### Current beta release in development: `v0.2.3`
->
->### Current major release in development: `v0.3.0`
-
-I am planning to release `v0.2.3` next week and `v0.3.0` next month.
+>### Current release in development: `v0.3.0`
