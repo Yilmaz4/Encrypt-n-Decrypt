@@ -1,4 +1,5 @@
 
+
 try:
     import pyperclip, os, base64, time, collections
 
@@ -221,7 +222,7 @@ class messagebox():
             return None
 try:
     appWidth = 800
-    appHeight = 560
+    appHeight = 600
     version = "0.2.1"
     build = "Build 15"
     root=Tk()
@@ -1183,7 +1184,7 @@ try:
     KeyValue.trace('w', limitKeyEntry)
     Mode = IntVar()
     Mode.set(2)
-    Encryption = ttk.Notebook(EncryptFrame, width=355, height=300)
+    Encryption = ttk.Notebook(EncryptFrame, width=355, height=280)
     KeySelectFrame = Frame(Encryption)
     Asymmetric = Frame(Encryption)
     Encryption.add(KeySelectFrame, text="Symmetric Key Encryption")
@@ -1266,7 +1267,7 @@ try:
     SelectKeyEntry.place(x=18, y=181)
     SelAlgAESradio.place(x=16, y=235)
     SelAlg3DESradio.place(x=16, y=254)
-    Encryption.place(x=10, y=125)
+    Encryption.place(x=10, y=155)
     def validate(action, index, value_if_allowed, prior_value, text, validation_type, trigger_type, widget_name):
         if value_if_allowed:
             try:
@@ -1426,19 +1427,31 @@ try:
             BrowseFileButton.configure(state=DISABLED)
             ClearFileButton.configure(state=DISABLED)
             showCharCheck.configure(state=NORMAL)
+            PasteTextButton.configure(state=NORMAL)
+            ClearTextButton.configure(state=NORMAL)
         else:
             encryptedTextEntry.configure(state=DISABLED)
             FilePathEntry.configure(state=NORMAL)
             BrowseFileButton.configure(state=NORMAL)
             ClearFileButton.configure(state=NORMAL)
             showCharCheck.configure(state=DISABLED)
+            PasteTextButton.configure(state=DISABLED)
+            ClearTextButton.configure(state=DISABLED)
     def BrowseFileToEncrypt():
         global FilePathEntry
         files = [("All files","*.*")]
         filePath = filedialog.askopenfilename(title = "Open file to encrypt", filetypes=files)
         FilePathEntry.delete(0, END)
         FilePathEntry.insert(0, filePath)
+    def PasteTextCommand():
+        encryptedTextEntry.delete(0, END)
+        if not str(pyperclip.paste()).replace(" ","") == "":
+            encryptedTextEntry.insert(0, str(pyperclip.paste()))
+            return
+        return
     TextToEncryptLabel = Radiobutton(EncryptFrame, text = "Plain text:", value=1, variable=WhatToEncrypt, command=ChangeWhatTo)
+    PasteTextButton = Button(EncryptFrame, text = "Paste", width=14, state=NORMAL, command=PasteTextCommand)
+    ClearTextButton = Button(EncryptFrame, text = "Clear", width=14, state=NORMAL, command=lambda:encryptedTextEntry.delete(0, END))
     FileToEncryptLabel = Radiobutton(EncryptFrame, text = "File:", value=2, variable=WhatToEncrypt, command=ChangeWhatTo)
     showCharCheck = Checkbutton(EncryptFrame, text = "Hide characters", variable = showCharState, onvalue = 1, offvalue = 0, command = toggleHideChar)
     BrowseFileButton = Button(EncryptFrame, text = "Browse...", width=14, state=DISABLED, command=BrowseFileToEncrypt)
@@ -1446,16 +1459,18 @@ try:
     if showChar == False:
         encryptedTextEntry = Entry(EncryptFrame, width = 48, show = "●", font=("Consolas",9))
         TextToEncryptLabel.place(x=8, y=2)
-        FileToEncryptLabel.place(x=8, y=46)
+        FileToEncryptLabel.place(x=8, y=76)
     else:
         encryptedTextEntry = Entry(EncryptFrame, width = 48, font=("Consolas",9))
         TextToEncryptLabel.place(x=8, y=2)
-        FileToEncryptLabel.place(x=8, y=46)
+        FileToEncryptLabel.place(x=8, y=76)
     FilePathEntry = Entry(EncryptFrame, width = 48, font=("Consolas",9), state=DISABLED)
     ClearFileButton.config(command=lambda:FilePathEntry.delete(0, END))
-    FilePathEntry.place(x=24, y=66)
-    BrowseFileButton.place(x=23, y=93)
-    ClearFileButton.place(x=126, y=93)
+    FilePathEntry.place(x=24, y=96)
+    BrowseFileButton.place(x=23, y=123)
+    ClearFileButton.place(x=124, y=123)
+    PasteTextButton.place(x=23, y=49)
+    ClearTextButton.place(x=124, y=49)
     # Log page widgets
     LogClearButton = Button(LogFrame, text = "Clear", width=15)
     LogSaveButton = Button(LogFrame, text = "Save as...", width=15)
@@ -1522,9 +1537,9 @@ try:
     AESkeyLabel.place(x=8, y=125)
     RSApublicLabel.place(x=8, y=194)
     RSAprivateLabel.place(x=8, y=334)
-    checkButton.place(x=116, y=460)
-    encryButton.place(x=9, y=460)
-    showCharCheck.place(x=261, y=1)
+    checkButton.place(x=116, y=500)
+    encryButton.place(x=9, y=500)
+    showCharCheck.place(x=261, y=50)
     copyButton.place(x=8, y=100)
     clearButton.place(x=85, y=100)
     about.place(x=10, y=10)
