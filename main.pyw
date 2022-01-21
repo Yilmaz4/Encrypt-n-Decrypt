@@ -100,6 +100,9 @@ CANCEL = "cancel"
 YES = "yes"
 NO = "no"
 
+class Message(Dialog):
+    command  = "tk_messageBox"
+
 def _show(title=None, message=None, _icon=None, _type=None, **options):
     if _icon and "icon" not in options:
         options["icon"] = _icon
