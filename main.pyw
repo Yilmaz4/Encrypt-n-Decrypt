@@ -11,7 +11,7 @@
   ██    ████    ██    ████         ██
 
 
-Copyright 2021 Yilmaz Alpaslan
+Copyright 2021-2022 Yilmaz Alpaslan
 
 Permission is hereby granted, free ofy person obtaining a copy of this
 software and associated documentation files (the "Software"), to deal in the Software
@@ -117,35 +117,44 @@ def _show(title=None, message=None, _icon=None, _type=None, **options):
     return str(res)
 
 class messagebox():
+    @staticmethod
     def showinfo(title=None, message=None, **options):
         if InfoVar.get() == 1:
             return _show(title, message, INFO, OK, **options)
+    @staticmethod
     def showwarning(title=None, message=None, **options):
         if WarningVar.get() == 1:
             return _show(title, message, WARNING, OK, **options)
+    @staticmethod
     def showerror(title=None, message=None, **options):
         if ErrorVar.get() == 1:
             return _show(title, message, ERROR, OK, **options)
+    @staticmethod
     def askquestion(title=None, message=None, **options):
         return _show(title, message, QUESTION, YESNO, **options)
+    @staticmethod
     def askokcancel(title=None, message=None, **options):
         s = _show(title, message, QUESTION, OKCANCEL, **options)
         return s == OK
+    @staticmethod
     def askyesno(title=None, message=None, **options):
         s = _show(title, message, QUESTION, YESNO, **options)
         if s == YES:
             return True
         else:
             return False
+    @staticmethod
     def askyesnocancel(title=None, message=None, **options):
         s = _show(title, message, QUESTION, YESNOCANCEL, **options)
         s = str(s)
         if s == CANCEL:
             return None
         return s == YES
+    @staticmethod
     def askretrycancel(title=None, message=None, **options):
         s = _show(title, message, WARNING, RETRYCANCEL, **options)
         return s == RETRY
+    @staticmethod
     def abortretryignore(title=None, message=None, **options):
         s = _show(title, message, WARNING, ABORTRETRYIGNORE, **options)
         if s == ABORT:
@@ -1005,13 +1014,13 @@ try:
 
     def CheckEncrypt():
         pass
-    def EncryptPage(event=None):
+    def EncryptPage(*args, **kwargs):
         MainScreen.select(0)
-    def DecryptPage(event=None):
+    def DecryptPage(*args, **kwargs):
         MainScreen.select(1)
-    def LogsPage(event=None):
+    def LogsPage(*args, **kwargs):
         MainScreen.select(2)
-    def HelpPage(event=None):
+    def HelpPage(*args, **kwargs):
         MainScreen.select(3)
 
     Alpha = IntVar()
