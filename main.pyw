@@ -759,12 +759,12 @@ try:
                     logTextWidget.config(state=DISABLED)
                     messagebox.showerror("ERR_UNABLE_TO_DEFINE_KEY","An error occured while trying to define entered key into 3DES. Key might invalid for 3DES (Triple Data Encryption Standard). Either select to generate a new key or try another key.")
                     return
-                encrypted_raw = iv + des.encrypt(plaintext.encode("utf-8"))
+                encrypted_raw = iv + des.encrypt(plaintext)
                 encrypted = base64.urlsafe_b64encode(encrypted_raw).decode("utf-8")
                 iv = encrypted_raw[:8]
                 des = DES3.new(key, DES3.MODE_OFB, iv)
                 decrypted_text = des.decrypt(encrypted_raw.replace(iv, b"")).decode("utf-8")
-                if plaintext == decrypted_text:
+                if plaintext.decode("utf-8") == decrypted_text:
                     encryptedTextWidget.configure(state=NORMAL)
                     encryptedTextWidget.delete('1.0', END)
                     if len(encrypted) > 15000:
