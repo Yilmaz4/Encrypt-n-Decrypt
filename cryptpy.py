@@ -1,17 +1,5 @@
 """
-
-████████████████████  ████  ██████████████
-████████████████████  ████  ██████████████
-████    ████    ████  ████       ████
-████    ████    ████  ████       ████
-████    ████    ████  ████       ████
-██      ████      ██  ████       ██
-  ██    ████    ██    ████         ██
-██      ████      ██  ████       ██
-  ██    ████    ██    ████         ██
-
-
-Copyright 2021 Yilmaz Alpaslan
+Copyright 2021=2022 Yilmaz Alpaslan
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this
 software and associated documentation files (the "Software"), to deal in the Software
@@ -31,6 +19,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+from sys import float_repr_style
 from Crypto.Cipher import AES as CryptoAES
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Cipher import DES3 as CryptoDES3
@@ -39,25 +28,14 @@ from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from Crypto import Random
 
-from typing import Union
+from .errors import *
+
+from typing import Union, Optional
 from string import ascii_letters, digits
 from asyncio import run as asyncrun
 from random import randint, choice
 
 import base64
-
-# Exceptions
-class InvalidKey(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
-class InvalidKeyLength(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
-class EncryptionError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
 
 # Generate AES key function
 def generateKey(length: Union[str, int] = 32):
@@ -97,29 +75,32 @@ class AES:
         if not type(key) == bytes:
             key = bytes(key, "utf-8")
         if not len(key) in [16, 24, 32]:
-            raise InvalidKeyLength("Key length is invalid! It can be either 16, 24 or 32 characters long.")
+            raise InvalidKeyLength("Key length is invalid. It can be either 16, 24 or 32 characters long.")
         if not type(iv) == bytes:
             iv = bytes(iv, "utf-8")
         self.key, self.iv = key, iv
-    def encryptData(self, data: Union[str, bytes, int]):
-        if not type(data) == bytes:
+
+    def encrypt(self, data: Union[str, bytes, int]) -> Optional[str]:
+        if not type(data) is bytes:
             data = bytes(data, "utf-8")
         try:
             cipher = CryptoAES.new(self.key, CryptoAES.MODE_CFB, iv=self.iv)
         except:
-            raise EncryptionError("Encryption failed! This maybe be due to invalid IV or key.")
+            try:
+                CryptoAES.new(self.key, CryptoAES.MODE_CFB, iv=get_random_bytes(CryptoAES.block_size))
+            except:
+                raise InvalidKey("The key you've provided seems to be invalid.") from None
+            else:
+                raise InvalidIV("The IV you've provided seems to be invalid.") from None
         else:
             try:
                 result = base64.urlsafe_b64encode(self.iv + cipher.encrypt(data)).decode("utf-8")
                 return result
             except:
-                raise EncryptionError("Encryption failed! This maybe be due to invalid IV or key.")
+                raise EncryptionError("Encryption failed! This maybe be due to invalid IV or key.") from None
             else:
                 iv_result = base64.urlsafe_b64decode(bytes(result, "utf-8"))[:16]
                 data_result = base64.urlsafe_b64decode(bytes(result, "utf-8")).replace(iv_result, "")
                 cipher_verify = CryptoAES.new(self.key, CryptoAES.MODE_CFB, iv=self.iv)
                 cipher_verify.decrypt(data_result)
-        
-            
-        
-            
+                return

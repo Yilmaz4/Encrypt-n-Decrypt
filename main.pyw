@@ -1,4 +1,35 @@
+"""
 
+████████████████████  ████  ██████████████
+████████████████████  ████  ██████████████
+████    ████    ████  ████       ████
+████    ████    ████  ████       ████
+████    ████    ████  ████       ████
+██      ████      ██  ████       ██
+  ██    ████    ██    ████         ██
+██      ████      ██  ████       ██
+  ██    ████    ██    ████         ██
+
+
+Copyright 2021 Yilmaz Alpaslan
+
+Permission is hereby granted, free ofy person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be included in all copies
+or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
 
 try:
     import pyperclip, os, base64, time, collections
@@ -34,19 +65,23 @@ try:
     from zipfile import ZipFile
     from traceback import format_exc
     from time import strftime
-    from threading import Thread
+    from typing import Union, Any, Optional
 except ImportError or ModuleNotFoundError:
     from tkinter import messagebox, Tk
     from traceback import format_exc
     root = Tk()
     root.withdraw()
-    messagebox.showerror("ERR_MISSING_LIBRARIES",format_exc())
+    messagebox.showerror("ERR_MISSING_LIBRARIES", format_exc())
     __import__("sys").exit()
+
+version = "0.3.0"
+
 def is_admin():
     try:
         return windll.shell32.IsUserAnAdmin()
     except:
         return False
+
 ERROR = "error"
 INFO = "info"
 QUESTION = "question"
@@ -64,107 +99,7 @@ OK = "ok"
 CANCEL = "cancel"
 YES = "yes"
 NO = "no"
-uname_result = collections.namedtuple("uname_result","system node release version machine processor")
-_uname_cache = None
-_WIN32_CLIENT_RELEASES = {(5, 0): "2000",(5, 1): "XP",(5, 2): "2003Server",(5, None): "post2003",(6, 0): "Vista",(6, 1): "7",(6, 2): "8",(6, 3): "8.1",(6, None): "post8.1",(10, 0): "10",(10, None): "post10",}
-class Message(Dialog):
-    command  = "tk_messageBox"
-try:
-    DEV_NULL = os.devnull
-except AttributeError:
-    if platform in ('dos', 'win32', 'win16'):
-        DEV_NULL = 'NUL'
-    else:
-        DEV_NULL = '/dev/null'
-def _node(default=''):
-    try:
-        import socket
-    except ImportError:
-        return default
-    try:
-        return socket.gethostname()
-    except OSError:
-        return default
-def win32_ver(release='', version='', csd='', ptype=''):
-    try:
-        from sys import getwindowsversion
-    except ImportError:
-        return release, version, csd, ptype
-    winver = getwindowsversion()
-    maj, min, build = winver.platform_version or winver[:3]
-    version = '{0}.{1}.{2}'.format(maj, min, build)
-    release = (_WIN32_CLIENT_RELEASES.get((maj, min)) or _WIN32_CLIENT_RELEASES.get((maj, None)) or release)
-    if winver[:2] == (maj, min):
-        try:
-            csd = 'SP{}'.format(winver.service_pack_major)
-        except AttributeError:
-            if csd[:13] == 'Service Pack ':
-                csd = 'SP' + csd[13:]
-    try:
-        import winreg
-    except ImportError:
-        pass
-    else:
-        try:
-            cvkey = r'SOFTWARE\Microsoft\Windows NT\CurrentVersion'
-            with winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, cvkey) as key:
-                ptype = winreg.QueryValueEx(key, 'CurrentType')[0]
-        except OSError:
-            pass
-    return release, version, csd, ptype
-def uname():
-    global _uname_cache
-    no_os_uname=0
-    if _uname_cache is not None:
-        return _uname_cache
-    processor=''
-    try:
-        system, node, release, version, machine = os.uname()
-    except AttributeError:
-        no_os_uname=1
-    if no_os_uname or not list(filter(None,(system,node,release,version,machine))):
-        if no_os_uname:
-            system = platform
-            release=''
-            version=''
-            node=_node()
-            machine=''
-        use_syscmd_ver=1
-        if system=='win32':
-            release,version,csd,ptype=win32_ver()
-            if release and version:
-                use_syscmd_ver=0
-            if not machine:
-                if "PROCESSOR_ARCHITEW6432" in os.environ:
-                    machine = os.environ.get("PROCESSOR_ARCHITEW6432",'')
-                else:
-                    machine = os.environ.get('PROCESSOR_ARCHITECTURE','')
-            if not processor:
-                processor = os.environ.get('PROCESSOR_IDENTIFIER',machine)
-        if system in ('win32', 'win16'):
-            if not version:
-                if system=='win32':
-                    version='32bit'
-                else:
-                    version='16bit'
-            system='Windows'
-    if system=='unknown':
-        system=''
-    if node=='unknown':
-        node=''
-    if release=='unknown':
-        release=''
-    if version=='unknown':
-        version=''
-    if machine=='unknown':
-        machine=''
-    if processor=='unknown':
-        processor=''
-    if system=='Microsoft' and release=='Windows':
-        system='Windows'
-        release='Vista'
-    _uname_cache=uname_result(system,node,release,version,machine,processor)
-    return _uname_cache
+
 def _show(title=None, message=None, _icon=None, _type=None, **options):
     if _icon and "icon" not in options:
         options["icon"] = _icon
@@ -180,8 +115,7 @@ def _show(title=None, message=None, _icon=None, _type=None, **options):
             return YES
         return NO
     return str(res)
-class InvalidToken(Exception):
-    pass
+
 class messagebox():
     def showinfo(title=None, message=None, **options):
         if InfoVar.get() == 1:
@@ -220,33 +154,31 @@ class messagebox():
             return True
         elif s == IGNORE:
             return None
+
 try:
     appWidth = 800
     appHeight = 600
-    version = "0.2.1"
-    build = "Build 15"
     root=Tk()
-    root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
+    root.title(f"Eɲcrƴpʈ'n'Decrƴpʈ {version} {time.strftime(r'%H:%M:%S - %d/%m/%Y')}")
     root.resizable(width=FALSE, height=FALSE)
-    root.geometry("{}x{}".format(appWidth, appHeight))
+    root.geometry(f"{appWidth}x{appHeight}")
     root.attributes("-fullscreen", False)
     try:
         root.iconbitmap("Encrypt-n-Decrypt.ico")
     except:
         pass
     root.minsize(appWidth, appHeight)
-    #root.wm_iconbitmap("Ico.ico")
-    MainScreen=ttk.Notebook(root,width=380,height=340)
-    LogFrame=Frame(MainScreen)
-    logTextWidget=Text(LogFrame,height=22,width=107,font=("Consolas",9),state=DISABLED)
-    menu=Menu(root)
-    root.config(menu=menu)
-    enterMenu=Menu(menu,tearoff=0)
-    viewMenu=Menu(menu,tearoff=0)
-    titleMenu=Menu(viewMenu,tearoff=0)
-    helpMenu=Menu(menu,tearoff=0)
-    transMenu=Menu(viewMenu,tearoff=0)
-    langMenu=Menu(viewMenu,tearoff=0)
+    MainScreen = ttk.Notebook(root, width=380, height=340, takefocus=0)
+    LogFrame = Frame(MainScreen, takefocus=0)
+    logTextWidget = Text(LogFrame, height=22, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
+    menu = Menu(root)
+    root.config(menu = menu)
+    enterMenu = Menu(menu, tearoff=0)
+    viewMenu = Menu(menu, tearoff=0)
+    titleMenu = Menu(viewMenu, tearoff=0)
+    helpMenu = Menu(menu, tearoff=0)
+    transMenu = Menu(viewMenu, tearoff=0)
+    langMenu = Menu(viewMenu, tearoff=0)
     def CheckUpdates():
         def Asset0DownloadBrowser():
             openweb(Version.json()["assets"][0]["browser_download_url"])
@@ -349,7 +281,7 @@ try:
                 ProgressLabel.configure(text="Download progress:")
                 downloadProgress.set(0)
                 finishTime = time.time()
-                messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed sucsessfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
+                messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed successfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
         def Asset0Download():
             if DownloadPathEntry.get()[1:] == "\\":
                 AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
@@ -404,60 +336,60 @@ try:
                         frame.grid_propagate(0)
                         frame.enable_images(0)
                         frame.place(x=0, y=0)
-                        UpdateAvailableLabel = Label(update, text="An update is available!", font=('Segoe UI', 22), foreground="#189200")
-                        LatestVersionLabel = Label(update, text="Latest version: {}".format(Version.json()["name"], font=('Segoe UI', 11)))
-                        YourVersionLabel = Label(update, text="Current version: Encrypt'n'Decrypt {} ({})".format(version,build), font=('Segoe UI', 9))
-                        DownloadLabel = Label(update, text="Download page for more information and asset files:")
-                        DownloadLinks = LabelFrame(update, text="Download links", height=248, width=349)
-                        OtherOptions = LabelFrame(update, text="Other options", height=128, width=349)
-                        DownloadLinkLabel = Label(DownloadLinks, text=Version.json()["assets"][0]["name"])
-                        DownloadLinkLabel2 = Label(DownloadLinks, text=Version.json()["assets"][1]["name"])
-                        Separator1 = Separator(update, orient='horizontal')
-                        Separator2 = Separator(DownloadLinks, orient='horizontal')
-                        Separator3 = Separator(DownloadLinks, orient='horizontal')
-                        Separator4 = Separator(OtherOptions, orient='horizontal')
-                        CopyDownloadPage = Button(update, text="Copy", width=10)
-                        OpenDownloadLink = Button(update, text="Open in browser", width=17, command=lambda: openweb(str(Version.json()["html_url"])))
-                        CopyDownloadLink = Button(DownloadLinks, text="Copy", width=10)
-                        DownloadTheLinkBrowser = Button(DownloadLinks, text="Download from browser", width=25, command=Asset0DownloadBrowser)
-                        DownloadTheLinkBuiltin = Button(DownloadLinks, text="Download", width=13, command=Asset0Download)
-                        CopyDownloadLink2 = Button(DownloadLinks, text="Copy", width=10)
-                        DownloadTheLinkBrowser2 = Button(DownloadLinks, text="Download from browser", width=25, command=Asset1DownloadBrowser)
-                        DownloadTheLinkBuiltin2 = Button(DownloadLinks, text="Download", width=13, command=Asset1Download)
-                        DownloadPage = Entry(update, width=57)
+                        UpdateAvailableLabel = Label(update, text="An update is available!", font=('Segoe UI', 22), foreground="#189200", takefocus=0)
+                        LatestVersionLabel = Label(update, text="Latest version: {}".format(Version.json()["name"], font=('Segoe UI', 11)), takefocus=0)
+                        YourVersionLabel = Label(update, text="Current version: Encrypt'n'Decrypt {}".format(version), font=('Segoe UI', 9), takefocus=0)
+                        DownloadLabel = Label(update, text="Download page for more information and asset files:", takefocus=0)
+                        DownloadLinks = LabelFrame(update, text="Download links", height=248, width=349, takefocus=0)
+                        OtherOptions = LabelFrame(update, text="Other options", height=128, width=349, takefocus=0)
+                        DownloadLinkLabel = Label(DownloadLinks, text=Version.json()["assets"][0]["name"], takefocus=0)
+                        DownloadLinkLabel2 = Label(DownloadLinks, text=Version.json()["assets"][1]["name"], takefocus=0)
+                        Separator1 = Separator(update, orient='horizontal', takefocus=0)
+                        Separator2 = Separator(DownloadLinks, orient='horizontal', takefocus=0)
+                        Separator3 = Separator(DownloadLinks, orient='horizontal', takefocus=0)
+                        Separator4 = Separator(OtherOptions, orient='horizontal', takefocus=0)
+                        CopyDownloadPage = Button(update, text="Copy", width=10, takefocus=0)
+                        OpenDownloadLink = Button(update, text="Open in browser", width=17, command=lambda: openweb(str(Version.json()["html_url"])), takefocus=0)
+                        CopyDownloadLink = Button(DownloadLinks, text="Copy", width=10, takefocus=0)
+                        DownloadTheLinkBrowser = Button(DownloadLinks, text="Download from browser", width=25, command=Asset0DownloadBrowser, takefocus=0)
+                        DownloadTheLinkBuiltin = Button(DownloadLinks, text="Download", width=13, command=Asset0Download, takefocus=0)
+                        CopyDownloadLink2 = Button(DownloadLinks, text="Copy", width=10, takefocus=0)
+                        DownloadTheLinkBrowser2 = Button(DownloadLinks, text="Download from browser", width=25, command=Asset1DownloadBrowser, takefocus=0)
+                        DownloadTheLinkBuiltin2 = Button(DownloadLinks, text="Download", width=13, command=Asset1Download, takefocus=0)
+                        DownloadPage = Entry(update, width=57, takefocus=0)
                         DownloadPage.insert(0, str(Version.json()["html_url"]))
                         DownloadPage.configure(state=DISABLED)
-                        DownloadLink = Entry(DownloadLinks, width=54)
+                        DownloadLink = Entry(DownloadLinks, width=54, takefocus=0)
                         DownloadLink.insert(0, str(Version.json()["assets"][0]["browser_download_url"]))
                         DownloadLink.configure(state=DISABLED)
-                        DownloadLink2 = Entry(DownloadLinks, width=54)
+                        DownloadLink2 = Entry(DownloadLinks, width=54, takefocus=0)
                         DownloadLink2.insert(0, str(Version.json()["assets"][1]["browser_download_url"]))
                         DownloadLink2.configure(state=DISABLED)
-                        AssetSize = Label(DownloadLinks, text=("{:.2f} MB".format(int(size) / MBFACTOR)), foreground="#474747")
-                        AssetSize2 = Label(DownloadLinks, text=("{:.2f} MB".format(int(size2) / MBFACTOR)), foreground="#474747")
+                        AssetSize = Label(DownloadLinks, text=("{:.2f} MB".format(int(size) / MBFACTOR)), foreground="#474747", takefocus=0)
+                        AssetSize2 = Label(DownloadLinks, text=("{:.2f} MB".format(int(size2) / MBFACTOR)), foreground="#474747", takefocus=0)
                         if response.headers.get('Last-Modified', 0)[:17][16] == " ":
                             DateVariable = response.headers.get('Last-Modified', 0)[:16]
                         else:
                             DateVariable = response.headers.get('Last-Modified', 0)[:17]
-                        Date = Label(DownloadLinks, text=DateVariable, foreground="gray")
-                        Date2 = Label(DownloadLinks, text=DateVariable, foreground="gray")
+                        Date = Label(DownloadLinks, text=DateVariable, foreground="gray", takefocus=0)
+                        Date2 = Label(DownloadLinks, text=DateVariable, foreground="gray", takefocus=0)
                         downloadProgress = IntVar()
                         downloadProgress.set(0)
-                        ProgressBar = Progressbar(DownloadLinks, length=329, mode='determinate', orient=HORIZONTAL, variable=downloadProgress, maximum=int(size))
-                        ProgressLabel = Label(DownloadLinks, text="Download progress:")
-                        DownloadPathLabel = Label(OtherOptions, text="Download directory:")
-                        DownloadPathEntry = Entry(OtherOptions, width=54)
+                        ProgressBar = Progressbar(DownloadLinks, length=329, mode='determinate', orient=HORIZONTAL, variable=downloadProgress, maximum=int(size), takefocus=0)
+                        ProgressLabel = Label(DownloadLinks, text="Download progress:", takefocus=0)
+                        DownloadPathLabel = Label(OtherOptions, text="Download directory:", takefocus=0)
+                        DownloadPathEntry = Entry(OtherOptions, width=54, takefocus=0)
                         DownloadPathEntry.insert(0, r"C:\Users\{}\Downloads".format(getuser()))
-                        DownloadPathStatus = Label(OtherOptions, text="Status: OK", foreground="green")
+                        DownloadPathStatus = Label(OtherOptions, text="Status: OK", foreground="green", takefocus=0)
                         def directoryRevert():
                             DownloadPathEntry.delete(0,'end')
                             DownloadPathEntry.insert(0, r"C:\Users\{}\Downloads".format(getuser()))
-                        DownloadPathReset = Button(OtherOptions, text="Revert to default directory", width=24, command=directoryRevert)
-                        DownloadPathTest = Button(OtherOptions, text="Check directory", width=14, command=TestDirectory)
-                        DownloadPathBrowse = Button(OtherOptions, text="Browse", width=10)
+                        DownloadPathReset = Button(OtherOptions, text="Revert to default directory", width=24, command=directoryRevert, takefocus=0)
+                        DownloadPathTest = Button(OtherOptions, text="Check directory", width=14, command=TestDirectory, takefocus=0)
+                        DownloadPathBrowse = Button(OtherOptions, text="Browse", width=10, takefocus=0)
                         ExtractContent = IntVar()
                         ExtractContent.set(0)
-                        ExtractContentsCheck = Checkbutton(OtherOptions, text="Extract downloaded files", onvalue=1, offvalue=0, variable=ExtractContent)
+                        ExtractContentsCheck = Checkbutton(OtherOptions, text="Extract downloaded files", onvalue=1, offvalue=0, variable=ExtractContent, takefocus=0)
                         DownloadPathLabel.place(x=5, y=0)
                         DownloadPathEntry.place(x=7, y=21)
                         DownloadPathStatus.place(x=116, y=0)
@@ -500,9 +432,10 @@ try:
                         OtherOptions.place(x=310, y=420)
                         update.focus_force()
                         update.mainloop()
-    def GenerateAES(Length):
+
+    def GenerateAES(length: int = 32) -> str:
         key = ""
-        for i in range(Length):
+        for i in range(length):
             random = randint(1,32)
             if random < 25:
                 key += str(choice(ascii_letters))
@@ -511,8 +444,7 @@ try:
             elif random >= 30:
                 key += str(choice("!'^+%&/()=?_<>#${[]}\|__--$__--"))
         return key
-    def ShutDown():
-        root.destroy()
+
     showCharState = IntVar(value=0)
     deshowCharState = IntVar(value=0)
     showChar = True
@@ -521,32 +453,35 @@ try:
     Base64Check = IntVar()
     Base64Check.set(0)
     ToolTipActive = False
+
     class ToolTip(object):
-        def __init__(self,widget):
+        def __init__(self, widget):
             self.widget = widget
             self.tipwindow = None
             self.id = None
             self.x = self.y = 0
-        def showtip(self, text, widget, event):
+
+        def showtip(self, text, *args, **kwargs) -> None:
             global tw
             self.text = text
             if self.tipwindow or not self.text:
                 return
-            x, y, cx, cy = self.widget.bbox("insert")
+            x, y, _, cy = self.widget.bbox("insert")
             x = x + root.winfo_pointerx() + 2
             y = y + cy + root.winfo_pointery() + 15
             self.tipwindow = tw = Toplevel(self.widget)
             tw.wm_overrideredirect(1)
             tw.wm_geometry("+%d+%d" % (x, y))
             tw.attributes("-alpha", 0)
-            label = Label(tw, text=self.text, justify=LEFT, relief=SOLID, borderwidth=1, foreground="#6f6f6f", background="white")
+            label = Label(tw, text=self.text, justify=LEFT, relief=SOLID, borderwidth=1, foreground="#6f6f6f", background="white", takefocus=0)
             label.pack(ipadx=1)
             tw.attributes("-alpha", root.attributes("-alpha"))
             try:
                 tw.tk.call("::tk::unsupported::MacWindowStyle", "style", tw._w, "help", "noActivates")
             except TclError:
                 pass
-        def hidetip(self, widget):
+
+        def hidetip(self, *args, **kwargs) -> None:
             try:
                 tw = self.tipwindow
                 tw.title("Tooltip")
@@ -562,8 +497,11 @@ try:
                 fade_away()
             except:
                 root.after_cancel(task)
-    def createToolTip(widget, text):
+
+    def createToolTip(widget, text: Union[str, bytes] = "Undefined") -> None:
         global task
+        if type(text) != str:
+            text = str(text)
         toolTip = ToolTip(widget)
         def enter(event):
             if not ToolTipVar.get() == 0:
@@ -574,29 +512,14 @@ try:
         widget.bind('<Enter>', enter)
         widget.bind('<Leave>', leave)
         widget.bind('<Button-1>', leave)
+
     def toggleHideChar():
-        global encryptedTextEntry
+        global plainTextEntry
         if showCharState.get() == 1:
-            encryptedTextEntry.configure(show = "●")
+            plainTextEntry.configure(show = "●")
         else:
-            encryptedTextEntry.config(show = "")
-    def GeneratePassword():
-        global key
-        keylength = int(genPassword.get())
-        if keylength >= 8196:
-            choice = messagebox.askyesno("Entered key length is longer than 8196.","Entered key length is longer than 8196. Longer than 8196 key generations can cause program to stop responding. Are you sure want to continute?")
-            if choice:
-                keylength = keylength / 1024
-                keylength = (96 * 8) * keylength
-                key = base64.urlsafe_b64encode(os.urandom(int(keylength)))
-                return key
-        else:
-            keylength = keylength / 128
-            keylength = keylength * 96
-            key = base64.urlsafe_b64encode(os.urandom(int(keylength)))
-            return key
-    def RedirectEncryption(event=None):
-        pass
+            plainTextEntry.config(show = "")
+
     def FileEncrypt(algorithm, key):
         global encrypted, index
         try:
@@ -615,7 +538,7 @@ try:
             if algorithm == 1:
                 iv = get_random_bytes(AES.block_size)
                 try:
-                    aes = AES.new(key, AES.MODE_CFB, iv=iv)    
+                    aes = AES.new(key, AES.MODE_CFB, iv=iv)
                 except Exception as e:
                     if key.decode("utf-8").replace(" ","") == "":
                         messagebox.showwarning("ERR_KEY_FIELD_EMPTY","You selected to enter a key but leaved the key entry field empty. Either select to generate a new key or enter a key to encrypt data.")
@@ -676,7 +599,7 @@ try:
                     messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Specified file is not encryptable. Please report this text to me.")
                     return
                 logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCSESS: Specified file sucsessfully encrypted using AES-{} symmetric key encryption.".format(len(key)*8))+"\n")
+                logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCCESS: Specified file successfully encrypted using AES-{} symmetric key encryption.".format(len(key)*8))+"\n")
                 logTextWidget.config(state=DISABLED)
             elif algorithm == 2:
                 iv = Random.new().read(DES3.block_size)
@@ -747,44 +670,14 @@ try:
                     messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Entered text is not encryptable. Please report this text to me.")
                     return
                 logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCSESS: Specified file sucsessfully encrypted using 3DES-{} symmetric key encryption.".format(len(key)*8))+"\n")
+                logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCCESS: Specified file successfully encrypted using 3DES-{} symmetric key encryption.".format(len(key)*8))+"\n")
                 logTextWidget.config(state=DISABLED)
-    def Encrypt(event=None):
+    def Encrypt(*args, **kwargs):
         if MainScreen.tab(MainScreen.select(), "text") == "Encryption":
-            global encryptedTextEntry, encryptedTextWidget, key, KeySelectVar
-            def RSAencryption(public, private, plaintext):
-                try:
-                    ciphertext=PKCS1_OAEP.new(public).encrypt(bytes(plaintext,"utf-8"))
-                except ValueError:
-                    messagebox.showwarning("ERR_PLAIN_TEXT_IS_TOO_LONG","The text you entered to encrypt is too long with {} encoding for RSA-{} asymmetric encryption. Please select a longer RSA key to encrypt this data like RSA-{} or RSA-{}".format("utf-8", RSAkeyVar.get(), RSAkeyVar.get()*2, RSAkeyVar.get()*4))
-                cipher = base64.urlsafe_b64encode(ciphertext).decode()
-                if cipher == "":
-                    cipher = "[Blank]"
-                output = PKCS1_OAEP.new(RSA.import_key(private)).decrypt(ciphertext).decode("utf-8")
-                if output == encryptedTextEntry.get():
-                    encryptedTextWidget.configure(state=NORMAL, fg="black")
-                    encryptedTextWidget.delete('1.0', END)
-                    encryptedTextWidget.insert(INSERT, cipher)
-                    encryptedTextWidget.configure(state=DISABLED)
-                    RSApublicKeyWidget.configure(state=NORMAL)
-                    RSApublicKeyWidget.delete('1.0', END)
-                    RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode())
-                    RSApublicKeyWidget.configure(state=DISABLED)
-                    RSAprivateKeyWidget.configure(state=NORMAL)
-                    RSAprivateKeyWidget.delete('1.0', END)
-                    RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode())
-                    RSAprivateKeyWidget.configure(state=DISABLED)
-                    AESkeyEntry.configure(state=NORMAL)
-                    AESkeyEntry.delete('1.0', END)
-                    AESkeyEntry.configure(state=DISABLED)
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCSESS: Entered text sucsessfully encrypted using RSA-{} symmetric key encryption.".format(RSAkeyVar.get()))+"\n")
-                    logTextWidget.config(state=DISABLED)
-                else:
-                    pass # Add error code to here
-            def AESencryption(key=None):
-                global encrypted, Mode, encryptedTextWidget
-                plaintext = bytes(encryptedTextEntry.get(), "utf-8")
+            global plainTextEntry, encryptedTextWidget, key, KeySelectVar
+            def encryptAES(key: Union[str, bytes] = GenerateAES(32)):
+                global encrypted, encryptedTextWidget
+                plaintext = bytes(plainTextEntry.get(), "utf-8")
                 iv = get_random_bytes(AES.block_size)
                 try:
                     aes = AES.new(key, AES.MODE_CFB, iv=iv)
@@ -804,11 +697,11 @@ try:
                 iv = encrypted_raw[:16]
                 aes = AES.new(key, AES.MODE_CFB, iv=iv)
                 plaintext = aes.decrypt(encrypted_raw.replace(iv, b""))
-                if plaintext.decode("utf-8") == encryptedTextEntry.get():
+                if plaintext.decode("utf-8") == plainTextEntry.get():
                     encryptedTextWidget.configure(state=NORMAL)
                     encryptedTextWidget.delete('1.0', END)
                     if len(encrypted) > 15000:
-                        encryptedTextWidget.insert(INSERT, "Encrypted data is not being displayed because it is longer than 15.000 characters.")
+                        encryptedTextWidget.insert(INSERT, "Encrypted data is not being displayed as it is longer than 15.000 characters.")
                         encryptedTextWidget.configure(fg="gray")
                     else:
                         encryptedTextWidget.configure(fg="black")
@@ -825,15 +718,16 @@ try:
                     RSAprivateKeyWidget.delete('1.0', END)
                     RSAprivateKeyWidget.configure(state=DISABLED)
                     logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCSESS: Entered text sucsessfully encrypted using AES-{} symmetric key encryption.".format(len(key)*8))+"\n")
+                    logTextWidget.insert(INSERT, strftime(f"[%I:%M:%S %p] SUCCESS: Entered text has been successfully encrypted using AES-{len(key) * 8} symmetric key encryption.\n"))
                     logTextWidget.config(state=DISABLED)
                 else:
                     logTextWidget.config(state=NORMAL)
                     logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] WARNING: Entered text is not encryptable.")+"\n")
                     logTextWidget.config(state=DISABLED)
                     messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Entered text is not encryptable. Please report this text to me.")
-            def TripleDESencryption(key = None, plaintext = encryptedTextEntry.get()):
+            def encryptDES(key: Union[str, bytes] = GenerateAES(32)):
                 global encrypted
+                plaintext = bytes(plainTextEntry.get(), "utf-8")
                 iv = Random.new().read(DES3.block_size)
                 try:
                     des = DES3.new(key, DES3.MODE_OFB, iv)
@@ -879,29 +773,77 @@ try:
                     RSAprivateKeyWidget.delete('1.0', END)
                     RSAprivateKeyWidget.configure(state=DISABLED)
                     logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCSESS: Entered text sucsessfully encrypted using 3DES-{} symmetric key encryption.".format(len(key)*8))+"\n")
+                    logTextWidget.insert(INSERT, strftime(f"[%I:%M:%S %p] SUCCESS: Entered text has been successfully encrypted using 3DES-{len(key)*8} symmetric key encryption algorithm.") + "\n")
                     logTextWidget.config(state=DISABLED)
                 else:
                     logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] WARNING: Entered text is not encryptable.")+"\n")
+                    logTextWidget.insert(INSERT, strftime(f"[%I:%M:%S %p] WARNING: Entered text is not encryptable.")+"\n")
                     logTextWidget.config(state=DISABLED)
                     messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Entered text is not encryptable. Please report this text to me.")
+            def encryptRSA(public, private, plaintext):
+                try:
+                    ciphertext=PKCS1_OAEP.new(public).encrypt(bytes(plaintext,"utf-8"))
+                except ValueError:
+                    messagebox.showwarning("ERR_PLAIN_TEXT_IS_TOO_LONG","The text you entered to encrypt is too long with {} encoding for RSA-{} asymmetric encryption. Please select a longer RSA key to encrypt this data like RSA-{} or RSA-{}".format("utf-8", RSAkeyVar.get(), RSAkeyVar.get()*2, RSAkeyVar.get()*4))
+                cipher = base64.urlsafe_b64encode(ciphertext).decode()
+                if cipher == "":
+                    cipher = "[Blank]"
+                output = PKCS1_OAEP.new(RSA.import_key(private)).decrypt(ciphertext).decode("utf-8")
+                if output == plainTextEntry.get():
+                    encryptedTextWidget.configure(state=NORMAL, fg="black")
+                    encryptedTextWidget.delete('1.0', END)
+                    encryptedTextWidget.insert(INSERT, cipher)
+                    encryptedTextWidget.configure(state=DISABLED)
+                    RSApublicKeyWidget.configure(state=NORMAL)
+                    RSApublicKeyWidget.delete('1.0', END)
+                    RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode())
+                    RSApublicKeyWidget.configure(state=DISABLED)
+                    RSAprivateKeyWidget.configure(state=NORMAL)
+                    RSAprivateKeyWidget.delete('1.0', END)
+                    RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode())
+                    RSAprivateKeyWidget.configure(state=DISABLED)
+                    AESkeyEntry.configure(state=NORMAL)
+                    AESkeyEntry.delete('1.0', END)
+                    AESkeyEntry.configure(state=DISABLED)
+                    logTextWidget.config(state=NORMAL)
+                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCCESS: Entered text successfully encrypted using RSA-{} symmetric key encryption.".format(RSAkeyVar.get()))+"\n")
+                    logTextWidget.config(state=DISABLED)
+                else:
+                    pass # Add error code to here
             if WhatToEncrypt.get() == 1:
                 if Encryption.index(Encryption.select()) == 0:
+                    copyButton.configure(state=NORMAL)
+                    clearButton.configure(state=NORMAL)
+                    SaveENCbutton.configure(state=NORMAL)
+                    CopyAESbutton.configure(state=NORMAL)
+                    ClearAESbutton.configure(state=NORMAL)
+                    SaveAESbutton.configure(state=NORMAL)
                     if KeySelectVar.get() == 1:
                         if AlgSel.get() == 1:
-                            AESencryption(key=GenerateAES(int(RandomKeyVar.get()/8)).encode("utf-8"))
+                            encryptAES(key=GenerateAES(int(RandomKeyVar.get()/8)).encode("utf-8"))
                         elif AlgSel.get() == 2:
-                            TripleDESencryption(key=GenerateAES(int(TripleVar.get()/8)).encode("utf-8"))
+                            encryptDES(key=GenerateAES(int(TripleVar.get()/8)).encode("utf-8"))
                     elif KeySelectVar.get() == 2:
                         if SelectKeyAlg.get() == 1:
-                            AESencryption(key=KeyValue.get().encode("utf-8"))
+                            encryptAES(key=KeyValue.get().encode("utf-8"))
                         elif SelectKeyAlg.get() == 2:
-                            TripleDESencryption(key=KeyValue.get())
+                            encryptDES(key=KeyValue.get())
                 elif Encryption.index(Encryption.select()) == 1:
+                    CopyPubKeybutton.configure(state=NORMAL)
+                    ClearPubKeybutton.configure(state=NORMAL)
+                    SavePubKeybutton.configure(state=NORMAL)
+                    CopyPrivKeybutton.configure(state=NORMAL)
+                    ClearPrivKeybutton.configure(state=NORMAL)
+                    SavePrivKeybutton.configure(state=NORMAL)
                     pass # RSA
             elif WhatToEncrypt.get() == 2:
                 if Encryption.index(Encryption.select()) == 0:
+                    copyButton.configure(state=NORMAL)
+                    clearButton.configure(state=NORMAL)
+                    SaveENCbutton.configure(state=NORMAL)
+                    CopyAESbutton.configure(state=NORMAL)
+                    ClearAESbutton.configure(state=NORMAL)
+                    SaveAESbutton.configure(state=NORMAL)
                     if KeySelectVar.get() == 1:
                         if AlgSel.get() == 1:
                             FileEncrypt(1, GenerateAES(int(RandomKeyVar.get()/8)).encode("utf-8"))
@@ -913,6 +855,12 @@ try:
                         elif SelectKeyAlg.get() == 2:
                             FileEncrypt(2, KeyValue.get().encode("utf-8"))
                 elif Encryption.index(Encryption.select()) == 1:
+                    CopyPubKeybutton.configure(state=NORMAL)
+                    ClearPubKeybutton.configure(state=NORMAL)
+                    SavePubKeybutton.configure(state=NORMAL)
+                    CopyPrivKeybutton.configure(state=NORMAL)
+                    ClearPrivKeybutton.configure(state=NORMAL)
+                    SavePrivKeybutton.configure(state=NORMAL)
                     pass # RSA
     def SaveKey(path, key):
         global cipher, Mode, encryptedTextWidget
@@ -935,7 +883,8 @@ try:
             finally:
                 with open(path, encoding = 'utf-8', mode="w") as file:
                     file.write(str(encrypted_key))
-    def GetKey(path):
+
+    def GetKey(path: str = "Encryption Key.key"):
         with open(path, encoding = 'utf-8', mode="r") as file:
             global index
             index = file.read()
@@ -966,14 +915,21 @@ try:
                 return str(file.read())
             else:
                 return False
+
     def Copy():
         global encryptedTextWidget
-        pyperclip.copy(encrypted)
+        try:
+            pyperclip.copy(encrypted)
+        except NameError:
+            return
         copyed = pyperclip.paste()
         if copyed == encrypted:
-            messagebox.showinfo("Copied","Encrypted text copied to clipboard sucsessfully.")
+            messagebox.showinfo("Copied","Encrypted text copied to clipboard successfully.")
     def Clear():
         global encryptedTextWidget
+        copyButton.configure(state=DISABLED)
+        clearButton.configure(state=DISABLED)
+        SaveENCbutton.configure(state=DISABLED)
         encryptedTextWidget.configure(state=NORMAL)
         encryptedTextWidget.delete('1.0', END)
         encryptedTextWidget.configure(state=DISABLED)
@@ -989,9 +945,12 @@ try:
         pyperclip.copy(AESkeyEntry.get('1.0', END)[:-1])
         copyed = pyperclip.paste()
         if copyed == (AESkeyEntry.get('1.0', END)[:-1]):
-            messagebox.showinfo("Copied","AES/3DES key copied to clipboard sucsessfully.")
+            messagebox.showinfo("Copied","AES/3DES key copied to clipboard successfully.")
     def ClearAES():
         global AESkeyEntry
+        CopyAESbutton.configure(state=DISABLED)
+        ClearAESbutton.configure(state=DISABLED)
+        SaveAESbutton.configure(state=DISABLED)
         AESkeyEntry.configure(state=NORMAL)
         AESkeyEntry.delete('1.0', END)
         AESkeyEntry.configure(state=DISABLED)
@@ -1006,9 +965,12 @@ try:
         pyperclip.copy(RSApublicKeyWidget.get('1.0', END)[:-1])
         copyed = pyperclip.paste()
         if copyed == (RSApublicKeyWidget.get('1.0', END)[:-1]):
-            messagebox.showinfo("Copied","RSA public key copied to clipboard sucsessfully.")
+            messagebox.showinfo("Copied","RSA public key copied to clipboard successfully.")
     def ClearPublic():
         global RSApublicKeyWidget
+        CopyPubKeybutton.configure(state=DISABLED)
+        ClearPubKeybutton.configure(state=DISABLED)
+        SavePubKeybutton.configure(state=DISABLED)
         RSApublicKeyWidget.configure(state=NORMAL)
         RSApublicKeyWidget.delete('1.0', END)
         RSApublicKeyWidget.configure(state=DISABLED)
@@ -1024,9 +986,12 @@ try:
         pyperclip.copy(RSAprivateKeyWidget.get('1.0', END)[:-1])
         copyed = pyperclip.paste()
         if copyed == (RSAprivateKeyWidget.get('1.0', END)[:-1]):
-            messagebox.showinfo("Copied","RSA private key copied to clipboard sucsessfully.")
+            messagebox.showinfo("Copied","RSA private key copied to clipboard successfully.")
     def ClearPriv():
         global RSAprivateKeyWidget
+        CopyPrivKeybutton.configure(state=DISABLED)
+        ClearPrivKeybutton.configure(state=DISABLED)
+        SavePrivKeybutton.configure(state=DISABLED)
         RSAprivateKeyWidget.configure(state=NORMAL)
         RSAprivateKeyWidget.delete('1.0', END)
         RSAprivateKeyWidget.configure(state=DISABLED)
@@ -1037,36 +1002,40 @@ try:
             return
         with open(path, encoding="utf-8", mode="w") as file:
             file.write(RSAprivateKeyWidget.get('1.0', END)[:-1])
+
     def CheckEncrypt():
         pass
     def EncryptPage(event=None):
         MainScreen.select(0)
     def DecryptPage(event=None):
         MainScreen.select(1)
-    def HelpPage(event=None):
-        MainScreen.select(3)
     def LogsPage(event=None):
         MainScreen.select(2)
+    def HelpPage(event=None):
+        MainScreen.select(3)
+
     Alpha = IntVar()
     Alpha.set(100)
-    def changeAlpha(alpha):
+
+    def changeAlpha(alpha: int = 100) -> None:
         if alpha != 100:
             alpha = '0.{}'.format(alpha)
         else:
             alpha = 1
             Alpha.set(100)
         root.attributes("-alpha", float(alpha))
+
     logTextWidget.config(state=NORMAL)
     logTextWidget.config(state=DISABLED)
     screenWidth = root.winfo_screenwidth()
     screenHeight = root.winfo_screenheight()
     logTextWidget.config(state=NORMAL)
     logTextWidget.config(state=DISABLED)
-    EncryptFrame = Frame(MainScreen)
-    DecryptFrame = Frame(MainScreen)
-    AboutFrame = Frame(MainScreen)
-    FileEncryptFrame = Frame(MainScreen)
-    PasswordGeneration = Frame(MainScreen)
+    EncryptFrame = Frame(MainScreen, takefocus=0)
+    DecryptFrame = Frame(MainScreen, takefocus=0)
+    AboutFrame = Frame(MainScreen, takefocus=0)
+    FileEncryptFrame = Frame(MainScreen, takefocus=0)
+    PasswordGeneration = Frame(MainScreen, takefocus=0)
     RandomKeyVar = IntVar()
     RandomKeyVar.set(256)
     KeySelectVar = IntVar()
@@ -1182,14 +1151,12 @@ try:
                     StatusLabelAES.configure(foreground="red", text="Validity: Invalid")
     KeyValue = StringVar()
     KeyValue.trace('w', limitKeyEntry)
-    Mode = IntVar()
-    Mode.set(2)
-    Encryption = ttk.Notebook(EncryptFrame, width=355, height=280)
-    KeySelectFrame = Frame(Encryption)
-    Asymmetric = Frame(Encryption)
+    Encryption = ttk.Notebook(EncryptFrame, width=355, height=280, takefocus=0)
+    KeySelectFrame = Frame(Encryption, takefocus=0)
+    Asymmetric = Frame(Encryption, takefocus=0)
     Encryption.add(KeySelectFrame, text="Symmetric Key Encryption")
     Encryption.add(Asymmetric, text="Asymmetric Key Encryption")
-    EncryptFrameLabel = LabelFrame(EncryptFrame, text="Output", height=506, width=403)
+    EncryptFrameLabel = LabelFrame(EncryptFrame, text="Output", height=506, width=403, takefocus=0)
     MainScreen.add(EncryptFrame, text="Encryption")
     MainScreen.add(DecryptFrame, text="Decryption")
     MainScreen.add(LogFrame, text="Logs")
@@ -1204,8 +1171,10 @@ try:
     TripleVar.set(192)
     SelectKeyAlg = IntVar()
     SelectKeyAlg.set(1)
+
     def ChangeAESselection():
         pass
+
     def ChangeAlgSelection():
         if AlgSel.get() == 1:
             AES128Check.configure(state=NORMAL)
@@ -1233,22 +1202,22 @@ try:
                 key = file.read()
         SelectKeyEntry.delete(0, END)
         SelectKeyEntry.insert(0, key)
-    RandomKeyCheck = Radiobutton(KeySelectFrame, text="Generate a random key", value=1, variable=KeySelectVar, command=ChangeKeySelection)
-    AESCheck = Radiobutton(KeySelectFrame, text="AES (Advanced Encryption Standard)", value=1, variable=AlgSel, command=ChangeAlgSelection)
-    AES128Check = Radiobutton(KeySelectFrame, text="AES-128 Key", value=128, variable=RandomKeyVar, command=ChangeAESselection)
-    AES192Check = Radiobutton(KeySelectFrame, text="AES-192 Key", value=192, variable=RandomKeyVar, command=ChangeAESselection)
-    AES256Check = Radiobutton(KeySelectFrame, text="AES-256 Key", value=256, variable=RandomKeyVar, command=ChangeAESselection)
-    TripleDESCheck = Radiobutton(KeySelectFrame, text="3DES (Triple Data Encryption Standard)", value=2, variable=AlgSel, command=ChangeAlgSelection)
-    Triple128Check = Radiobutton(KeySelectFrame, text="3DES-128 Key", state=DISABLED, variable=TripleVar, value=128)
-    Triple192Check = Radiobutton(KeySelectFrame, text="3DES-192 Key", state=DISABLED, variable=TripleVar, value=192)
-    SelectKeyCheck = Radiobutton(KeySelectFrame, text="Use this key:", value=2, variable=KeySelectVar, command=ChangeKeySelection)
-    SelectKeyEntry = Entry(KeySelectFrame, width=46, font=("Consolas",9), state=DISABLED, textvariable=KeyValue)
-    KeyEntryHideChar = Checkbutton(KeySelectFrame, text="Hide characters", onvalue=1, offvalue=0, variable=KeyHideCharVar, state=DISABLED)
-    KeyFileBrowseButton = Button(KeySelectFrame, text="Browse key file...", width=21, state=DISABLED, command=GetKeyFromFile)
-    KeyEntryPasteButton = Button(KeySelectFrame, text="Paste", width=13, state=DISABLED)
-    KeyEntryClearButton = Button(KeySelectFrame, text="Clear", width=13, state=DISABLED, command=lambda:SelectKeyEntry.delete(0, END))
-    SelAlgAESradio = Radiobutton(KeySelectFrame, text="AES (Advanced Encryption Standard)", value=1, variable=SelectKeyAlg, command=limitKeyEntry, state=DISABLED)
-    SelAlg3DESradio = Radiobutton(KeySelectFrame, text="3DES (Triple Data Encryption Standard)", value=2, variable=SelectKeyAlg, command=limitKeyEntry, state=DISABLED)
+    RandomKeyCheck = Radiobutton(KeySelectFrame, text="Generate a random key", value=1, variable=KeySelectVar, command=ChangeKeySelection, takefocus=0)
+    AESCheck = Radiobutton(KeySelectFrame, text="AES (Advanced Encryption Standard)", value=1, variable=AlgSel, command=ChangeAlgSelection, takefocus=0)
+    AES128Check = Radiobutton(KeySelectFrame, text="AES-128 Key", value=128, variable=RandomKeyVar, command=ChangeAESselection, takefocus=0)
+    AES192Check = Radiobutton(KeySelectFrame, text="AES-192 Key", value=192, variable=RandomKeyVar, command=ChangeAESselection, takefocus=0)
+    AES256Check = Radiobutton(KeySelectFrame, text="AES-256 Key", value=256, variable=RandomKeyVar, command=ChangeAESselection, takefocus=0)
+    TripleDESCheck = Radiobutton(KeySelectFrame, text="3DES (Triple Data Encryption Standard)", value=2, variable=AlgSel, command=ChangeAlgSelection, takefocus=0)
+    Triple128Check = Radiobutton(KeySelectFrame, text="3DES-128 Key", state=DISABLED, variable=TripleVar, value=128, takefocus=0)
+    Triple192Check = Radiobutton(KeySelectFrame, text="3DES-192 Key", state=DISABLED, variable=TripleVar, value=192, takefocus=0)
+    SelectKeyCheck = Radiobutton(KeySelectFrame, text="Use this key:", value=2, variable=KeySelectVar, command=ChangeKeySelection, takefocus=0)
+    SelectKeyEntry = Entry(KeySelectFrame, width=46, font=("Consolas",9), state=DISABLED, textvariable=KeyValue, takefocus=0)
+    KeyEntryHideChar = Checkbutton(KeySelectFrame, text="Hide characters", onvalue=1, offvalue=0, variable=KeyHideCharVar, state=DISABLED, takefocus=0)
+    KeyFileBrowseButton = Button(KeySelectFrame, text="Browse key file...", width=21, state=DISABLED, command=GetKeyFromFile, takefocus=0)
+    KeyEntryPasteButton = Button(KeySelectFrame, text="Paste", width=13, state=DISABLED, takefocus=0)
+    KeyEntryClearButton = Button(KeySelectFrame, text="Clear", width=13, state=DISABLED, command=lambda:SelectKeyEntry.delete(0, END), takefocus=0)
+    SelAlgAESradio = Radiobutton(KeySelectFrame, text="AES (Advanced Encryption Standard)", value=1, variable=SelectKeyAlg, command=limitKeyEntry, state=DISABLED, takefocus=0)
+    SelAlg3DESradio = Radiobutton(KeySelectFrame, text="3DES (Triple Data Encryption Standard)", value=2, variable=SelectKeyAlg, command=limitKeyEntry, state=DISABLED, takefocus=0)
     KeyEntryClearButton.place(x=114, y=207)
     KeyEntryPasteButton.place(x=17, y=207)
     KeyFileBrowseButton.place(x=211, y=207)
@@ -1301,32 +1270,51 @@ try:
             FileToDecryptBrowse.config(state=NORMAL)
             FileToDecryptClear.config(state=NORMAL)
             FileToDecryptEntry.config(state=NORMAL)
-    TextToDecryptRadio = Radiobutton(DecryptFrame, text = "Encrypted text:", value=1, variable=DecryptSourceVar, command=ChangeWhatToDecrypt)
-    TextToDecryptPaste = Button(DecryptFrame, width=15, text="Paste")
-    TextToDecryptClear = Button(DecryptFrame, width=15, text="Clear")
-    FileToDecryptBrowse = Button(DecryptFrame, width=15, text="Browse...", state=DISABLED)
-    FileToDecryptClear = Button(DecryptFrame, width=15, text="Clear", state=DISABLED)
-    FileToDecryptRadio = Radiobutton(DecryptFrame, text = "Encrypted file:", value=2, variable=DecryptSourceVar, command=ChangeWhatToDecrypt)
-    TextToDecryptEntry = Text(DecryptFrame, width=105, height=6, font=("Consolas", 9))
-    FileToDecryptEntry = Entry(DecryptFrame, width=107, font=("Consolas", 9), state=DISABLED)
-    TextToDecryptScroll = Scrollbar(DecryptFrame, command=TextToDecryptEntry.yview)
+    def PasteEncryptedFunc():
+        if not str(pyperclip.paste()).replace(" ","") == "":
+            TextToDecryptEntry.delete("1.0", END)
+            TextToDecryptEntry.insert("1.0", str(pyperclip.paste()))
+            return
+        return
+    def BrowseEncryptedFunc():
+        file = filedialog.askopenfilename(title='Select an encrypted file to decrypt', filetypes=[('All files', '*.*')])
+        if not str(file).replace(" ","") == "":
+            FileToDecryptEntry.delete(0, END)
+            FileToDecryptEntry.insert(0, file)
+            return
+        return
+    def PasteKeyFunc():
+        if not str(pyperclip.paste()).replace(" ","") == "":
+            SymKeyEntry.delete(0, END)
+            SymKeyEntry.insert(0, str(pyperclip.paste()))
+            return
+        return
+    TextToDecryptRadio = Radiobutton(DecryptFrame, text = "Encrypted text:", value=1, variable=DecryptSourceVar, command=ChangeWhatToDecrypt, takefocus=0)
+    TextToDecryptPaste = Button(DecryptFrame, width=15, text="Paste", command=PasteEncryptedFunc, takefocus=0)
+    TextToDecryptClear = Button(DecryptFrame, width=15, text="Clear", command=lambda: TextToDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
+    FileToDecryptBrowse = Button(DecryptFrame, width=15, text="Browse...", state=DISABLED, command=BrowseEncryptedFunc, takefocus=0)
+    FileToDecryptClear = Button(DecryptFrame, width=15, text="Clear", state=DISABLED, command=lambda: FileToDecryptEntry.delete(0, END), takefocus=0)
+    FileToDecryptRadio = Radiobutton(DecryptFrame, text = "Encrypted file:", value=2, variable=DecryptSourceVar, command=ChangeWhatToDecrypt, takefocus=0)
+    TextToDecryptEntry = Text(DecryptFrame, width=105, height=6, font=("Consolas", 9), takefocus=0)
+    FileToDecryptEntry = Entry(DecryptFrame, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
+    TextToDecryptScroll = Scrollbar(DecryptFrame, command=TextToDecryptEntry.yview, takefocus=0)
     TextToDecryptEntry.configure(yscrollcommand=TextToDecryptScroll.set)
-    KeyEntryToDecrypt = ttk.Notebook(DecryptFrame, height=160, width=765)
-    SymKeyDecrypt = Frame(KeyEntryToDecrypt)
-    AsymKeyDecrypt = Frame(KeyEntryToDecrypt)
+    KeyEntryToDecrypt = ttk.Notebook(DecryptFrame, height=160, width=765, takefocus=0)
+    SymKeyDecrypt = Frame(KeyEntryToDecrypt, takefocus=0)
+    AsymKeyDecrypt = Frame(KeyEntryToDecrypt, takefocus=0)
     KeyEntryToDecrypt.add(SymKeyDecrypt, text="Symmetric Key Decryption")
     KeyEntryToDecrypt.add(AsymKeyDecrypt, text="Asymmetric Key Decryption")
-    SelectAlgorithmDecryptFrame = LabelFrame(SymKeyDecrypt, text="Select algorithm", height=63, width=749)
-    SelectAESradio = Radiobutton(SelectAlgorithmDecryptFrame, text="AES (Advanced Encryption Standard)", value=1, variable=DecryptAlg)
-    SelectDESradio = Radiobutton(SelectAlgorithmDecryptFrame, text="3DES (Triple Data Encryption Standard)", value=2, variable=DecryptAlg)
-    EnterKeyFrame = LabelFrame(SymKeyDecrypt, text="Enter encryption key", height=84, width=749)
-    SymKeyEntry = Entry(EnterKeyFrame, width=103, font=("Consolas", 9))
-    SymKeyBrowseButton = Button(EnterKeyFrame, width=21, text="Browse key file...")
-    SymKeyPasteButton = Button(EnterKeyFrame, width=15, text="Paste")
-    SymKeyClearButton = Button(EnterKeyFrame, width=15, text="Clear")
-    DecryptButton = Button(DecryptFrame, width=18, text="Decrypt")
-    OutputFrame = LabelFrame(DecryptFrame, text="Decrypted text", height=84, width=766)
-    OutputEntry = Text(OutputFrame, width=103, height=1, font=("Consolas", 9), state=DISABLED)
+    SelectAlgorithmDecryptFrame = LabelFrame(SymKeyDecrypt, text="Select algorithm", height=63, width=749, takefocus=0)
+    SelectAESradio = Radiobutton(SelectAlgorithmDecryptFrame, text="AES (Advanced Encryption Standard)", value=1, variable=DecryptAlg, takefocus=0)
+    SelectDESradio = Radiobutton(SelectAlgorithmDecryptFrame, text="3DES (Triple Data Encryption Standard)", value=2, variable=DecryptAlg, takefocus=0)
+    EnterKeyFrame = LabelFrame(SymKeyDecrypt, text="Enter encryption key", height=84, width=749, takefocus=0)
+    SymKeyEntry = Entry(EnterKeyFrame, width=103, font=("Consolas", 9), takefocus=0)
+    SymKeyBrowseButton = Button(EnterKeyFrame, width=21, text="Browse key file...", takefocus=0)
+    SymKeyPasteButton = Button(EnterKeyFrame, width=15, text="Paste", takefocus=0, command=PasteKeyFunc)
+    SymKeyClearButton = Button(EnterKeyFrame, width=15, text="Clear", takefocus=0, state=DISABLED)
+    DecryptButton = Button(DecryptFrame, width=18, text="Decrypt", takefocus=0)
+    OutputFrame = LabelFrame(DecryptFrame, text="Decrypted text", height=84, width=766, takefocus=0)
+    OutputEntry = Text(OutputFrame, width=103, height=1, font=("Consolas", 9), state=DISABLED, takefocus=0)
     
     TextToDecryptRadio.place(x=8, y=2)
     FileToDecryptRadio.place(x=8, y=145)
@@ -1422,18 +1410,24 @@ try:
     WhatToEncrypt.set(1)
     def ChangeWhatTo():
         if WhatToEncrypt.get() == 1:
-            encryptedTextEntry.configure(state=NORMAL)
+            plainTextEntry.configure(state=NORMAL)
             FilePathEntry.configure(state=DISABLED)
             BrowseFileButton.configure(state=DISABLED)
             ClearFileButton.configure(state=DISABLED)
             showCharCheck.configure(state=NORMAL)
             PasteTextButton.configure(state=NORMAL)
-            ClearTextButton.configure(state=NORMAL)
+            if plainTextEntryVar.get() != "":
+                ClearTextButton.configure(state=NORMAL)
+            else:
+                ClearTextButton.configure(state=DISABLED)
         else:
-            encryptedTextEntry.configure(state=DISABLED)
+            plainTextEntry.configure(state=DISABLED)
             FilePathEntry.configure(state=NORMAL)
             BrowseFileButton.configure(state=NORMAL)
-            ClearFileButton.configure(state=NORMAL)
+            if filePathEntryVar.get() != "":
+                ClearFileButton.configure(state=NORMAL)
+            else:
+                ClearFileButton.configure(state=DISABLED)
             showCharCheck.configure(state=DISABLED)
             PasteTextButton.configure(state=DISABLED)
             ClearTextButton.configure(state=DISABLED)
@@ -1444,63 +1438,77 @@ try:
         FilePathEntry.delete(0, END)
         FilePathEntry.insert(0, filePath)
     def PasteTextCommand():
-        encryptedTextEntry.delete(0, END)
+        plainTextEntry.delete(0, END)
         if not str(pyperclip.paste()).replace(" ","") == "":
-            encryptedTextEntry.insert(0, str(pyperclip.paste()))
+            plainTextEntry.insert(0, str(pyperclip.paste()))
             return
         return
-    TextToEncryptLabel = Radiobutton(EncryptFrame, text = "Plain text:", value=1, variable=WhatToEncrypt, command=ChangeWhatTo)
-    PasteTextButton = Button(EncryptFrame, text = "Paste", width=14, state=NORMAL, command=PasteTextCommand)
-    ClearTextButton = Button(EncryptFrame, text = "Clear", width=14, state=NORMAL, command=lambda:encryptedTextEntry.delete(0, END))
-    FileToEncryptLabel = Radiobutton(EncryptFrame, text = "File:", value=2, variable=WhatToEncrypt, command=ChangeWhatTo)
-    showCharCheck = Checkbutton(EncryptFrame, text = "Hide characters", variable = showCharState, onvalue = 1, offvalue = 0, command = toggleHideChar)
-    BrowseFileButton = Button(EncryptFrame, text = "Browse...", width=14, state=DISABLED, command=BrowseFileToEncrypt)
-    ClearFileButton = Button(EncryptFrame, text = "Clear", width=14, state=DISABLED)
-    if showChar == False:
-        encryptedTextEntry = Entry(EncryptFrame, width = 48, show = "●", font=("Consolas",9))
-        TextToEncryptLabel.place(x=8, y=2)
-        FileToEncryptLabel.place(x=8, y=76)
-    else:
-        encryptedTextEntry = Entry(EncryptFrame, width = 48, font=("Consolas",9))
-        TextToEncryptLabel.place(x=8, y=2)
-        FileToEncryptLabel.place(x=8, y=76)
-    FilePathEntry = Entry(EncryptFrame, width = 48, font=("Consolas",9), state=DISABLED)
-    ClearFileButton.config(command=lambda:FilePathEntry.delete(0, END))
+
+    def plainTextEntryCallback(*args, **kwargs):
+        if plainTextEntryVar.get() != "":
+            ClearTextButton.configure(state=NORMAL)
+        else:
+            ClearTextButton.configure(state=DISABLED)
+    def filePathEntryCallback(*args, **kwargs):
+        if plainTextEntryVar.get() != "":
+            ClearFileButton.configure(state=NORMAL)
+        else:
+            ClearFileButton.configure(state=DISABLED)
+
+    plainTextEntryVar = StringVar()
+    plainTextEntryVar.trace("w", plainTextEntryCallback)
+    filePathEntryVar = StringVar()
+    filePathEntryVar.trace("w", filePathEntryCallback)
+
+    TextToEncryptLabel = Radiobutton(EncryptFrame, text = "Plain text:", value=1, variable=WhatToEncrypt, command=ChangeWhatTo, takefocus=0)
+    PasteTextButton = Button(EncryptFrame, text = "Paste", width=14, state=NORMAL, command=PasteTextCommand, takefocus=0)
+    ClearTextButton = Button(EncryptFrame, text = "Clear", width=14, command=lambda:plainTextEntry.delete(0, END), takefocus=0, state=DISABLED)
+    FileToEncryptLabel = Radiobutton(EncryptFrame, text = "File:", value=2, variable=WhatToEncrypt, command=ChangeWhatTo, takefocus=0)
+    showCharCheck = Checkbutton(EncryptFrame, text = "Hide characters", variable = showCharState, onvalue = 1, offvalue = 0, command = toggleHideChar, takefocus=0)
+    BrowseFileButton = Button(EncryptFrame, text = "Browse...", width=14, state=DISABLED, command=BrowseFileToEncrypt, takefocus=0)
+    ClearFileButton = Button(EncryptFrame, text = "Clear", width=14, state=DISABLED, takefocus=0)
+
+    plainTextEntry = Entry(EncryptFrame, width = 48, font=("Consolas", 9), takefocus=0, textvariable=plainTextEntryVar)
+    FilePathEntry = Entry(EncryptFrame, width = 48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=filePathEntryVar)
+    TextToEncryptLabel.place(x=8, y=2)
+    FileToEncryptLabel.place(x=8, y=76)
+
+    ClearFileButton.config(command=lambda: FilePathEntry.delete(0, END))
     FilePathEntry.place(x=24, y=96)
     BrowseFileButton.place(x=23, y=123)
     ClearFileButton.place(x=124, y=123)
     PasteTextButton.place(x=23, y=49)
     ClearTextButton.place(x=124, y=49)
     # Log page widgets
-    LogClearButton = Button(LogFrame, text = "Clear", width=15)
-    LogSaveButton = Button(LogFrame, text = "Save as...", width=15)
-    LogSavePreset = Button(LogFrame, text = "Save to 'Encrypt-n-Decrypt.log'", width=28)
+    LogClearButton = Button(LogFrame, text = "Clear", width=15, takefocus=0, state=DISABLED)
+    LogSaveButton = Button(LogFrame, text = "Save as...", width=15, takefocus=0)
+    LogSavePreset = Button(LogFrame, text = "Save to 'Encrypt-n-Decrypt.log'", width=28, takefocus=0)
     LogClearButton.place(x=9, y=330)
     LogSavePreset.place(x=601, y=330)
     LogSaveButton.place(x=494, y=330)
     # Main widgets
-    encryButton = Button(EncryptFrame, text = "Encrypt", width=15, command=Encrypt)
-    checkButton = Button(EncryptFrame, text = "Check encryption", width=20, command=CheckEncrypt)
-    copyButton = Button(EncryptFrameLabel, text = "Copy", width=10, command=Copy)
-    clearButton = Button(EncryptFrameLabel, text = "Clear", width=10, command=Clear)
-    encryptedTextWidget = Text(EncryptFrameLabel, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="white", relief=SUNKEN)
-    SaveENCbutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SaveENC)
-    RSApublicKeyWidget = Text(EncryptFrameLabel, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN)
-    RSAprivateKeyWidget = Text(EncryptFrameLabel, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN)
-    AESkeyEntry = Text(EncryptFrameLabel, width=54, height=1, state=DISABLED, font=("Consolas",9), relief=SUNKEN)
-    AESkeyLabel = Label(EncryptFrameLabel, text="AES/3DES Key:")
-    RSApublicLabel = Label(EncryptFrameLabel, text="RSA Public Key:")
-    RSAprivateLabel = Label(EncryptFrameLabel, text="RSA Private Key:")
-    StatusLabelAES = Label(KeySelectFrame, text="Validity: [Blank]", foreground="gray")
-    CopyAESbutton = Button(EncryptFrameLabel, width = 10, text="Copy", command=CopyAES)
-    ClearAESbutton = Button(EncryptFrameLabel, width = 10, text="Clear", command=ClearAES)
-    SaveAESbutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SaveAES)
-    CopyPubKeybutton = Button(EncryptFrameLabel, width = 10, text="Copy", command=CopyPublic)
-    ClearPubKeybutton = Button(EncryptFrameLabel, width = 10, text="Clear", command=ClearPublic)
-    SavePubKeybutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SavePub)
-    CopyPrivKeybutton = Button(EncryptFrameLabel, width = 10, text="Copy", command=CopyPriv)
-    ClearPrivKeybutton = Button(EncryptFrameLabel, width = 10, text="Clear", command=ClearPriv)
-    SavePrivKeybutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SavePriv)
+    encryButton = Button(EncryptFrame, text = "Encrypt", width=15, command=Encrypt, takefocus=0)
+    checkButton = Button(EncryptFrame, text = "Check encryption", width=20, command=CheckEncrypt, takefocus=0)
+    encryptedTextWidget = Text(EncryptFrameLabel, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="white", relief=SUNKEN, takefocus=0)
+    RSApublicKeyWidget = Text(EncryptFrameLabel, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
+    RSAprivateKeyWidget = Text(EncryptFrameLabel, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
+    AESkeyEntry = Text(EncryptFrameLabel, width=54, height=1, state=DISABLED, font=("Consolas",9), relief=SUNKEN, takefocus=0)
+    AESkeyLabel = Label(EncryptFrameLabel, text="AES/3DES Key:", takefocus=0)
+    RSApublicLabel = Label(EncryptFrameLabel, text="RSA Public Key:", takefocus=0)
+    RSAprivateLabel = Label(EncryptFrameLabel, text="RSA Private Key:", takefocus=0)
+    StatusLabelAES = Label(KeySelectFrame, text="Validity: [Blank]", foreground="gray", takefocus=0)
+    copyButton = Button(EncryptFrameLabel, text = "Copy", width=10, command=Copy, state=DISABLED, takefocus=0)
+    clearButton = Button(EncryptFrameLabel, text = "Clear", width=10, command=Clear, state=DISABLED, takefocus=0)
+    SaveENCbutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SaveENC, state=DISABLED, takefocus=0)
+    CopyAESbutton = Button(EncryptFrameLabel, width = 10, text="Copy", command=CopyAES, state=DISABLED, takefocus=0)
+    ClearAESbutton = Button(EncryptFrameLabel, width = 10, text="Clear", command=ClearAES, state=DISABLED, takefocus=0)
+    SaveAESbutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SaveAES, state=DISABLED, takefocus=0)
+    CopyPubKeybutton = Button(EncryptFrameLabel, width = 10, text="Copy", command=CopyPublic, state=DISABLED, takefocus=0)
+    ClearPubKeybutton = Button(EncryptFrameLabel, width = 10, text="Clear", command=ClearPublic, state=DISABLED, takefocus=0)
+    SavePubKeybutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SavePub, state=DISABLED, takefocus=0)
+    CopyPrivKeybutton = Button(EncryptFrameLabel, width = 10, text="Copy", command=CopyPriv, state=DISABLED, takefocus=0)
+    ClearPrivKeybutton = Button(EncryptFrameLabel, width = 10, text="Clear", command=ClearPriv, state=DISABLED, takefocus=0)
+    SavePrivKeybutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SavePriv, state=DISABLED, takefocus=0)
     scrollbar = Scrollbar(LogFrame)
     scrollbar2 = Scrollbar(EncryptFrameLabel)
     scrollbar3 = Scrollbar(EncryptFrameLabel)
@@ -1528,7 +1536,7 @@ try:
     about.insert(INSERT, AboutText)
     about.configure(state=DISABLED)
     scrollbar.place(x=762, y=10, height=312)
-    encryptedTextEntry.place(x=24, y=22)
+    plainTextEntry.place(x=24, y=22)
     encryptedTextWidget.place(x=9, y=5)
     RSApublicKeyWidget.place(x=9, y=215)
     RSAprivateKeyWidget.place(x=9, y=355)
