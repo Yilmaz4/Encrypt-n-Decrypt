@@ -74,7 +74,7 @@ except ImportError or ModuleNotFoundError:
     messagebox.showerror("ERR_MISSING_LIBRARIES", format_exc())
     __import__("sys").exit()
 
-version = "0.3.0"
+version = "0.2.0"
 
 def is_admin():
     try:
@@ -1462,7 +1462,7 @@ try:
         else:
             ClearTextButton.configure(state=DISABLED)
     def filePathEntryCallback(*args, **kwargs):
-        if plainTextEntryVar.get() != "":
+        if filePathEntryVar.get() != "":
             ClearFileButton.configure(state=NORMAL)
         else:
             ClearFileButton.configure(state=DISABLED)
