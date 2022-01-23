@@ -66,12 +66,33 @@ pip install cryptography
 ```
 All libraries used in this project are listed below:
 ```python
-from cryptography.fernet import Fernet # Used for encryption
-from time import sleep # Used for delay
-from sys import exit # Used to exit the program
-from ctypes import windll # Used to change title of window
-from tkinter.filedialog import asksaveasfilename # Used for save-as function
-from tkinter import Tk # Used to close tkinter window after save-as.
+import pyperclip, os, base64, time, collections
+
+from tkinter import *
+from tkinter.commondialog import Dialog
+from tkinter import filedialog
+from tkinter import ttk
+from tkinter.ttk import *
+
+from Crypto.Cipher import AES, PKCS1_OAEP, DES3
+from Crypto.Util import Counter
+from Crypto import Random
+from Crypto.PublicKey import RSA
+from Crypto.Random import get_random_bytes
+
+from requests import get, head
+from webbrowser import open as openweb
+from random import randint, choice
+from string import ascii_letters, digits
+from sys import exit, platform, exc_info
+from markdown import markdown
+from tkinterweb import HtmlFrame
+from getpass import getuser
+from ctypes import windll
+from zipfile import ZipFile
+from traceback import format_exc
+from time import strftime
+from typing import Union, Any, Optional
 ```
 ---
 ## Version status:
