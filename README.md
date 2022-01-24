@@ -27,12 +27,6 @@ Hello everyone, this is my second Python project and first project that I've pub
 ###### Source: [Cryptography Fernet official website](https://cryptography.io/en/latest/fernet/)
 
 ---
-## System requirements:
-- **Operating System:** Microsoft® Windows® Vista or later, Microsoft® Windows® 11 is recommended
-- **Processor:** Intel® Pentium® 4 Processor 1.30 GHz or later, a dual-core 2GHz processor recommended
-- **RAM (Random Access Memory):** 1GB or larger, 2GB is recommended
-- **Screen resolution:** 640x480 or larger, 1280x720 is recommended
----
 ## Future plans:
 In future releases, I'm planning to add GUI to program and support for encrypting files. Also I'm planning to change encryption standart to `AES-256`, `AES-192` and `AES-128` encryption standarts. I'm also planning to add `RSA-1024` and above asymmetric key encryption standarts. I am currently working on GUI update. It will be released soon.
 
