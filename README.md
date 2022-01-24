@@ -8,7 +8,7 @@
 
 [//]: <> (009e0a Stable | ffc700 Prerelease | ff0000 Beta)
 
-Hello everyone, this project is my second Python project and first project that I've published on GitHub. This program can encrypt and decrypt plain text or files with AES or RSA symmetric key encryption algorithm. 
+Hello everyone, this is my second Python project and first project that I've published to GitHub which can encrypt plain text & files using AES and RSA algorithm.
 
 ### About **Fernet** library and it's encryption standart:
 >Fernet guarantees that a message encrypted using it cannot be manipulated or read without the key. [Fernet](https://github.com/fernet/spec/) is an implementation of symmetric (also known as “secret key”) authenticated cryptography. Fernet also has support for implementing key rotation via `MultiFernet`.
