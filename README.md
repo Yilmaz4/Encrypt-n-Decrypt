@@ -1,5 +1,5 @@
 # About Encrypt'n'Decrypt:
-[![made-with-python](https://img.shields.io/badge/Made%20With-Python%203%2E7%2E9-396F9E.svg?style=plastic)](https://www.python.org/)
+[![made-with-python](https://img.shields.io/badge/Made%20With-Python%203%2E9%2E7-396F9E.svg?style=plastic)](https://www.python.org/)
 [![made-for-windows](https://img.shields.io/badge/Made%20For-Windows-00A4E3.svg?style=plastic)](https://www.microsoft.com/)
 [![GitHub license](https://img.shields.io/badge/License-MIT-A10000?style=plastic)](https://github.com/Yilmaz4/Encrypt-n-Decrypt/blob/master/LICENSE)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-Partially-ffc700.svg?style=plastic)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
