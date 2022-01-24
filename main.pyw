@@ -1,17 +1,7 @@
 """
+MIT License
 
-████████████████████  ████  ██████████████
-████████████████████  ████  ██████████████
-████    ████    ████  ████       ████
-████    ████    ████  ████       ████
-████    ████    ████  ████       ████
-██      ████      ██  ████       ██
-  ██    ████    ██    ████         ██
-██      ████      ██  ████       ██
-  ██    ████    ██    ████         ██
-
-
-Copyright 2021-2022 Yilmaz Alpaslan
+Copyright 2017-2022 Yilmaz Alpaslan
 
 Permission is hereby granted, free ofy person obtaining a copy of this
 software and associated documentation files (the "Software"), to deal in the Software
