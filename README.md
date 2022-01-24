@@ -28,18 +28,14 @@ Hello everyone, this is my second Python project and first project that I've pub
 
 ---
 ## Future plans:
-In future releases, I'm planning to add GUI to program and support for encrypting files. Also I'm planning to change encryption standart to `AES-256`, `AES-192` and `AES-128` encryption standarts. I'm also planning to add `RSA-1024` and above asymmetric key encryption standarts. I am currently working on GUI update. It will be released soon.
+In future releases, I'm planning to add a GUI (Graphical User Interface) to the program and support for encrypting files. Also I'm planning to change encryption standart to `AES-256`, `AES-192` and `AES-128` encryption standarts. I'm also planning to add `RSA-1024` and above asymmetric key encryption standarts. I am currently working on GUI update. It will be released soon.
 
 The libraries that going to be used in future releases are `pycryptodome` and `pycryptodomex` libraries. These libraries are alternatives to *dead* `PyCrypto` library that fully replaces this library. These libraries can be used for both symmetric and asymmetric key encryptions and for asymmetric encryption, these libraries can support up to infinitive bytes of Private Key. For symmetric key encryption, these libraries supports `AES-256` `AES-192` and `AES-128` encryption keys.
 
 Also the library that is going to be used for GUI is `tkinter` and `ttk` librarires. I am also planning to change GUI library to `PyQt5` or `PyQt6` to improve user interface and visuality in future releases.
-### System requirements for the upcoming `v0.3.0` version:
-- **Operating System:** Microsoft® Windows® Vista or later, Microsoft® Windows® 11 is recommended
-- **Processor:** At least 1.5GHz dual-core processor or later, 2GHz dual-core processor is recommended
-- **RAM (Random Access Memory):** 2GB or larger, 4GB is recommended
-- **Screen resolution:** 800x600 or larger, 1280x720 is recommended
+
 #### Source code requirements:
-- Python 3.5 and up, Python 3.7.9 recommended
+- Python 3.9 and up.
 - `ttkwidgets` version `3.2.2` and up
 - `cryptography` version `3.4.7` and up
 - `pywin32` version `300` and up
