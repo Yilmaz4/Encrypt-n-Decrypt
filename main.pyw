@@ -23,6 +23,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from tkinter import *
 from tkinter import messagebox, filedialog
+from tkinter.scrolledtext import ScrolledText
 from tkinter.commondialog import Dialog
 from tkinter.ttk import *
 
@@ -35,6 +36,7 @@ from string import ascii_letters, digits
 from getpass import getuser
 from ctypes import windll
 from zipfile import ZipFile
+from datetime import datetime
 
 from Crypto.Cipher import AES, PKCS1_OAEP, DES3
 from Crypto.Util import Counter
@@ -59,6 +61,32 @@ class loggingHandler(logging.Handler):
             self.widget.yview(END)
 
         self.widget.after(0, append)
+    
+    def format(self, record: logging.LogRecord) -> str:
+        '%(asctime)s [%(levelname)s] %(message)s'
+        return str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S') + " [" + record.levelname + "] " + record.getMessage())
+
+class ScrolledText(Text):
+    def __init__(self, master=None, **kw):
+        self.frame = Frame(master)
+        self.vbar = Scrollbar(self.frame)
+        self.vbar.pack(side=RIGHT, fill=Y)
+
+        kw.update({'yscrollcommand': self.vbar.set})
+        Text.__init__(self, self.frame, **kw)
+        self.pack(side=LEFT, fill=BOTH, expand=True)
+        self.vbar['command'] = self.yview
+
+        text_meths = vars(Text).keys()
+        methods = vars(Pack).keys() | vars(Grid).keys() | vars(Place).keys()
+        methods = methods.difference(text_meths)
+
+        for m in methods:
+            if m[0] != '_' and m != 'config' and m != 'configure':
+                setattr(self, m, getattr(self.frame, m))
+
+    def __str__(self):
+        return str(self.frame)
 
 class Interface(Tk):
     def __init__(self):
@@ -78,9 +106,19 @@ class Interface(Tk):
         except TclError:
             pass
         
-        self.initialize_vars()
-        self.initialize_menu()
-        self.initialize_widgets()
+        self.mainNotebook = Notebook(self, width=380, height=340, takefocus=0)
+        self.encryptionFrame = Frame(self.mainNotebook, takefocus=0)
+        self.decryptionFrame = Frame(self.mainNotebook, takefocus=0)
+        self.loggingFrame = Frame(self.mainNotebook, takefocus=0)
+        self.helpFrame = Frame(self.mainNotebook, takefocus=0)
+
+        self.mainNotebook.add(self.encryptionFrame, text="Encryption")
+        self.mainNotebook.add(self.decryptionFrame, text="Decryption")
+        self.mainNotebook.add(self.loggingFrame, text="Logs")
+        self.mainNotebook.add(self.helpFrame, text="Help")
+
+        self.mainNotebook.pack(fill=BOTH, expand=1, pady=4, padx=4, side=TOP)
+        self.loggingWidget = ScrolledText(self.loggingFrame, height=22, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
 
         loghandler = loggingHandler(widget = self.loggingWidget)
         logging.basicConfig(
@@ -90,6 +128,10 @@ class Interface(Tk):
         )
         self.logger = logging.getLogger()
         self.logger.addHandler(loghandler)
+
+        self.initialize_vars()
+        self.initialize_menu()
+        self.initialize_widgets()
 
     @property
     def logging_level(self) -> int:
@@ -105,34 +147,72 @@ class Interface(Tk):
             self.logger.disabled = True
 
     def initialize_widgets(self):
-        self.mainNotebook = Notebook(self, width=380, height=340, takefocus=0)
-        self.encryptionFrame = Frame(self.mainNotebook, takefocus=0)
-        self.decryptionFrame = Frame(self.mainNotebook, takefocus=0)
-        self.loggingFrame = Frame(self.mainNotebook, takefocus=0)
-        self.helpFrame = Frame(self.mainNotebook, takefocus=0)
-
-        self.mainNotebook.add(self.encryptionFrame, text="Encryption")
-        self.mainNotebook.add(self.decryptionFrame, text="Decryption")
-        self.mainNotebook.add(self.loggingFrame, text="Logs")
-        self.mainNotebook.add(self.helpFrame, text="Help")
-
-        self.mainNotebook.pack(fill=BOTH, expand=1, pady=4, padx=4, side=TOP)
-
         # ┌──────────────────┐
         # │ Encryption Frame │
         # └──────────────────┘
 
         # Plain text & file entries frame
+        def changeFileEntrySectionState(state = DISABLED):
+            self.fileEntry.configure(state=state)
+            self.fileBrowseButton.configure(state=state)
+            self.fileClearButton.configure(state=state)
+
+        def changeTextEntrySectionState(state = NORMAL):
+            self.textEntry.configure(state=state)
+            self.textEntryHideCharCheck.configure(state=state)
+            self.textClearButton.configure(state=state)
+            if plainTextEntryVar.get() != "":
+                ClearTextButton.configure(state=state)
+            else:
+                ClearTextButton.configure(state=state)
         def changeDataSource():
+            if self.dataSourceVar.get() == 1:
+                pass
+            else:
+                plainTextEntry.configure(state=DISABLED)
+                FilePathEntry.configure(state=NORMAL)
+                BrowseFileButton.configure(state=NORMAL)
+                if filePathEntryVar.get() != "":
+                    ClearFileButton.configure(state=NORMAL)
+                else:
+                    ClearFileButton.configure(state=DISABLED)
+                showCharCheck.configure(state=DISABLED)
+                PasteTextButton.configure(state=DISABLED)
+                ClearTextButton.configure(state=DISABLED)
+        def BrowseFileToEncrypt():
+            global FilePathEntry
+            files = [("All files","*.*")]
+            filePath = filedialog.askopenfilename(title = "Open file to encrypt", filetypes=files)
+            FilePathEntry.delete(0, END)
+            FilePathEntry.insert(0, filePath)
+        def PasteTextCommand():
+            plainTextEntry.delete(0, END)
+            if not str(pyperclip.paste()).replace(" ","") == "":
+                plainTextEntry.insert(0, str(pyperclip.paste()))
+                return
+            return
+
+        def plainTextEntryCallback(*args, **kwargs):
+            if plainTextEntryVar.get() != "":
+                ClearTextButton.configure(state=NORMAL)
+            else:
+                ClearTextButton.configure(state=DISABLED)
+        def filePathEntryCallback(*args, **kwargs):
+            if filePathEntryVar.get() != "":
+                ClearFileButton.configure(state=NORMAL)
+            else:
+                ClearFileButton.configure(state=DISABLED)
+        def toggleHideChar():
+            pass
             
         self.textEntryCheck = Radiobutton(self.encryptionFrame, text = "Plain text:", value=0, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
-        self.textEntry = Entry(self.encryptionFrame, width = 48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=plainTextEntryVar)
+        self.textEntry = Entry(self.encryptionFrame, width = 48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.textEntryVar)
         self.textPasteButton = Button(self.encryptionFrame, text = "Paste", width=14, state=NORMAL, command=PasteTextCommand, takefocus=0)
         self.textClearButton = Button(self.encryptionFrame, text = "Clear", width=14, command=lambda: self.textEntry.delete(0, END), takefocus=0, state=DISABLED)
-        self.textEntryHideCharCheck = Checkbutton(self.encryptionFrame, text = "Hide characters", variable=showCharState, onvalue=1, offvalue=0, command=toggleHideChar, takefocus=0)
+        self.textEntryHideCharCheck = Checkbutton(self.encryptionFrame, text = "Hide characters", variable=self.textEntryHideCharVar, onvalue=1, offvalue=0, command=toggleHideChar, takefocus=0)
 
         self.fileEntryCheck = Radiobutton(self.encryptionFrame, text = "File:", value=1, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
-        self.fileEntry = Entry(self.encryptionFrame, width = 48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=filePathEntryVar)
+        self.fileEntry = Entry(self.encryptionFrame, width = 48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=self.fileEntryVar)
         self.fileBrowseButton = Button(self.encryptionFrame, text = "Browse...", width=14, state=DISABLED, command=BrowseFileToEncrypt, takefocus=0)
         self.fileClearButton = Button(self.encryptionFrame, text = "Clear", width=14, state=DISABLED, command=lambda: self.fileEntry.delete(0, END), takefocus=0)
 
@@ -180,7 +260,7 @@ class Interface(Tk):
             changeDESState(state = DISABLED if bool(self.keySourceSelection.get()) else NORMAL if bool(self.generateAlgorithmSelection.get()) else DISABLED)
             changeEnterKeySectionState(state = NORMAL if bool(self.keySourceSelection.get()) else DISABLED)
 
-        def GetKey(path: str) -> Optional[Union[str, bytes]]:
+        def getKey(path: str) -> Optional[Union[str, bytes]]:
             with open(path, encoding = 'utf-8', mode="r") as file:
                 global index
                 index = file.read()
@@ -217,7 +297,7 @@ class Interface(Tk):
             if path == "":
                 return
             if os.path.splitext(path)[1] != ".txt":
-                key = GetKey(path)
+                key = getKey(path)
                 if not key:
                     messagebox.showwarning("ERR_INVALID_KEY_FILE","The specified file does not contain any valid key for encryption.")
                     return
@@ -227,6 +307,8 @@ class Interface(Tk):
             self.keyEntry.delete(0, END)
             self.keyEntry.insert(0, key)
 
+        for _ in range(500):
+            self.logger.info("hi")
         def limitKeyEntry(*args, **kwargs):
             global value
             if len(self.keyEntryVar.get()) > 32:
@@ -352,7 +434,15 @@ class Interface(Tk):
         # ┌───────────────┐
         # │ Logging Frame │
         # └───────────────┘
-        self.loggingWidget = Text(self.loggingFrame, height=22, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
+        self.loggingClearButton = Button(self.loggingFrame, text="Clear", width=15, takefocus=0, state=DISABLED)
+        self.loggingSaveAsButton = Button(self.loggingFrame, text="Save as...", width=15, takefocus=0)
+        self.loggingSaveButton = Button(self.loggingFrame, text="Save to 'Encrypt-n-Decrypt.log'", width=28, takefocus=0)
+
+        self.loggingWidget.place(x=10, y=10)
+        self.loggingClearButton.place(x=9, y=330)
+        self.loggingSaveAsButton.place(x=494, y=330)
+        self.loggingSaveButton.place(x=601, y=330)
+        
 
     def initialize_vars(self):
         self.showTextChar = IntVar(value=0)
@@ -371,6 +461,9 @@ class Interface(Tk):
         self.keyEntryHideCharVar = IntVar()
 
         self.dataSourceVar = IntVar(value=0)
+        self.textEntryVar = StringVar()
+        self.fileEntryVar = StringVar()
+        self.textEntryHideCharVar = IntVar(value=0)
 
 
     def initialize_menu(self):
