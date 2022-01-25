@@ -37,6 +37,7 @@ from getpass import getuser
 from ctypes import windll
 from zipfile import ZipFile
 from datetime import datetime
+from random import randint, choice
 
 from Crypto.Cipher import AES, PKCS1_OAEP, DES3
 from Crypto.Util import Counter
@@ -45,6 +46,48 @@ from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
 import base64, os, time, logging
+
+class Crypto:
+    def __init__(self, master: Tk):
+        self.master = master
+
+    @staticmethod
+    def generateKey(length: int = 32) -> str:
+        key = str()
+        for i in range(length):
+            random = randint(1,32)
+            if random < 25:
+                key += str(choice(ascii_letters))
+            elif random >= 25 and random < 30:
+                key += str(choice(digits))
+            elif random >= 30:
+                key += str(choice("!'^+%&/()=?_<>#${[]}\|__--$__--"))
+        return key
+
+    def encrypt(self):
+        if not bool(self.master.dataSourceVar.get()):
+            key = self.generateKey(self.master.generateRandomAESVar.get() / 8) if not bool(self.master.keySourceSelection.get()) else self.master.keyEntryVar.get()
+            iv = get_random_bytes(AES.block_size)
+            aes = AES.new(key, AES.MODE_CFB, iv=iv)
+        """self.showTextChar = IntVar(value=0)
+        self.showTooltip = IntVar(value=1)
+        self.showInfoBox = IntVar(value=1)
+        self.showWarnBox = IntVar(value=1)
+        self.showErrorBox = IntVar(value=1)
+        self.windowAlpha = IntVar(value=1)
+
+        self.generateRandomAESVar = IntVar(value=256)
+        self.generateRandomDESVar = IntVar(value=192)
+        self.keySourceSelection = IntVar(value=0)
+        self.generateAlgorithmSelection = IntVar(value=0)
+        self.entryAlgorithmSelection = IntVar(value=0)
+        self.keyEntryVar = StringVar()
+        self.keyEntryHideCharVar = IntVar()
+
+        self.dataSourceVar = IntVar(value=0)
+        self.textEntryVar = StringVar()
+        self.fileEntryVar = StringVar()
+        self.textEntryHideCharVar = IntVar(value=0)"""
 
 class loggingHandler(logging.Handler):
     def __init__(self, widget: Text):
@@ -63,7 +106,6 @@ class loggingHandler(logging.Handler):
         self.widget.after(0, append)
     
     def format(self, record: logging.LogRecord) -> str:
-        '%(asctime)s [%(levelname)s] %(message)s'
         return str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S') + " [" + record.levelname + "] " + record.getMessage())
 
 class ScrolledText(Text):
@@ -124,10 +166,13 @@ class Interface(Tk):
         logging.basicConfig(
             format = '%(asctime)s [%(levelname)s] %(message)s',
             level = logging.DEBUG,
-            datefmt = r'%Y-%m-%d %H:%M:%S'
+            datefmt = r'%Y-%m-%d %H:%M:%S',
+            handlers = [loghandler]
         )
         self.logger = logging.getLogger()
-        self.logger.addHandler(loghandler)
+        self.logger.propagate = False
+
+        self.crypto = Crypto()
 
         self.initialize_vars()
         self.initialize_menu()
@@ -165,56 +210,61 @@ class Interface(Tk):
                 ClearTextButton.configure(state=state)
             else:
                 ClearTextButton.configure(state=state)
+
         def changeDataSource():
             if self.dataSourceVar.get() == 1:
-                pass
-            else:
-                plainTextEntry.configure(state=DISABLED)
-                FilePathEntry.configure(state=NORMAL)
-                BrowseFileButton.configure(state=NORMAL)
-                if filePathEntryVar.get() != "":
-                    ClearFileButton.configure(state=NORMAL)
-                else:
-                    ClearFileButton.configure(state=DISABLED)
-                showCharCheck.configure(state=DISABLED)
-                PasteTextButton.configure(state=DISABLED)
-                ClearTextButton.configure(state=DISABLED)
-        def BrowseFileToEncrypt():
-            global FilePathEntry
-            files = [("All files","*.*")]
-            filePath = filedialog.askopenfilename(title = "Open file to encrypt", filetypes=files)
-            FilePathEntry.delete(0, END)
-            FilePathEntry.insert(0, filePath)
-        def PasteTextCommand():
-            plainTextEntry.delete(0, END)
-            if not str(pyperclip.paste()).replace(" ","") == "":
-                plainTextEntry.insert(0, str(pyperclip.paste()))
-                return
-            return
+                self.textEntry.configure(state=DISABLED)
+                self.textEntryHideCharCheck.configure(state=DISABLED)
+                self.textClearButton.configure(state=DISABLED)
+                self.textPasteButton.configure(state=DISABLED)
 
-        def plainTextEntryCallback(*args, **kwargs):
-            if plainTextEntryVar.get() != "":
-                ClearTextButton.configure(state=NORMAL)
+                self.fileEntry.configure(state=NORMAL)
+                self.fileBrowseButton.configure(state=NORMAL)
+                if self.fileEntryVar.get() != "":
+                    self.fileClearButton.configure(state=NORMAL)
+                else:
+                    self.fileClearButton.configure(state=DISABLED)
             else:
-                ClearTextButton.configure(state=DISABLED)
-        def filePathEntryCallback(*args, **kwargs):
-            if filePathEntryVar.get() != "":
-                ClearFileButton.configure(state=NORMAL)
-            else:
-                ClearFileButton.configure(state=DISABLED)
+                self.textEntry.configure(state=NORMAL)
+                if self.textEntryVar.get() != "":
+                    self.textClearButton.configure(state=NORMAL)
+                else:
+                    self.textClearButton.configure(state=DISABLED)
+                self.textEntryHideCharCheck.configure(state=NORMAL)
+                self.textPasteButton.configure(state=NORMAL)
+
+                self.fileEntry.configure(state=DISABLED)
+                self.fileBrowseButton.configure(state=DISABLED)
+                self.fileClearButton.configure(state=DISABLED)
+
+        def fileEntryBrowse():
+            files = [("All files","*.*")]
+            filePath = filedialog.askopenfilename(title = "Open a file to encrypt", filetypes=files)
+            self.fileEntry.delete(0, END)
+            self.fileEntry.insert(0, filePath)
+
         def toggleHideChar():
-            pass
+            self.textEntry.configure(show="●" if bool(self.textEntryHideCharVar.get()) else "")
+
+        def textEntryCallback(*args, **kwargs):
+            self.textClearButton.configure(state=DISABLED if self.textEntryVar.get() == "" else NORMAL)
+        
+        def fileEntryCallback(*args, **kwargs):
+            self.fileClearButton.configure(state=DISABLED if self.fileEntryVar.get() == "" else NORMAL)
             
         self.textEntryCheck = Radiobutton(self.encryptionFrame, text = "Plain text:", value=0, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
         self.textEntry = Entry(self.encryptionFrame, width = 48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.textEntryVar)
-        self.textPasteButton = Button(self.encryptionFrame, text = "Paste", width=14, state=NORMAL, command=PasteTextCommand, takefocus=0)
+        self.textPasteButton = Button(self.encryptionFrame, text = "Paste", width=14, state=NORMAL, command=lambda: (self.textEntry.delete(0, END), self.textEntry.insert(0, str(self.clipboard_get()))), takefocus=0)
         self.textClearButton = Button(self.encryptionFrame, text = "Clear", width=14, command=lambda: self.textEntry.delete(0, END), takefocus=0, state=DISABLED)
         self.textEntryHideCharCheck = Checkbutton(self.encryptionFrame, text = "Hide characters", variable=self.textEntryHideCharVar, onvalue=1, offvalue=0, command=toggleHideChar, takefocus=0)
 
         self.fileEntryCheck = Radiobutton(self.encryptionFrame, text = "File:", value=1, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
         self.fileEntry = Entry(self.encryptionFrame, width = 48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=self.fileEntryVar)
-        self.fileBrowseButton = Button(self.encryptionFrame, text = "Browse...", width=14, state=DISABLED, command=BrowseFileToEncrypt, takefocus=0)
+        self.fileBrowseButton = Button(self.encryptionFrame, text = "Browse...", width=14, state=DISABLED, command=fileEntryBrowse, takefocus=0)
         self.fileClearButton = Button(self.encryptionFrame, text = "Clear", width=14, state=DISABLED, command=lambda: self.fileEntry.delete(0, END), takefocus=0)
+
+        self.textEntryVar.trace("w", textEntryCallback)
+        self.fileEntryVar.trace("w", fileEntryCallback)
 
         self.textEntryCheck.place(x=8, y=2)
         self.textEntry.place(x=24, y=22)
@@ -307,8 +357,6 @@ class Interface(Tk):
             self.keyEntry.delete(0, END)
             self.keyEntry.insert(0, key)
 
-        for _ in range(500):
-            self.logger.info("hi")
         def limitKeyEntry(*args, **kwargs):
             global value
             if len(self.keyEntryVar.get()) > 32:
@@ -373,6 +421,67 @@ class Interface(Tk):
         self.selectKeyCheck.place(x=5, y=158)
         self.keyEnteredAlgAES.place(x=16, y=235)
         self.keyEnteredAlgDES.place(x=16, y=254)
+
+        # Output section & encrypt button
+        encryButton = Button(self.symmetricEncryption, text = "Encrypt", width=15, command=self.crypto.encrypt, takefocus=0)
+        encryptedTextWidget = Text(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="white", relief=SUNKEN, takefocus=0)
+        RSApublicKeyWidget = Text(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
+        RSAprivateKeyWidget = Text(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
+        AESkeyEntry = Text(self.symmetricEncryption, width=54, height=1, state=DISABLED, font=("Consolas",9), relief=SUNKEN, takefocus=0)
+        AESkeyLabel = Label(self.symmetricEncryption, text="AES/3DES Key:", takefocus=0)
+        RSApublicLabel = Label(self.symmetricEncryption, text="RSA Public Key:", takefocus=0)
+        RSAprivateLabel = Label(self.symmetricEncryption, text="RSA Private Key:", takefocus=0)
+        StatusLabelAES = Label(self.symmetricEncryption, text="Validity: [Blank]", foreground="gray", takefocus=0)
+        copyButton = Button(self.symmetricEncryption, text = "Copy", width=10, command=Copy, state=DISABLED, takefocus=0)
+        clearButton = Button(self.symmetricEncryption, text = "Clear", width=10, command=Clear, state=DISABLED, takefocus=0)
+        SaveENCbutton = Button(self.symmetricEncryption, width=15, text="Save as...", command=SaveENC, state=DISABLED, takefocus=0)
+        CopyAESbutton = Button(self.symmetricEncryption, width = 10, text="Copy", command=CopyAES, state=DISABLED, takefocus=0)
+        ClearAESbutton = Button(self.symmetricEncryption, width = 10, text="Clear", command=ClearAES, state=DISABLED, takefocus=0)
+        SaveAESbutton = Button(self.symmetricEncryption, width=15, text="Save as...", command=SaveAES, state=DISABLED, takefocus=0)
+        CopyPubKeybutton = Button(self.symmetricEncryption, width = 10, text="Copy", command=CopyPublic, state=DISABLED, takefocus=0)
+        ClearPubKeybutton = Button(self.symmetricEncryption, width = 10, text="Clear", command=ClearPublic, state=DISABLED, takefocus=0)
+        SavePubKeybutton = Button(self.symmetricEncryption, width=15, text="Save as...", command=SavePub, state=DISABLED, takefocus=0)
+        CopyPrivKeybutton = Button(self.symmetricEncryption, width = 10, text="Copy", command=CopyPriv, state=DISABLED, takefocus=0)
+        ClearPrivKeybutton = Button(self.symmetricEncryption, width = 10, text="Clear", command=ClearPriv, state=DISABLED, takefocus=0)
+        SavePrivKeybutton = Button(self.symmetricEncryption, width=15, text="Save as...", command=SavePriv, state=DISABLED, takefocus=0)
+        scrollbar2 = Scrollbar(EncryptFrameLabel)
+        scrollbar3 = Scrollbar(EncryptFrameLabel)
+        scrollbar4 = Scrollbar(EncryptFrameLabel)
+        RSApublicKeyWidget.config(yscrollcommand=scrollbar4.set)
+        RSAprivateKeyWidget.config(yscrollcommand=scrollbar3.set)
+        encryptedTextWidget.config(yscrollcommand=scrollbar2.set)
+        scrollbar2.config(command=encryptedTextWidget.yview)
+        scrollbar3.config(command=RSAprivateKeyWidget.yview)
+        scrollbar4.config(command=RSApublicKeyWidget.yview)
+        SaveENCbutton.place(x=162, y=100)
+        CopyAESbutton.place(x=8, y=170)
+        ClearAESbutton.place(x=85, y=170)
+        SaveAESbutton.place(x=162, y=170)
+        CopyPubKeybutton.place(x=8, y=309)
+        ClearPubKeybutton.place(x=85, y=309)
+        SavePubKeybutton.place(x=162, y=309)
+        CopyPrivKeybutton.place(x=8, y=449)
+        ClearPrivKeybutton.place(x=85, y=449)
+        SavePrivKeybutton.place(x=162, y=449)
+        about = Text(self.helpFrame, height=28, width=127, font=("Segoe UI", 9), wrap=WORD)
+        AboutText = "This program can encrypt and decrypt plain texts and files with both symmetric key encryption and asymmetric key encryption algorithms. AES-128 key is a 16 characters long and base64.urlsafe encoded key, AES-192 key is a 24 characters long and base64.urlsafe encoded key and AES-256 key is a 32 characters long and base64.urlsafe encoded key. RSA keys are base64.urlsafe encoded keys that in any length longer than 128 characters. Program can generate a fresh random AES or RSA key or can use a pre-generated key. In RSA encryption, Public Key is used to encrypt the data and Private Key is required to decrypt the cipher (Encrypted data). Public key can be extracted from Private key. 1024-bit RSA encryption can take 1 second to 10 seconds and 8196-bit RSA encryption can take 1 minute to 12 minutes depending on your computer. AES encryptions are way faster than RSA encryption. Fernet encryption (Legacy Fernet Key) also includes ability to change encryption time. That means you can encrypt your data with a fake date. But AES and RSA doesn't support this. Also you can select Fast mode to encrypt the data faster but bypass encyrption check.\n\nIf you are having problems with program, below information might be helpful to resolve problems:\n\nERR_ENCRYPTER_NOT_WORKING_PROPERLY: This error indicates that encrypter is not working properly even 'abc' text encryption failed. Try encrypting again after restarting the program. If problem persists, please report this problem to me.\n\nERR_INVALID_ENCRYPTION_KEY: This error occures when you selected to enter an encryption key and entered a non-encryption key. Please be sure you entered a AES-128, AES-192, AES-256, Fernet or RSA key that is bigger than 1024-bit; if the key you entered is one of them, be sure it's base64.urlsafe encoded.\n\nERR_UNENCRYPTABLE_TEXT: This error indicates that text you entered to encrypt is not encryptable or includes a illegal character for selected encoding system. Please try another text to encyrpt.\n\nERR_UNABLE_TO_CLEAR: This error pops-up when an unknown error occures while trying to clear the cipher or key from output. Only solution is probably restarting the program. If problem persists, please report this problem to me.\n\nERR_UNABLE_TO_DECRYPT: This errorVersion: {} Build 14\nAuthor: Yılmaz Alpaslan\ngithub.com\Yilmaz4\Encrypt-n-Decrypt".format(version)
+        about.insert(INSERT, AboutText)
+        about.configure(state=DISABLED)
+        encryptedTextWidget.place(x=9, y=5)
+        RSApublicKeyWidget.place(x=9, y=215)
+        RSAprivateKeyWidget.place(x=9, y=355)
+        StatusLabelAES.place(x=92, y=159)
+        AESkeyEntry.place(x=9, y=145)
+        AESkeyLabel.place(x=8, y=125)
+        RSApublicLabel.place(x=8, y=194)
+        RSAprivateLabel.place(x=8, y=334)
+        encryButton.place(x=9, y=500)
+        copyButton.place(x=8, y=100)
+        clearButton.place(x=85, y=100)
+        about.place(x=10, y=10)
+        scrollbar2.place(x=376, y=5, height=88)
+        scrollbar3.place(x=376, y=355, height=88)
+        scrollbar4.place(x=376, y=215, height=88)
 
         # ┌──────────────────┐
         # │ Decryption Frame │
@@ -550,27 +659,23 @@ class Interface(Tk):
                 Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
             except Exception as e:
                 messagebox.showerror("ERR_INTERNET_DISCONNECTED","An error occured while trying to connect to the GitHub API. Please check your internet connection.")
-                logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: GitHub API connection failed ({})\n".format(e))+"\n")
-                logTextWidget.config(state=DISABLED)
+                master.logger.error("GitHub API connection failed ({})".format(e))
             else:
                 MBFACTOR = float(1 << 20)
                 try:
                     response = head(Version.json()["assets"][0]["browser_download_url"], allow_redirects=True)
                 except KeyError as e:
                     messagebox.showerror("ERR_API_LIMIT_EXCEED","An error occured while trying to connect to the GitHub API servers. GitHub API limit may be exceed as servers has only 5000 connections limit per hour and per IP adress. Please try again after 1 hours.")
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, "ERROR: GitHub API limit exceeded, connection failed. ({})\n".format(e))
-                    logTextWidget.config(state=DISABLED)
+                    master.logger.error("GitHub API limit exceeded, connection failed. ({})".format(e))
                 else:
                     size = response.headers.get('content-length', 0)
                     response2 = head(Version.json()["assets"][1]["browser_download_url"], allow_redirects=True)
                     size2 = response2.headers.get('content-length', 0)
-                    if Version.json()["tag_name"] == "v" + self.version:
-                        messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+                    if Version.json()["tag_name"] == "v" + master.version:
+                        messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: v{}\nLatest version: v{}".format(master.version, Version.json()["tag_name"]))
                     else:
                         if self.version.replace(".","") > (Version.json()["tag_name"]).replace("b","").replace("v","").replace(".",""):
-                            messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
+                            messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: v{}\nLatest version: v{}".format(master.version, Version.json()["tag_name"]))
                             return
                         else:
                             pass
@@ -599,7 +704,7 @@ class Interface(Tk):
             frame.place(x=0, y=0)
             UpdateAvailableLabel = Label(self, text="An update is available!", font=('Segoe UI', 22), foreground="#189200", takefocus=0)
             LatestVersionLabel = Label(self, text="Latest version: {}".format(Version.json()["name"], font=('Segoe UI', 11)), takefocus=0)
-            YourVersionLabel = Label(self, text="Current version: Eɲcrƴpʈ'n'Decrƴpʈ v{}".format(self.version), font=('Segoe UI', 9), takefocus=0)
+            YourVersionLabel = Label(self, text="Current version: Eɲcrƴpʈ'n'Decrƴpʈ v{}".format(master.version), font=('Segoe UI', 9), takefocus=0)
             DownloadLabel = Label(self, text="Download page for more information and asset files:", takefocus=0)
             DownloadLinks = LabelFrame(self, text="Download links", height=248, width=349, takefocus=0)
             OtherOptions = LabelFrame(self, text="Other options", height=128, width=349, takefocus=0)
@@ -613,10 +718,10 @@ class Interface(Tk):
             OpenDownloadLink = Button(self, text="Open in browser", width=17, command=lambda: openweb(str(Version.json()["html_url"])), takefocus=0)
             CopyDownloadLink = Button(DownloadLinks, text="Copy", width=10, takefocus=0)
             DownloadTheLinkBrowser = Button(DownloadLinks, text="Download from browser", width=25, command=lambda: openweb(Version.json()["assets"][0]["browser_download_url"]), takefocus=0)
-            DownloadTheLinkBuiltin = Button(DownloadLinks, text="Download", width=13, command=Asset0Download, takefocus=0)
+            DownloadTheLinkBuiltin = Button(DownloadLinks, text="Download", width=13, command=lambda: None, takefocus=0)
             CopyDownloadLink2 = Button(DownloadLinks, text="Copy", width=10, takefocus=0)
             DownloadTheLinkBrowser2 = Button(DownloadLinks, text="Download from browser", width=25, command=lambda: openweb(Version.json()["assets"][1]["browser_download_url"]), takefocus=0)
-            DownloadTheLinkBuiltin2 = Button(DownloadLinks, text="Download", width=13, command=Asset1Download, takefocus=0)
+            DownloadTheLinkBuiltin2 = Button(DownloadLinks, text="Download", width=13, command=lambda: None, takefocus=0)
             DownloadPage = Entry(self, width=57, takefocus=0)
             DownloadPage.insert(0, str(self.json()["html_url"]))
             DownloadPage.configure(state=DISABLED)
