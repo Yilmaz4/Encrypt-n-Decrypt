@@ -422,66 +422,44 @@ class Interface(Tk):
         self.keyEnteredAlgAES.place(x=16, y=235)
         self.keyEnteredAlgDES.place(x=16, y=254)
 
-        # Output section & encrypt button
-        encryButton = Button(self.symmetricEncryption, text = "Encrypt", width=15, command=self.crypto.encrypt, takefocus=0)
-        encryptedTextWidget = Text(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="white", relief=SUNKEN, takefocus=0)
-        RSApublicKeyWidget = Text(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
-        RSAprivateKeyWidget = Text(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
-        AESkeyEntry = Text(self.symmetricEncryption, width=54, height=1, state=DISABLED, font=("Consolas",9), relief=SUNKEN, takefocus=0)
-        AESkeyLabel = Label(self.symmetricEncryption, text="AES/3DES Key:", takefocus=0)
-        RSApublicLabel = Label(self.symmetricEncryption, text="RSA Public Key:", takefocus=0)
-        RSAprivateLabel = Label(self.symmetricEncryption, text="RSA Private Key:", takefocus=0)
-        StatusLabelAES = Label(self.symmetricEncryption, text="Validity: [Blank]", foreground="gray", takefocus=0)
-        copyButton = Button(self.symmetricEncryption, text = "Copy", width=10, command=Copy, state=DISABLED, takefocus=0)
-        clearButton = Button(self.symmetricEncryption, text = "Clear", width=10, command=Clear, state=DISABLED, takefocus=0)
-        SaveENCbutton = Button(self.symmetricEncryption, width=15, text="Save as...", command=SaveENC, state=DISABLED, takefocus=0)
-        CopyAESbutton = Button(self.symmetricEncryption, width = 10, text="Copy", command=CopyAES, state=DISABLED, takefocus=0)
-        ClearAESbutton = Button(self.symmetricEncryption, width = 10, text="Clear", command=ClearAES, state=DISABLED, takefocus=0)
-        SaveAESbutton = Button(self.symmetricEncryption, width=15, text="Save as...", command=SaveAES, state=DISABLED, takefocus=0)
-        CopyPubKeybutton = Button(self.symmetricEncryption, width = 10, text="Copy", command=CopyPublic, state=DISABLED, takefocus=0)
-        ClearPubKeybutton = Button(self.symmetricEncryption, width = 10, text="Clear", command=ClearPublic, state=DISABLED, takefocus=0)
-        SavePubKeybutton = Button(self.symmetricEncryption, width=15, text="Save as...", command=SavePub, state=DISABLED, takefocus=0)
-        CopyPrivKeybutton = Button(self.symmetricEncryption, width = 10, text="Copy", command=CopyPriv, state=DISABLED, takefocus=0)
-        ClearPrivKeybutton = Button(self.symmetricEncryption, width = 10, text="Clear", command=ClearPriv, state=DISABLED, takefocus=0)
-        SavePrivKeybutton = Button(self.symmetricEncryption, width=15, text="Save as...", command=SavePriv, state=DISABLED, takefocus=0)
-        scrollbar2 = Scrollbar(EncryptFrameLabel)
-        scrollbar3 = Scrollbar(EncryptFrameLabel)
-        scrollbar4 = Scrollbar(EncryptFrameLabel)
-        RSApublicKeyWidget.config(yscrollcommand=scrollbar4.set)
-        RSAprivateKeyWidget.config(yscrollcommand=scrollbar3.set)
-        encryptedTextWidget.config(yscrollcommand=scrollbar2.set)
-        scrollbar2.config(command=encryptedTextWidget.yview)
-        scrollbar3.config(command=RSAprivateKeyWidget.yview)
-        scrollbar4.config(command=RSApublicKeyWidget.yview)
-        SaveENCbutton.place(x=162, y=100)
-        CopyAESbutton.place(x=8, y=170)
-        ClearAESbutton.place(x=85, y=170)
-        SaveAESbutton.place(x=162, y=170)
-        CopyPubKeybutton.place(x=8, y=309)
-        ClearPubKeybutton.place(x=85, y=309)
-        SavePubKeybutton.place(x=162, y=309)
-        CopyPrivKeybutton.place(x=8, y=449)
-        ClearPrivKeybutton.place(x=85, y=449)
-        SavePrivKeybutton.place(x=162, y=449)
-        about = Text(self.helpFrame, height=28, width=127, font=("Segoe UI", 9), wrap=WORD)
-        AboutText = "This program can encrypt and decrypt plain texts and files with both symmetric key encryption and asymmetric key encryption algorithms. AES-128 key is a 16 characters long and base64.urlsafe encoded key, AES-192 key is a 24 characters long and base64.urlsafe encoded key and AES-256 key is a 32 characters long and base64.urlsafe encoded key. RSA keys are base64.urlsafe encoded keys that in any length longer than 128 characters. Program can generate a fresh random AES or RSA key or can use a pre-generated key. In RSA encryption, Public Key is used to encrypt the data and Private Key is required to decrypt the cipher (Encrypted data). Public key can be extracted from Private key. 1024-bit RSA encryption can take 1 second to 10 seconds and 8196-bit RSA encryption can take 1 minute to 12 minutes depending on your computer. AES encryptions are way faster than RSA encryption. Fernet encryption (Legacy Fernet Key) also includes ability to change encryption time. That means you can encrypt your data with a fake date. But AES and RSA doesn't support this. Also you can select Fast mode to encrypt the data faster but bypass encyrption check.\n\nIf you are having problems with program, below information might be helpful to resolve problems:\n\nERR_ENCRYPTER_NOT_WORKING_PROPERLY: This error indicates that encrypter is not working properly even 'abc' text encryption failed. Try encrypting again after restarting the program. If problem persists, please report this problem to me.\n\nERR_INVALID_ENCRYPTION_KEY: This error occures when you selected to enter an encryption key and entered a non-encryption key. Please be sure you entered a AES-128, AES-192, AES-256, Fernet or RSA key that is bigger than 1024-bit; if the key you entered is one of them, be sure it's base64.urlsafe encoded.\n\nERR_UNENCRYPTABLE_TEXT: This error indicates that text you entered to encrypt is not encryptable or includes a illegal character for selected encoding system. Please try another text to encyrpt.\n\nERR_UNABLE_TO_CLEAR: This error pops-up when an unknown error occures while trying to clear the cipher or key from output. Only solution is probably restarting the program. If problem persists, please report this problem to me.\n\nERR_UNABLE_TO_DECRYPT: This errorVersion: {} Build 14\nAuthor: Yılmaz Alpaslan\ngithub.com\Yilmaz4\Encrypt-n-Decrypt".format(version)
-        about.insert(INSERT, AboutText)
-        about.configure(state=DISABLED)
-        encryptedTextWidget.place(x=9, y=5)
-        RSApublicKeyWidget.place(x=9, y=215)
-        RSAprivateKeyWidget.place(x=9, y=355)
-        StatusLabelAES.place(x=92, y=159)
-        AESkeyEntry.place(x=9, y=145)
-        AESkeyLabel.place(x=8, y=125)
-        RSApublicLabel.place(x=8, y=194)
-        RSAprivateLabel.place(x=8, y=334)
-        encryButton.place(x=9, y=500)
-        copyButton.place(x=8, y=100)
-        clearButton.place(x=85, y=100)
-        about.place(x=10, y=10)
-        scrollbar2.place(x=376, y=5, height=88)
-        scrollbar3.place(x=376, y=355, height=88)
-        scrollbar4.place(x=376, y=215, height=88)
+        # Output section & encrypt 
+        def saveOutput():
+            
+        self.encryptButton = Button(self.symmetricEncryption, text = "Encrypt", width=15, command=self.crypto.encrypt, takefocus=0)
+        self.outputText = ScrolledText(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="white", relief=SUNKEN, takefocus=0)
+
+        self.AESKeyText = Text(self.symmetricEncryption, width=54, height=1, state=DISABLED, font=("Consolas",9), relief=SUNKEN, takefocus=0)
+        self.RSAPublicText = ScrolledText(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
+        self.RSAPrivateText = ScrolledText(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
+        self.AESKeyLabel = Label(self.symmetricEncryption, text="AES/3DES Key:", takefocus=0)
+        self.RSAPublicLabel = Label(self.symmetricEncryption, text="RSA Public Key:", takefocus=0)
+        self.RSAPrivateLabel = Label(self.symmetricEncryption, text="RSA Private Key:", takefocus=0)
+
+        self.copyOutputButton = Button(self.symmetricEncryption, text = "Copy", width=10, command=lambda: (self.clipboard_clear(), self.clipboard_append(self.outputTex.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.clearOutputButton = Button(self.symmetricEncryption, text = "Clear", width=10, command=lambda: self.outputText.delete("1.0", END), state=DISABLED, takefocus=0)
+        self.saveOutputButton = Button(self.symmetricEncryption, width=15, text="Save as...", command=saveOutput, state=DISABLED, takefocus=0)
+        self.copyAESKeyButton = Button(self.symmetricEncryption, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.AESKeyText.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.clearAESKeyButton = Button(self.symmetricEncryption, width = 10, text="Clear", command=lambda: self.AESKeyText.delete("1.0", END), state=DISABLED, takefocus=0)
+        self.saveAESKeyButton = Button(self.symmetricEncryption, width=15, text="Save as...", command=saveAESKey, state=DISABLED, takefocus=0)
+        self.copyRSAPublicButton = Button(self.symmetricEncryption, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.RSAPublicText.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.clearRSAPublicButton = Button(self.symmetricEncryption, width = 10, text="Clear", command=lambda: self.AESKeyText.delete("1.0", END), state=DISABLED, takefocus=0)
+        self.saveRSAPublicButton = Button(self.symmetricEncryption, width=15, text="Save as...", command=saveRSAPublic, state=DISABLED, takefocus=0)
+        self.copyRSAPrivateButton = Button(self.symmetricEncryption, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.RSAPrivateText.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.clearRSAPrivateButton = Button(self.symmetricEncryption, width = 10, text="Clear", command=lambda: self.AESKeyText.delete("1.0", END), state=DISABLED, takefocus=0)
+        self.saveRSAPrivateButton = Button(self.symmetricEncryption, width=15, text="Save as...", command=saveRSAPrivate, state=DISABLED, takefocus=0)
+
+        self.encryptButton.place(x=9, y=500)
+        self.outputText.place(x=9, y=5)
+
+        self.AESKeyText.place(x=9, y=145)
+        self.RSAPublicText.place(x=9, y=215)
+        self.RSAPrivateLabel.place(x=9, y=355)
+        self.AESKeyLabel.place(x=8, y=125)
+        self.RSAPublicLabel.place(x=8, y=194)
+        self.RSAPrivateLabel.place(x=8, y=334)
+
+        self.copyOutputButton.place(x=8, y=100)
+        self.clearOutputButton.place(x=85, y=100)
 
         # ┌──────────────────┐
         # │ Decryption Frame │
@@ -535,11 +513,6 @@ class Interface(Tk):
         OutputFrame.place(x=10, y=442)
         OutputEntry.place(x=9, y=3)"""
 
-        # Encrypted data / output frame
-        self.outputFrame = LabelFrame(self.encryptionFrame, text="Output", height=506, width=403, takefocus=0)
-
-
-        self.outputFrame.place(x=377, y=4)
         # ┌───────────────┐
         # │ Logging Frame │
         # └───────────────┘
