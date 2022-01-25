@@ -123,7 +123,29 @@ class Interface(Tk):
         # └──────────────────┘
 
         # Plain text & file entries frame
+        def changeDataSource():
+            
+        self.textEntryCheck = Radiobutton(self.encryptionFrame, text = "Plain text:", value=0, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
+        self.textEntry = Entry(self.encryptionFrame, width = 48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=plainTextEntryVar)
+        self.textPasteButton = Button(self.encryptionFrame, text = "Paste", width=14, state=NORMAL, command=PasteTextCommand, takefocus=0)
+        self.textClearButton = Button(self.encryptionFrame, text = "Clear", width=14, command=lambda: self.textEntry.delete(0, END), takefocus=0, state=DISABLED)
+        self.textEntryHideCharCheck = Checkbutton(self.encryptionFrame, text = "Hide characters", variable=showCharState, onvalue=1, offvalue=0, command=toggleHideChar, takefocus=0)
 
+        self.fileEntryCheck = Radiobutton(self.encryptionFrame, text = "File:", value=1, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
+        self.fileEntry = Entry(self.encryptionFrame, width = 48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=filePathEntryVar)
+        self.fileBrowseButton = Button(self.encryptionFrame, text = "Browse...", width=14, state=DISABLED, command=BrowseFileToEncrypt, takefocus=0)
+        self.fileClearButton = Button(self.encryptionFrame, text = "Clear", width=14, state=DISABLED, command=lambda: self.fileEntry.delete(0, END), takefocus=0)
+
+        self.textEntryCheck.place(x=8, y=2)
+        self.textEntry.place(x=24, y=22)
+        self.textPasteButton.place(x=23, y=49)
+        self.textClearButton.place(x=124, y=49)
+        self.textEntryHideCharCheck.place(x=261, y=50)
+
+        self.fileEntryCheck.place(x=8, y=76)
+        self.fileEntry.place(x=24, y=96)
+        self.fileBrowseButton.place(x=23, y=123)
+        self.fileClearButton.place(x=124, y=123)
 
         # Algorithm selection frame
         def changeEnterKeySectionState(state = DISABLED):
@@ -347,6 +369,8 @@ class Interface(Tk):
         self.entryAlgorithmSelection = IntVar(value=0)
         self.keyEntryVar = StringVar()
         self.keyEntryHideCharVar = IntVar()
+
+        self.dataSourceVar = IntVar(value=0)
 
 
     def initialize_menu(self):
