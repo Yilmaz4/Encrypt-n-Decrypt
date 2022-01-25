@@ -42,147 +42,24 @@ from Crypto import Random
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
-import base64, os, time
+import base64, os, time, logging
 
-def CheckUpdates():
-    def AssetDownload(downloadPath, ProgressBar, downloadProgress, ProgressLabel, size, ExtractContent, Asset=0, chunkSize=2197318):
-        startTime = time.time()
-        size = int(size)
-        MBFACTOR = float(1 << 20)
-        try:
-            os.remove(downloadPath)
-        except:
-            pass
-        ProgressBar.configure(maximum=int(chunkSize))
-        downloadProgress.set(0)
-        downloadedSize = 0
-        try:
-            ProgressLabel.configure(text="Download progress: Creating the file in specified location . . .")
-            update.update()
-            file = open(downloadPath, mode='wb')
-            downloadedContent = ""
-            ProgressLabel.configure(text="Download progress: Getting ready for download operation . . .")
-            update.update()
-            for chunk in range(0, int(size), int(chunkSize)):
-                try:
-                    ProgressLabel.configure(text="Download progress: {:.1f} MB ({:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize), int(size)/MBFACTOR))
-                    update.update()
-                    downloadURL = get(Version.json()["assets"][int(Asset)]["browser_download_url"], headers={"Range":"bytes={}-{}".format(chunk, chunk+chunkSize-1)})
-                except Exception as e:
-                    messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e))
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: GitHub server connection failed ({})".format(e))+"\n")
-                    logTextWidget.config(state=DISABLED)
-                    try:
-                        os.remove(downloadPath)
-                    except:
-                        pass
-                    break
-                ProgressLabel.configure(text="Download progress: {:.1f} MB ({:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize), int(size)/MBFACTOR))
-                update.update()
-                downloadedContent = bytes(str(downloadedContent), "utf-8") + downloadURL.content
-                update.update()
-                downloadedSize = downloadedSize + len(downloadURL.content)
-                update.update()
-                downloadProgress.set(downloadProgress.get()+len(downloadURL.content))
-                update.update()
-                ProgressBar.configure(maximum=size)
-                update.update()
-            try:
-                file.write(downloadedContent)
-            except Exception as e:
-                if not is_admin():
-                    messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e))
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: File write operation failed ({})".format(e))+"\n")
-                    logTextWidget.config(state=DISABLED)
-                    try:
-                        os.remove(downloadPath)
-                    except:
-                        pass
-                else:
-                    messagebox.showerror("ERR_INVALID_PATH","An error occured while trying to write downloaded data to '{}' path. Path may be invalid or inaccessible. Please select another path.")
-                    try:
-                        os.remove(downloadPath)
-                    except:
-                        pass
-        except Exception as e:
-            if not is_admin():
-                messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e))
-                logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: File write operation failed ({})".format(e))+"\n")
-                logTextWidget.config(state=DISABLED)
-                try:
-                    os.remove(downloadPath)
-                except:
-                    pass
-            else:
-                messagebox.showerror("ERR_INVALID_PATH","An error occured while trying to write downloaded data to '{}' path. Path may be invalid or inaccessible. Please select another path.")
-                try:
-                    os.remove(downloadPath)
-                except:
-                    pass
-        else:
-            ProgressLabel.configure(text="Download progress: Finishing download operation...")
-            update.update()
-            if ExtractContent.get() == 1:
-                if DownloadPathEntry.get()[1:] == "\\":
-                    try:
-                        os.mkdir(DownloadPathEntry.get())
-                    except:
-                        pass
-                    with ZipFile("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:
-                        zip_ref.extractall(DownloadPathEntry.get())
-                else:
-                    try:
-                        os.mkdir(DownloadPathEntry.get()+"/")
-                    except:
-                        pass
-                    with ZipFile("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:zip_ref.extractall(DownloadPathEntry.get())
-            ProgressLabel.configure(text="Download progress:")
-            downloadProgress.set(0)
-            finishTime = time.time()
-            messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed successfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
-    def Asset0Download():
-        if DownloadPathEntry.get()[1:] == "\\":
-            AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
-        else:
-            AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
-    def Asset1Download():
-        if DownloadPathEntry.get()[1:] == "\\":
-            AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2, ExtractContent=ExtractContent)
-        else:
-            AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2, ExtractContent=ExtractContent)
-    try:
-        Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
-    except Exception as e:
-        messagebox.showerror("ERR_INTERNET_DISCONNECTED","An error occured while trying to connect to the GitHub API. Please check your internet connection.")
-        logTextWidget.config(state=NORMAL)
-        logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: GitHub API connection failed ({})\n".format(e))+"\n")
-        logTextWidget.config(state=DISABLED)
-    else:
-        MBFACTOR = float(1 << 20)
-        try:
-            response = head(Version.json()["assets"][0]["browser_download_url"], allow_redirects=True)
-        except KeyError as e:
-            messagebox.showerror("ERR_API_LIMIT_EXCEED","An error occured while trying to connect to the GitHub API servers. GitHub API limit may be exceed as servers has only 5000 connections limit per hour and per IP adress. Please try again after 1 hours.")
-            logTextWidget.config(state=NORMAL)
-            logTextWidget.insert(INSERT, "ERROR: GitHub API limit exceeded, connection failed. ({})\n".format(e))
-            logTextWidget.config(state=DISABLED)
-        else:
-            size = response.headers.get('content-length', 0)
-            response2 = head(Version.json()["assets"][1]["browser_download_url"], allow_redirects=True)
-            size2 = response2.headers.get('content-length', 0)
-            if Version.json()["tag_name"] == version:
-                messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
-            else:
-                if version.replace("b","").replace("v","").replace(".","") > (Version.json()["tag_name"]).replace("b","").replace("v","").replace(".",""):
-                    messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
-                else:
-                    def TestDirectory():
-                        pass
-                    update = Toplevel(root)
-                    
+class loggingHandler(logging.Handler):
+    def __init__(self, widget: Text):
+        super().__init__()
+        self.widget = widget
+
+    def emit(self, record):
+        message = self.format(record)
+        def append():
+            self.widget.configure(state=NORMAL)
+            self.widget.insert(END, message + '\n')
+            self.widget.configure(state=DISABLED)
+
+            self.widget.yview(END)
+
+        self.widget.after(0, append)
+
 class Interface(Tk):
     def __init__(self):
         super().__init__()
@@ -194,8 +71,8 @@ class Interface(Tk):
         self.title(f"Eɲcrƴpʈ'n'Decrƴpʈ v{self.version}")
         self.geometry(f"{self.width}x{self.height}")
         self.resizable(width=False, height=False)
-        self.minsize(width=self.width, height=self.height)
-        self.maxsize(width=self.width, height=self.height)
+        self.minsize(width = self.width, height = self.height)
+        self.maxsize(width = self.width, height = self.height)
         try:
             self.iconbitmap("icon.ico")
         except TclError:
@@ -205,87 +82,27 @@ class Interface(Tk):
         self.initialize_menu()
         self.initialize_widgets()
 
-    class ToolTip:
-        def __init__(self, widget, justify, background, foreground, relief, borderwidth, font, locationinvert, heightinvert):
-            self.widget = widget
-            self.tipwindow = None
-            self.id = None
-            self.x = self.y = 0
-            
-            self.transition = 10
+        loghandler = loggingHandler(widget = self.loggingWidget)
+        logging.basicConfig(
+            format = '%(asctime)s [%(levelname)s] %(message)s',
+            level = logging.DEBUG,
+            datefmt = r'%Y-%m-%d %H:%M:%S'
+        )
+        self.logger = logging.getLogger()
+        self.logger.addHandler(loghandler)
 
-            self.justify = justify
-            self.background = background
-            self.foreground = foreground
-            self.relief = relief
-            self.borderwidth = borderwidth
-            self.font = font
-            self.locationinvert = locationinvert
-            self.heightinvert = heightinvert
+    @property
+    def logging_level(self) -> int:
+        return self.logger.level
 
-        def showtip(self, text):
-            self.text = text
-            if self.tipwindow or not self.text:
-                return
-
-            x, y, _, cy = self.widget.bbox("insert")
-            x = x + self.winfo_pointerx() + 2
-            y = y + cy + self.winfo_pointery() + 15
-            self.tipwindow = tw = Toplevel(self.widget)
-
-            tw.wm_overrideredirect(1)
-            tw.wm_geometry("+%d+%d" % (x, y))
-            tw.attributes("-alpha", 0)
-            label = Label(tw, text=self.text, justify=LEFT, relief=SOLID, borderwidth=1, foreground="#6f6f6f", background="white", takefocus=0)
-            label.pack(ipadx=1)
-            tw.attributes("-alpha", 0)
-            try:
-                tw.tk.call("::tk::unsupported::MacWindowStyle", "style", tw._w, "help", "noActivates")
-            except TclError:
-                pass
-
-            def fade_in():
-                alpha = tw.attributes("-alpha")
-                if alpha != self.attributes("-alpha"):
-                    alpha += .1
-                    tw.attributes("-alpha", alpha)
-                    tw.after(self.transition, fade_in)
-                else:
-                    tw.attributes("-alpha", self.attributes("-alpha"))
-            fade_in()
-        
-        def hidetip(self):
-            tw = self.tipwindow
-            self.tipwindow = None
-            try:
-                def fade_away():
-                    alpha = tw.attributes("-alpha")
-                    if alpha > 0:
-                        alpha -= .1
-                        tw.attributes("-alpha", alpha)
-                        tw.after(self.transition, fade_away)
-                    else:
-                        tw.destroy()
-                if not tw.attributes("-alpha") in [0, 1]:
-                    tw.destroy()
-                else:
-                    fade_away()
-            except:
-                if tw:
-                    tw.destoy()
-
-    def createToolTip(self, widget: Any, text: str):
-        toolTip = self.ToolTip(widget)
-
-        def enter(event = None):
-            if not self.showTooltip.get() == 0:
-                self.task = self.after(1000, toolTip.showtip, text, widget, event)
-        def leave(event = None):
-            toolTip.hidetip(widget)
-
-        widget.bind('<Enter>', enter)
-        widget.bind('<Leave>', leave)
-        widget.bind('<Button-1>', leave)
+    @logging_level.setter
+    def logging_level(self, level: Optional[Literal[0, 10, 20, 30, 40, 50]] = None) -> None:
+        if not not level:
+            self.logger.setLevel(level=level)
+            self.logger.disabled = False
+        else:
+            self.logger.setLevel(level=logging.CRITICAL + 1)
+            self.logger.disabled = True
 
     def initialize_widgets(self):
         self.mainNotebook = Notebook(self, width=380, height=340, takefocus=0)
@@ -309,63 +126,37 @@ class Interface(Tk):
 
 
         # Algorithm selection frame
-        def changeAESState(state: Literal['normal', 'disabled'] = NORMAL):
+        def changeEnterKeySectionState(state = DISABLED):
+            self.keyEntry.configure(state=state)
+            self.keyEntryHideCharCheck.configure(state=state)
+            self.keyClearButton.configure(state=state)
+            self.keyPasteButton.configure(state=state)
+            self.keyBrowseButton.configure(state=state)
+            self.keyEnteredAlgDES.configure(state=state)
+            self.keyEnteredAlgAES.configure(state=state)
+
+        def changeGenerateKeySectionState(state = NORMAL):
+            self.AESAlgorithmCheck.configure(state=state)
+            self.DESAlgorithmCheck.configure(state=state)
+
+        def changeAESState(state = NORMAL):
             self.AES128Check.configure(state=state)
             self.AES192Check.configure(state=state)
             self.AES256Check.configure(state=state)
+        
+        def changeDESState(state = DISABLED):
+            self.DES128Check.configure(state=state)
+            self.DES192Check.configure(state=state)
+
         def changeAlgorithmSelection():
-            if self.generateAlgorithmSelection.get() == 0:
-                self.AES128Check.configure(state=NORMAL)
-                self.AES192Check.configure(state=NORMAL)
-                self.AES256Check.configure(state=NORMAL)
-                self.DES128Check.configure(state=DISABLED)
-                self.DES192Check.configure(state=DISABLED)
-            else:
-                self.AES128Check.configure(state=DISABLED)
-                self.AES192Check.configure(state=DISABLED)
-                self.AES256Check.configure(state=DISABLED)
-                self.DES128Check.configure(state=NORMAL)
-                self.DES192Check.configure(state=NORMAL)
+            changeAESState(state = DISABLED if bool(self.generateAlgorithmSelection.get()) else NORMAL)
+            changeDESState(state = NORMAL if bool(self.generateAlgorithmSelection.get()) else DISABLED)
 
         def changeSourceSelection():
-            if self.keySourceSelection.get() == 1:
-                self.AESAlgorithmCheck.configure(state=DISABLED)
-                self.DESAlgorithmCheck.configure(state=DISABLED)
-                self.DES128Check.configure(state=DISABLED)
-                self.DES192Check.configure(state=DISABLED)
-                self.AES128Check.configure(state=DISABLED)
-                self.AES192Check.configure(state=DISABLED)
-                self.AES256Check.configure(state=DISABLED)
-                self.keyEntry.configure(state=NORMAL)
-                self.keyEntryHideCharCheck.configure(state=NORMAL)
-                self.keyClearButton.configure(state=NORMAL)
-                self.keyPasteButton.configure(state=NORMAL)
-                self.keyBrowseButton.configure(state=NORMAL)
-                self.keyEnteredAlgDES.configure(state=NORMAL)
-                self.keyEnteredAlgAES.configure(state=NORMAL)
-            else:
-                self.AESAlgorithmCheck.configure(state=NORMAL)
-                self.DESAlgorithmCheck.configure(state=NORMAL)
-                self.DES128Check.configure(state=NORMAL)
-                if self.generateAlgorithmSelection.get() == 1:
-                    self.DES128Check.configure(state=NORMAL)
-                    self.DES192Check.configure(state=NORMAL)
-                    self.AES128Check.configure(state=DISABLED)
-                    self.AES192Check.configure(state=DISABLED)
-                    self.AES256Check.configure(state=DISABLED)
-                else:
-                    self.DES128Check.configure(state=DISABLED)
-                    self.DES192Check.configure(state=DISABLED)
-                    self.AES128Check.configure(state=NORMAL)
-                    self.AES192Check.configure(state=NORMAL)
-                    self.AES256Check.configure(state=NORMAL)
-                self.keyEntry.configure(state=DISABLED)
-                self.keyEntryHideCharCheck.configure(state=DISABLED)
-                self.keyClearButton.configure(state=DISABLED)
-                self.keyPasteButton.configure(state=DISABLED)
-                self.keyBrowseButton.configure(state=DISABLED)
-                self.keyEnteredAlgDES.configure(state=DISABLED)
-                self.keyEnteredAlgAES.configure(state=DISABLED)
+            changeGenerateKeySectionState(state = DISABLED if bool(self.keySourceSelection.get()) else NORMAL)
+            changeAESState(state = DISABLED if bool(self.keySourceSelection.get()) else DISABLED if bool(self.generateAlgorithmSelection.get()) else NORMAL)
+            changeDESState(state = DISABLED if bool(self.keySourceSelection.get()) else NORMAL if bool(self.generateAlgorithmSelection.get()) else DISABLED)
+            changeEnterKeySectionState(state = NORMAL if bool(self.keySourceSelection.get()) else DISABLED)
 
         def GetKey(path: str) -> Optional[Union[str, bytes]]:
             with open(path, encoding = 'utf-8', mode="r") as file:
@@ -580,8 +371,8 @@ class Interface(Tk):
         self.fileMenu.add_command(label = "Decryption", command=lambda: self.mainNotebook.select(1), accelerator="Ctrl+D", underline=0)
         self.fileMenu.add_command(label = "Logs", command=lambda: self.mainNotebook.select(2), accelerator="Ctrl+L", underline=0)
         self.fileMenu.add_command(label = "Help & About", command=lambda: self.mainNotebook.select(3), accelerator="F1", underline=0)
-        self.fileMenu.add_separator()
-        self.fileMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=CheckUpdates, underline=10)
+        #self.fileMenu.add_separator()
+        #self.fileMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=CheckUpdates, underline=10)
         self.fileMenu.add_separator()
         self.fileMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda:root.destroy())
         # View menu
@@ -775,6 +566,88 @@ class Interface(Tk):
             DownloadLinks.place(x=310, y=168)
             OtherOptions.place(x=310, y=420)
             self.focus_force()
+
+    class ToolTip:
+        def __init__(self, widget, justify, background, foreground, relief, borderwidth, font, locationinvert, heightinvert):
+            self.widget = widget
+            self.tipwindow = None
+            self.id = None
+            self.x = self.y = 0
+            
+            self.transition = 10
+
+            self.justify = justify
+            self.background = background
+            self.foreground = foreground
+            self.relief = relief
+            self.borderwidth = borderwidth
+            self.font = font
+            self.locationinvert = locationinvert
+            self.heightinvert = heightinvert
+
+        def showtip(self, text):
+            self.text = text
+            if self.tipwindow or not self.text:
+                return
+
+            x, y, _, cy = self.widget.bbox("insert")
+            x = x + self.winfo_pointerx() + 2
+            y = y + cy + self.winfo_pointery() + 15
+            self.tipwindow = tw = Toplevel(self.widget)
+
+            tw.wm_overrideredirect(1)
+            tw.wm_geometry("+%d+%d" % (x, y))
+            tw.attributes("-alpha", 0)
+            label = Label(tw, text=self.text, justify=LEFT, relief=SOLID, borderwidth=1, foreground="#6f6f6f", background="white", takefocus=0)
+            label.pack(ipadx=1)
+            tw.attributes("-alpha", 0)
+            try:
+                tw.tk.call("::tk::unsupported::MacWindowStyle", "style", tw._w, "help", "noActivates")
+            except TclError:
+                pass
+
+            def fade_in():
+                alpha = tw.attributes("-alpha")
+                if alpha != self.attributes("-alpha"):
+                    alpha += .1
+                    tw.attributes("-alpha", alpha)
+                    tw.after(self.transition, fade_in)
+                else:
+                    tw.attributes("-alpha", self.attributes("-alpha"))
+            fade_in()
+        
+        def hidetip(self):
+            tw = self.tipwindow
+            self.tipwindow = None
+            try:
+                def fade_away():
+                    alpha = tw.attributes("-alpha")
+                    if alpha > 0:
+                        alpha -= .1
+                        tw.attributes("-alpha", alpha)
+                        tw.after(self.transition, fade_away)
+                    else:
+                        tw.destroy()
+                if not tw.attributes("-alpha") in [0, 1]:
+                    tw.destroy()
+                else:
+                    fade_away()
+            except:
+                if tw:
+                    tw.destoy()
+
+    def createToolTip(self, widget: Any, text: str):
+        toolTip = self.ToolTip(widget)
+
+        def enter(event = None):
+            if not self.showTooltip.get() == 0:
+                self.task = self.after(1000, toolTip.showtip, text, widget, event)
+        def leave(event = None):
+            toolTip.hidetip(widget)
+
+        widget.bind('<Enter>', enter)
+        widget.bind('<Leave>', leave)
+        widget.bind('<Button-1>', leave)
 
 if __name__ == "__main__":
     root = Interface()
