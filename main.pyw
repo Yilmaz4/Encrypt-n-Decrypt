@@ -109,13 +109,48 @@ class loggingHandler(logging.Handler):
         return str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S') + " [" + record.levelname + "] " + record.getMessage())
 
 class ScrolledText(Text):
-    def __init__(self, master=None, **kw):
+    def __init__(self, master=None, *args, **kwargs):
         self.frame = Frame(master)
         self.vbar = Scrollbar(self.frame)
         self.vbar.pack(side=RIGHT, fill=Y)
 
-        kw.update({'yscrollcommand': self.vbar.set})
-        Text.__init__(self, self.frame, **kw)
+        kwargs.update({'yscrollcommand': self.vbar.set})
+
+        try:
+            self._textvariable = kwargs.pop("textvariable")
+        except KeyError:
+            self._textvariable = None
+
+        super().__init__(master, *args, **kwargs)
+
+        if self._textvariable is not None:
+            self.insert("1.0", self._textvariable.get())
+
+        self.tk.eval('''
+            proc widget_proxy {widget widget_command args} {
+
+                # call the real tk widget command with the real args
+                set result [uplevel [linsert $args 0 $widget_command]]
+
+                # if the contents changed, generate an event we can bind to
+                if {([lindex $args 0] in {insert replace delete})} {
+                    event generate $widget <<Change>> -when tail
+                }
+                # return the result from the real widget command
+                return $result
+            }
+            ''')
+        self.tk.eval('''
+            rename {widget} _{widget}
+            interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
+        '''.format(widget=str(self)))
+
+        self.bind("<<Change>>", self._on_widget_change)
+
+        if self._textvariable is not None:
+            self._textvariable.trace("wu", self._on_var_change)
+
+        super().__init__(self.frame, **kwargs)
         self.pack(side=LEFT, fill=BOTH, expand=True)
         self.vbar['command'] = self.yview
 
@@ -129,6 +164,64 @@ class ScrolledText(Text):
 
     def __str__(self):
         return str(self.frame)
+
+    def _on_var_change(self, *args):
+        text_current = self.get("1.0", "end-1c")
+        var_current = self._textvariable.get()
+        if text_current != var_current:
+            self.delete("1.0", "end")
+            self.insert("1.0", var_current)
+
+    def _on_widget_change(self, event=None):
+        if self._textvariable is not None:
+            self._textvariable.set(self.get("1.0", "end-1c"))
+
+class Text(Text):
+    def __init__(self, parent, *args, **kwargs):
+        try:
+            self._textvariable = kwargs.pop("textvariable")
+        except KeyError:
+            self._textvariable = None
+
+        super().__init__(parent, *args, **kwargs)
+
+        if self._textvariable is not None:
+            self.insert("1.0", self._textvariable.get())
+
+        self.tk.eval('''
+            proc widget_proxy {widget widget_command args} {
+
+                # call the real tk widget command with the real args
+                set result [uplevel [linsert $args 0 $widget_command]]
+
+                # if the contents changed, generate an event we can bind to
+                if {([lindex $args 0] in {insert replace delete})} {
+                    event generate $widget <<Change>> -when tail
+                }
+                # return the result from the real widget command
+                return $result
+            }
+            ''')
+        self.tk.eval('''
+            rename {widget} _{widget}
+            interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
+        '''.format(widget=str(self)))
+
+        self.bind("<<Change>>", self._on_widget_change)
+
+        if self._textvariable is not None:
+            self._textvariable.trace("wu", self._on_var_change)
+
+    def _on_var_change(self, *args):
+        text_current = self.get("1.0", "end-1c")
+        var_current = self._textvariable.get()
+        if text_current != var_current:
+            self.delete("1.0", "end")
+            self.insert("1.0", var_current)
+
+    def _on_widget_change(self, event=None):
+        if self._textvariable is not None:
+            self._textvariable.set(self.get("1.0", "end-1c"))
 
 class Interface(Tk):
     def __init__(self):
@@ -172,7 +265,7 @@ class Interface(Tk):
         self.logger = logging.getLogger()
         self.logger.propagate = False
 
-        self.crypto = Crypto()
+        self.crypto = Crypto(self)
 
         self.initialize_vars()
         self.initialize_menu()
@@ -424,42 +517,100 @@ class Interface(Tk):
 
         # Output section & encrypt 
         def saveOutput():
-            
+            files = [("Text document","*.txt"),("All files","*.*")]
+            path = filedialog.asksaveasfilename(title="Save encrypted data", initialfile="Encrypted Data.txt", filetypes=files, defaultextension="*.txt")
+            if path == "":
+                return
+            with open(path, encoding="utf-8", mode="w") as file:
+                file.write(encrypted)
+
+        def saveAESKey():
+            files = [("Encrypt'n'Decrypt key file","*.key"),("Text document","*.txt"),("All files","*.*")]
+            path = filedialog.asksaveasfilename(title="Save encryption key", initialfile="Encryption Key.key", filetypes=files, defaultextension="*.key")
+            if path == "":
+                return
+            SaveKey(path, AESkeyEntry.get('1.0', END)[:-1])
+
+        def saveRSAPublic():
+            files = [("Text document","*.txt"),("All files","*.*")]
+            path = filedialog.asksaveasfilename(title="Save public key", initialfile="Public Key.txt", filetypes=files, defaultextension="*.txt")
+            if path == "":
+                return
+            with open(path, encoding="utf-8", mode="w") as file:
+                file.write(RSApublicKeyWidget.get('1.0', END)[:-1])
+
+        def saveRSAPrivate():
+            files = [("Text document","*.txt"),("All files","*.*")]
+            path = filedialog.asksaveasfilename(title="Save private key", initialfile="Private Key.txt", filetypes=files, defaultextension="*.txt")
+            if path == "":
+                return
+            with open(path, encoding="utf-8", mode="w") as file:
+                file.write(RSAprivateKeyWidget.get('1.0', END)[:-1])
+
+        def outputTextCallback(*args, **kwargs):
+            if self.outputVar.get() == "":
+                self.outputText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+            else:
+                self.outputText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+
+        def AESKeyTextCallback(*args, **kwargs):
+            if self.AESKeyVar.get() == "":
+                self.AESKeyText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+            else:
+                self.AESKeyText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+
         self.encryptButton = Button(self.symmetricEncryption, text = "Encrypt", width=15, command=self.crypto.encrypt, takefocus=0)
-        self.outputText = ScrolledText(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="white", relief=SUNKEN, takefocus=0)
 
-        self.AESKeyText = Text(self.symmetricEncryption, width=54, height=1, state=DISABLED, font=("Consolas",9), relief=SUNKEN, takefocus=0)
-        self.RSAPublicText = ScrolledText(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
-        self.RSAPrivateText = ScrolledText(self.symmetricEncryption, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
-        self.AESKeyLabel = Label(self.symmetricEncryption, text="AES/3DES Key:", takefocus=0)
-        self.RSAPublicLabel = Label(self.symmetricEncryption, text="RSA Public Key:", takefocus=0)
-        self.RSAPrivateLabel = Label(self.symmetricEncryption, text="RSA Private Key:", takefocus=0)
+        self.outputFrame = LabelFrame(self.encryptionFrame, text="Output", height=506, width=403, takefocus=0)
 
-        self.copyOutputButton = Button(self.symmetricEncryption, text = "Copy", width=10, command=lambda: (self.clipboard_clear(), self.clipboard_append(self.outputTex.get("1.0", END))), state=DISABLED, takefocus=0)
-        self.clearOutputButton = Button(self.symmetricEncryption, text = "Clear", width=10, command=lambda: self.outputText.delete("1.0", END), state=DISABLED, takefocus=0)
-        self.saveOutputButton = Button(self.symmetricEncryption, width=15, text="Save as...", command=saveOutput, state=DISABLED, takefocus=0)
-        self.copyAESKeyButton = Button(self.symmetricEncryption, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.AESKeyText.get("1.0", END))), state=DISABLED, takefocus=0)
-        self.clearAESKeyButton = Button(self.symmetricEncryption, width = 10, text="Clear", command=lambda: self.AESKeyText.delete("1.0", END), state=DISABLED, takefocus=0)
-        self.saveAESKeyButton = Button(self.symmetricEncryption, width=15, text="Save as...", command=saveAESKey, state=DISABLED, takefocus=0)
-        self.copyRSAPublicButton = Button(self.symmetricEncryption, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.RSAPublicText.get("1.0", END))), state=DISABLED, takefocus=0)
-        self.clearRSAPublicButton = Button(self.symmetricEncryption, width = 10, text="Clear", command=lambda: self.AESKeyText.delete("1.0", END), state=DISABLED, takefocus=0)
-        self.saveRSAPublicButton = Button(self.symmetricEncryption, width=15, text="Save as...", command=saveRSAPublic, state=DISABLED, takefocus=0)
-        self.copyRSAPrivateButton = Button(self.symmetricEncryption, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.RSAPrivateText.get("1.0", END))), state=DISABLED, takefocus=0)
-        self.clearRSAPrivateButton = Button(self.symmetricEncryption, width = 10, text="Clear", command=lambda: self.AESKeyText.delete("1.0", END), state=DISABLED, takefocus=0)
-        self.saveRSAPrivateButton = Button(self.symmetricEncryption, width=15, text="Save as...", command=saveRSAPrivate, state=DISABLED, takefocus=0)
+        self.outputText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, textvariable=self.outputVar)
+        self.AESKeyText = Text(self.outputFrame, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, textvariable=self.AESKeyVar)
+        self.RSAPublicText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+        self.RSAPrivateText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+        self.AESKeyLabel = Label(self.outputFrame, text="AES/3DES Key:", takefocus=0)
+        self.RSAPublicLabel = Label(self.outputFrame, text="RSA Public Key:", takefocus=0)
+        self.RSAPrivateLabel = Label(self.outputFrame, text="RSA Private Key:", takefocus=0)
+
+        self.outputVar.trace("w", outputTextCallback)
+        self.AESKeyVar.trace("w", AESKeyTextCallback)
+
+        self.copyOutputButton = Button(self.outputFrame, text = "Copy", width=10, command=lambda: (self.clipboard_clear(), self.clipboard_append(self.outputTex.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.clearOutputButton = Button(self.outputFrame, text = "Clear", width=10, command=lambda: (self.outputText.configure(state=NORMAL), self.outputText.delete("1.0", END), self.outputText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+        self.saveOutputButton = Button(self.outputFrame, width=15, text="Save as...", command=saveOutput, state=DISABLED, takefocus=0)
+        self.copyAESKeyButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.AESKeyText.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.clearAESKeyButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.AESKeyText.configure(state=NORMAL), self.AESKeyText.delete("1.0", END), self.AESKeyText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+        self.saveAESKeyButton = Button(self.outputFrame, width=15, text="Save as...", command=saveAESKey, state=DISABLED, takefocus=0)
+        self.copyRSAPublicButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.RSAPublicText.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.clearRSAPublicButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.RSAPublicText.configure(state=NORMAL), self.RSAPublicText.delete("1.0", END), self.RSAPublicText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+        self.saveRSAPublicButton = Button(self.outputFrame, width=15, text="Save as...", command=saveRSAPublic, state=DISABLED, takefocus=0)
+        self.copyRSAPrivateButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.RSAPrivateText.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.clearRSAPrivateButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.RSAPrivateText.configure(state=NORMAL), self.RSAPrivateText.delete("1.0", END), self.RSAPrivateText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+        self.saveRSAPrivateButton = Button(self.outputFrame, width=15, text="Save as...", command=saveRSAPrivate, state=DISABLED, takefocus=0)
 
         self.encryptButton.place(x=9, y=500)
         self.outputText.place(x=9, y=5)
 
         self.AESKeyText.place(x=9, y=145)
         self.RSAPublicText.place(x=9, y=215)
-        self.RSAPrivateLabel.place(x=9, y=355)
+        self.RSAPrivateText.place(x=9, y=355)
         self.AESKeyLabel.place(x=8, y=125)
         self.RSAPublicLabel.place(x=8, y=194)
         self.RSAPrivateLabel.place(x=8, y=334)
 
         self.copyOutputButton.place(x=8, y=100)
         self.clearOutputButton.place(x=85, y=100)
+        self.saveOutputButton.place(x=162, y=100)
+        self.copyAESKeyButton.place(x=8, y=170)
+        self.clearAESKeyButton.place(x=85, y=170)
+        self.saveAESKeyButton.place(x=162, y=170)
+        self.copyRSAPublicButton.place(x=8, y=309)
+        self.clearRSAPublicButton.place(x=85, y=309)
+        self.saveRSAPublicButton.place(x=162, y=309)
+        self.copyRSAPrivateButton.place(x=8, y=449)
+        self.clearRSAPrivateButton.place(x=85, y=449)
+        self.saveRSAPrivateButton.place(x=162, y=449)
+
+        self.outputFrame.place(x=377, y=4)
 
         # ┌──────────────────┐
         # │ Decryption Frame │
@@ -546,7 +697,8 @@ class Interface(Tk):
         self.textEntryVar = StringVar()
         self.fileEntryVar = StringVar()
         self.textEntryHideCharVar = IntVar(value=0)
-
+        self.outputVar = StringVar()
+        self.AESKeyVar = StringVar()
 
     def initialize_menu(self):
         self.menuBar = Menu(self)
