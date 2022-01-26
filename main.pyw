@@ -70,8 +70,19 @@ class Crypto:
             iv = get_random_bytes(AES.block_size)
             if type(key) is str:
                 key = bytes(key, "utf-8")
+
             aes = AES.new(key, AES.MODE_CFB, iv=iv)
-            print(base64.urlsafe_b64encode(aes.encrypt(iv + b"hi")).decode("utf-8"))
+
+            self.master.outputText.configure(state=NORMAL)
+            self.master.outputText.replace(base64.urlsafe_b64encode(iv + aes.encrypt(b"hi")).decode("utf-8"))
+            self.master.outputText.configure(state=DISABLED)
+
+            self.master.AESKeyText.configure(state=NORMAL)
+            self.master.AESKeyText.replace(key.decode("utf-8"))
+            self.master.AESKeyText.configure(state=DISABLED)
+
+            print(self.master.AESKeyVar.get())
+            print(self.master.outputVar.get())
         """self.showTextChar = IntVar(value=0)
         self.showTooltip = IntVar(value=1)
         self.showInfoBox = IntVar(value=1)
@@ -113,22 +124,27 @@ class loggingHandler(logging.Handler):
 
 class ScrolledText(Text):
     def __init__(self, master=None, *args, **kwargs):
-        self.frame = Frame(master)
-        self.vbar = Scrollbar(self.frame)
-        self.vbar.pack(side=RIGHT, fill=Y)
-
-        kwargs.update({'yscrollcommand': self.vbar.set})
-
         try:
             self._textvariable = kwargs.pop("textvariable")
         except KeyError:
             self._textvariable = None
+        self.frame = Frame(master)
+        self.vbar = Scrollbar(self.frame)
+        self.vbar.pack(side=RIGHT, fill=Y)
+        kwargs.update({'yscrollcommand': self.vbar.set})
+        super().__init__(self.frame, **kwargs)
+        self.pack(side=LEFT, fill=BOTH, expand=True)
+        self.vbar['command'] = self.yview
+        text_meths = vars(Text).keys()
+        methods = vars(Pack).keys() | vars(Grid).keys() | vars(Place).keys()
+        methods = methods.difference(text_meths)
 
-        super().__init__(master, *args, **kwargs)
+        for m in methods:
+            if m[0] != '_' and m != 'config' and m != 'configure':
+                setattr(self, m, getattr(self.frame, m))
 
         if self._textvariable is not None:
             self.insert("1.0", self._textvariable.get())
-
         self.tk.eval('''
             proc widget_proxy {widget widget_command args} {
 
@@ -145,26 +161,14 @@ class ScrolledText(Text):
             rename {widget} _{widget}
             interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
         '''.format(widget=str(self)))
-
         self.bind("<<Change>>", self._on_widget_change)
 
         if self._textvariable is not None:
             self._textvariable.trace("wu", self._on_var_change)
 
-        super().__init__(self.frame, **kwargs)
-        self.pack(side=LEFT, fill=BOTH, expand=True)
-        self.vbar['command'] = self.yview
-
-        text_meths = vars(Text).keys()
-        methods = vars(Pack).keys() | vars(Grid).keys() | vars(Place).keys()
-        methods = methods.difference(text_meths)
-
-        for m in methods:
-            if m[0] != '_' and m != 'config' and m != 'configure':
-                setattr(self, m, getattr(self.frame, m))
-
-    def __str__(self):
-        return str(self.frame)
+    def replace(self, chars: str):
+        self.delete("1.0", END)
+        self.insert("1.0", chars)
 
     def _on_var_change(self, *args):
         text_current = self.get("1.0", "end-1c")
@@ -177,18 +181,18 @@ class ScrolledText(Text):
         if self._textvariable is not None:
             self._textvariable.set(self.get("1.0", "end-1c"))
 
+    def __str__(self):
+        return str(self.frame)
+
 class Text(Text):
     def __init__(self, parent, *args, **kwargs):
         try:
             self._textvariable = kwargs.pop("textvariable")
         except KeyError:
             self._textvariable = None
-
         super().__init__(parent, *args, **kwargs)
-
         if self._textvariable is not None:
             self.insert("1.0", self._textvariable.get())
-
         self.tk.eval('''
             proc widget_proxy {widget widget_command args} {
 
@@ -205,11 +209,14 @@ class Text(Text):
             rename {widget} _{widget}
             interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
         '''.format(widget=str(self)))
-
         self.bind("<<Change>>", self._on_widget_change)
 
         if self._textvariable is not None:
             self._textvariable.trace("wu", self._on_var_change)
+
+    def replace(self, chars: str):
+        self.delete("1.0", END)
+        self.insert("1.0", chars)
 
     def _on_var_change(self, *args):
         text_current = self.get("1.0", "end-1c")
