@@ -54,7 +54,7 @@ class Crypto:
     @staticmethod
     def generateKey(length: int = 32) -> str:
         key = str()
-        for i in range(length):
+        for i in range(int(length)):
             random = randint(1,32)
             if random < 25:
                 key += str(choice(ascii_letters))
@@ -66,9 +66,12 @@ class Crypto:
 
     def encrypt(self):
         if not bool(self.master.dataSourceVar.get()):
-            key = self.generateKey(self.master.generateRandomAESVar.get() / 8) if not bool(self.master.keySourceSelection.get()) else self.master.keyEntryVar.get()
+            key = self.generateKey(int(self.master.generateRandomAESVar.get() / 8)) if not bool(self.master.keySourceSelection.get()) else self.master.keyEntryVar.get()
             iv = get_random_bytes(AES.block_size)
+            if type(key) is str:
+                key = bytes(key, "utf-8")
             aes = AES.new(key, AES.MODE_CFB, iv=iv)
+            print(base64.urlsafe_b64encode(aes.encrypt(iv + b"hi")).decode("utf-8"))
         """self.showTextChar = IntVar(value=0)
         self.showTooltip = IntVar(value=1)
         self.showInfoBox = IntVar(value=1)
@@ -129,14 +132,12 @@ class ScrolledText(Text):
         self.tk.eval('''
             proc widget_proxy {widget widget_command args} {
 
-                # call the real tk widget command with the real args
                 set result [uplevel [linsert $args 0 $widget_command]]
 
-                # if the contents changed, generate an event we can bind to
                 if {([lindex $args 0] in {insert replace delete})} {
                     event generate $widget <<Change>> -when tail
                 }
-                # return the result from the real widget command
+
                 return $result
             }
             ''')
@@ -191,14 +192,12 @@ class Text(Text):
         self.tk.eval('''
             proc widget_proxy {widget widget_command args} {
 
-                # call the real tk widget command with the real args
                 set result [uplevel [linsert $args 0 $widget_command]]
 
-                # if the contents changed, generate an event we can bind to
                 if {([lindex $args 0] in {insert replace delete})} {
                     event generate $widget <<Change>> -when tail
                 }
-                # return the result from the real widget command
+
                 return $result
             }
             ''')
@@ -290,20 +289,6 @@ class Interface(Tk):
         # └──────────────────┘
 
         # Plain text & file entries frame
-        def changeFileEntrySectionState(state = DISABLED):
-            self.fileEntry.configure(state=state)
-            self.fileBrowseButton.configure(state=state)
-            self.fileClearButton.configure(state=state)
-
-        def changeTextEntrySectionState(state = NORMAL):
-            self.textEntry.configure(state=state)
-            self.textEntryHideCharCheck.configure(state=state)
-            self.textClearButton.configure(state=state)
-            if plainTextEntryVar.get() != "":
-                ClearTextButton.configure(state=state)
-            else:
-                ClearTextButton.configure(state=state)
-
         def changeDataSource():
             if self.dataSourceVar.get() == 1:
                 self.textEntry.configure(state=DISABLED)
@@ -522,14 +507,15 @@ class Interface(Tk):
             if path == "":
                 return
             with open(path, encoding="utf-8", mode="w") as file:
-                file.write(encrypted)
+                file.write(self.outputVar.get())
 
         def saveAESKey():
             files = [("Encrypt'n'Decrypt key file","*.key"),("Text document","*.txt"),("All files","*.*")]
             path = filedialog.asksaveasfilename(title="Save encryption key", initialfile="Encryption Key.key", filetypes=files, defaultextension="*.key")
             if path == "":
                 return
-            SaveKey(path, AESkeyEntry.get('1.0', END)[:-1])
+            with open(path, encoding="utf-8", mode="w") as file:
+                file.write(self.AESKeyVar.get())
 
         def saveRSAPublic():
             files = [("Text document","*.txt"),("All files","*.*")]
@@ -537,7 +523,7 @@ class Interface(Tk):
             if path == "":
                 return
             with open(path, encoding="utf-8", mode="w") as file:
-                file.write(RSApublicKeyWidget.get('1.0', END)[:-1])
+                file.write(self.RSAPublicVar.get())
 
         def saveRSAPrivate():
             files = [("Text document","*.txt"),("All files","*.*")]
@@ -545,7 +531,7 @@ class Interface(Tk):
             if path == "":
                 return
             with open(path, encoding="utf-8", mode="w") as file:
-                file.write(RSAprivateKeyWidget.get('1.0', END)[:-1])
+                file.write(self.RSAPrivateVar.get())
 
         def outputTextCallback(*args, **kwargs):
             if self.outputVar.get() == "":
@@ -559,12 +545,12 @@ class Interface(Tk):
             else:
                 self.AESKeyText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
 
-        self.encryptButton = Button(self.symmetricEncryption, text = "Encrypt", width=15, command=self.crypto.encrypt, takefocus=0)
+        self.encryptButton = Button(self.encryptionFrame, text = "Encrypt", width=15, command=self.crypto.encrypt, takefocus=0)
 
         self.outputFrame = LabelFrame(self.encryptionFrame, text="Output", height=506, width=403, takefocus=0)
 
-        self.outputText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, textvariable=self.outputVar)
-        self.AESKeyText = Text(self.outputFrame, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, textvariable=self.AESKeyVar)
+        self.outputText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.outputVar)
+        self.AESKeyText = Text(self.outputFrame, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.AESKeyVar)
         self.RSAPublicText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
         self.RSAPrivateText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
         self.AESKeyLabel = Label(self.outputFrame, text="AES/3DES Key:", takefocus=0)
@@ -699,6 +685,8 @@ class Interface(Tk):
         self.textEntryHideCharVar = IntVar(value=0)
         self.outputVar = StringVar()
         self.AESKeyVar = StringVar()
+        self.RSAPublicVar = StringVar()
+        self.RSAPrivateVar = StringVar()
 
     def initialize_menu(self):
         self.menuBar = Menu(self)
