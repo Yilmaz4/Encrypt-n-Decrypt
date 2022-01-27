@@ -45,7 +45,7 @@ from Crypto import Random
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
-import base64, os, time, logging
+import base64, os, time, logging, pyperclip
 
 class Crypto:
     def __init__(self, master: Tk):
@@ -74,15 +74,12 @@ class Crypto:
             aes = AES.new(key, AES.MODE_CFB, iv=iv)
 
             self.master.outputText.configure(state=NORMAL)
-            self.master.outputText.replace(base64.urlsafe_b64encode(iv + aes.encrypt(b"hi")).decode("utf-8"))
+            self.master.outputText.replace(base64.urlsafe_b64encode(iv + aes.encrypt(bytes(self.master.textEntryVar.get(), "utf-8"))).decode("utf-8"))
             self.master.outputText.configure(state=DISABLED)
 
             self.master.AESKeyText.configure(state=NORMAL)
             self.master.AESKeyText.replace(key.decode("utf-8"))
             self.master.AESKeyText.configure(state=DISABLED)
-
-            print(self.master.AESKeyVar.get())
-            print(self.master.outputVar.get())
         """self.showTextChar = IntVar(value=0)
         self.showTooltip = IntVar(value=1)
         self.showInfoBox = IntVar(value=1)
@@ -160,7 +157,7 @@ class ScrolledText(Text):
         self.tk.eval('''
             rename {widget} _{widget}
             interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
-        '''.format(widget=str(self)))
+        '''.format(widget=str(Text.__str__(self))))
         self.bind("<<Change>>", self._on_widget_change)
 
         if self._textvariable is not None:
@@ -543,14 +540,26 @@ class Interface(Tk):
         def outputTextCallback(*args, **kwargs):
             if self.outputVar.get() == "":
                 self.outputText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+                self.clearOutputButton.configure(state=DISABLED)
+                self.copyOutputButton.configure(state=DISABLED)
+                self.saveOutputButton.configure(state=DISABLED)
             else:
                 self.outputText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                self.clearOutputButton.configure(state=NORMAL)
+                self.copyOutputButton.configure(state=NORMAL)
+                self.saveOutputButton.configure(state=NORMAL)
 
         def AESKeyTextCallback(*args, **kwargs):
             if self.AESKeyVar.get() == "":
                 self.AESKeyText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+                self.clearAESKeyButton.configure(state=DISABLED)
+                self.copyAESKeyButton.configure(state=DISABLED)
+                self.saveAESKeyButton.configure(state=DISABLED)
             else:
                 self.AESKeyText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                self.clearAESKeyButton.configure(state=NORMAL)
+                self.copyAESKeyButton.configure(state=NORMAL)
+                self.saveAESKeyButton.configure(state=NORMAL)
 
         self.encryptButton = Button(self.encryptionFrame, text = "Encrypt", width=15, command=self.crypto.encrypt, takefocus=0)
 
@@ -567,16 +576,16 @@ class Interface(Tk):
         self.outputVar.trace("w", outputTextCallback)
         self.AESKeyVar.trace("w", AESKeyTextCallback)
 
-        self.copyOutputButton = Button(self.outputFrame, text = "Copy", width=10, command=lambda: (self.clipboard_clear(), self.clipboard_append(self.outputTex.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.copyOutputButton = Button(self.outputFrame, text = "Copy", width=10, command=lambda: self.clipboard_set(self.outputText.get("1.0", END)), state=DISABLED, takefocus=0)
         self.clearOutputButton = Button(self.outputFrame, text = "Clear", width=10, command=lambda: (self.outputText.configure(state=NORMAL), self.outputText.delete("1.0", END), self.outputText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
         self.saveOutputButton = Button(self.outputFrame, width=15, text="Save as...", command=saveOutput, state=DISABLED, takefocus=0)
-        self.copyAESKeyButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.AESKeyText.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.copyAESKeyButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.clipboard_set(self.AESKeyText.get("1.0", END)), state=DISABLED, takefocus=0)
         self.clearAESKeyButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.AESKeyText.configure(state=NORMAL), self.AESKeyText.delete("1.0", END), self.AESKeyText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
         self.saveAESKeyButton = Button(self.outputFrame, width=15, text="Save as...", command=saveAESKey, state=DISABLED, takefocus=0)
-        self.copyRSAPublicButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.RSAPublicText.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.copyRSAPublicButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.clipboard_set(self.RSAPublicText.get("1.0", END)), state=DISABLED, takefocus=0)
         self.clearRSAPublicButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.RSAPublicText.configure(state=NORMAL), self.RSAPublicText.delete("1.0", END), self.RSAPublicText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
         self.saveRSAPublicButton = Button(self.outputFrame, width=15, text="Save as...", command=saveRSAPublic, state=DISABLED, takefocus=0)
-        self.copyRSAPrivateButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: (self.clipboard_clear(), self.clipboard_append(self.RSAPrivateText.get("1.0", END))), state=DISABLED, takefocus=0)
+        self.copyRSAPrivateButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.clipboard_set(self.RSAPrivateText.get("1.0", END)), state=DISABLED, takefocus=0)
         self.clearRSAPrivateButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.RSAPrivateText.configure(state=NORMAL), self.RSAPrivateText.delete("1.0", END), self.RSAPrivateText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
         self.saveRSAPrivateButton = Button(self.outputFrame, width=15, text="Save as...", command=saveRSAPrivate, state=DISABLED, takefocus=0)
 
@@ -772,7 +781,15 @@ class Interface(Tk):
         self.menuBar.add_cascade(label = "Main", menu=self.fileMenu)
         self.menuBar.add_cascade(label = "Preferences", menu=self.viewMenu)
         self.menuBar.add_command(label = "Help", command=self.helpMenu)
-    
+
+    def clipboard_get(self) -> Optional[str]:
+        return pyperclip.paste()
+
+    def clipboard_set(self, text: str = None):
+        if text.endswith("\n"):
+            text = ''.join(text.split())[:-2].upper()
+        pyperclip.copy(text)
+
     class Updates(Toplevel):
         def __init__(self, master: Tk):
             try:
