@@ -21,6 +21,8 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+version = "0.2.1"
+
 from tkinter import *
 from tkinter import messagebox, filedialog
 from tkinter.scrolledtext import ScrolledText
@@ -28,6 +30,7 @@ from tkinter.commondialog import Dialog
 from tkinter.ttk import *
 
 from typing import Any, Union, Optional, Literal
+from urllib.request import urlopen
 from markdown import markdown
 from tkinterweb import HtmlFrame
 from requests import get, head
@@ -38,6 +41,7 @@ from ctypes import windll
 from zipfile import ZipFile
 from datetime import datetime
 from random import randint, choice
+from hurry.filesize import size, alternative
 
 from Crypto.Cipher import AES, PKCS1_OAEP, DES3
 from Crypto.Util import Counter
@@ -46,6 +50,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
 import base64, os, time, logging, pyperclip
+import json, ast
 
 class Crypto:
     def __init__(self, master: Tk):
@@ -228,11 +233,13 @@ class Text(Text):
 
 class Interface(Tk):
     def __init__(self):
+        global version
         super().__init__()
 
         self.height = 600
         self.width = 800
-        self.version = "0.3.0"
+        self.version = version
+        del version
 
         self.title(f"Eɲcrƴpʈ'n'Decrƴpʈ v{self.version}")
         self.geometry(f"{self.width}x{self.height}")
@@ -726,8 +733,8 @@ class Interface(Tk):
         self.fileMenu.add_command(label = "Decryption", command=lambda: self.mainNotebook.select(1), accelerator="Ctrl+D", underline=0)
         self.fileMenu.add_command(label = "Logs", command=lambda: self.mainNotebook.select(2), accelerator="Ctrl+L", underline=0)
         self.fileMenu.add_command(label = "Help & About", command=lambda: self.mainNotebook.select(3), accelerator="F1", underline=0)
-        #self.fileMenu.add_separator()
-        #self.fileMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=CheckUpdates, underline=10)
+        self.fileMenu.add_separator()
+        self.fileMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=lambda: self.Updates(self), underline=10)
         self.fileMenu.add_separator()
         self.fileMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda:root.destroy())
         # View menu
@@ -792,30 +799,35 @@ class Interface(Tk):
 
     class Updates(Toplevel):
         def __init__(self, master: Tk):
-            try:
-                Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
-            except Exception as e:
-                messagebox.showerror("ERR_INTERNET_DISCONNECTED","An error occured while trying to connect to the GitHub API. Please check your internet connection.")
-                master.logger.error("GitHub API connection failed ({})".format(e))
-            else:
-                MBFACTOR = float(1 << 20)
-                try:
-                    response = head(Version.json()["assets"][0]["browser_download_url"], allow_redirects=True)
-                except KeyError as e:
-                    messagebox.showerror("ERR_API_LIMIT_EXCEED","An error occured while trying to connect to the GitHub API servers. GitHub API limit may be exceed as servers has only 5000 connections limit per hour and per IP adress. Please try again after 1 hours.")
-                    master.logger.error("GitHub API limit exceeded, connection failed. ({})".format(e))
+            self.master = master
+            releases = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases").json()
+
+            latest = None
+            for release in releases:
+                if not release["draft"] and not release["prerelease"]:
+                    latest = release
+                    break
+
+            success = False
+            for i in range(len(latest["tag_name"].split("."))):
+                if latest["tag_name"].split(".")[i] > self.master.version.split(".")[i]:
+                    success = True
+                    break
                 else:
-                    size = response.headers.get('content-length', 0)
-                    response2 = head(Version.json()["assets"][1]["browser_download_url"], allow_redirects=True)
-                    size2 = response2.headers.get('content-length', 0)
-                    if Version.json()["tag_name"] == "v" + master.version:
-                        messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: v{}\nLatest version: v{}".format(master.version, Version.json()["tag_name"]))
-                    else:
-                        if self.version.replace(".","") > (Version.json()["tag_name"]).replace("b","").replace("v","").replace(".",""):
-                            messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: v{}\nLatest version: v{}".format(master.version, Version.json()["tag_name"]))
-                            return
-                        else:
-                            pass
+                    continue
+
+            if not success:
+                messagebox.showinfo("No updates available", "No updates avaliable yet. Please check back later.")
+                self.master.logger.info("Updates checked. No updates available.")
+                super().__init__(self.master)
+                self.withdraw()
+                self.destroy()
+                return
+
+            asset_0 = urlopen(latest["assets"][0]["browser_download_url"]).info()
+            asset_1 = urlopen(latest["assets"][1]["browser_download_url"]).info()
+            asset_0_size, asset_0_date = size(int(asset_0["Content-Length"]), system=alternative), asset_0["Last-Modified"]
+            asset_1_size, asset_1_date = size(int(asset_1["Content-Length"]), system=alternative), asset_0["Last-Modified"]
             super().__init__(master)
             self.grab_set()
             self.width = 669
@@ -832,7 +844,7 @@ class Interface(Tk):
             except TclError:
                 pass
 
-            HTML = markdown(Version.json()["body"])
+            HTML = markdown(latest["body"])
             frame = HtmlFrame(self, height=558, width=300, messages_enabled=False, vertical_scrollbar=True)
             frame.load_html(HTML)
             frame.set_zoom(0.8)
@@ -840,62 +852,41 @@ class Interface(Tk):
             frame.enable_images(0)
             frame.place(x=0, y=0)
             UpdateAvailableLabel = Label(self, text="An update is available!", font=('Segoe UI', 22), foreground="#189200", takefocus=0)
-            LatestVersionLabel = Label(self, text="Latest version: {}".format(Version.json()["name"], font=('Segoe UI', 11)), takefocus=0)
-            YourVersionLabel = Label(self, text="Current version: Eɲcrƴpʈ'n'Decrƴpʈ v{}".format(master.version), font=('Segoe UI', 9), takefocus=0)
+            LatestVersionLabel = Label(self, text="Latest version: Encrypt-n-Decrypt {}".format(latest["tag_name"]), font=('Segoe UI', 9, 'bold'), takefocus=0)
+            YourVersionLabel = Label(self, text="Current version: Encrypt-n-Decrypt v{}".format(master.version), font=('Segoe UI', 9), takefocus=0)
             DownloadLabel = Label(self, text="Download page for more information and asset files:", takefocus=0)
             DownloadLinks = LabelFrame(self, text="Download links", height=248, width=349, takefocus=0)
-            OtherOptions = LabelFrame(self, text="Other options", height=128, width=349, takefocus=0)
-            DownloadLinkLabel = Label(DownloadLinks, text=Version.json()["assets"][0]["name"], takefocus=0)
-            DownloadLinkLabel2 = Label(DownloadLinks, text=Version.json()["assets"][1]["name"], takefocus=0)
+            DownloadLinkLabel = Label(DownloadLinks, text=latest["assets"][0]["name"], takefocus=0)
+            DownloadLinkLabel2 = Label(DownloadLinks, text=latest["assets"][1]["name"], takefocus=0)
             Separator1 = Separator(self, orient='horizontal', takefocus=0)
             Separator2 = Separator(DownloadLinks, orient='horizontal', takefocus=0)
             Separator3 = Separator(DownloadLinks, orient='horizontal', takefocus=0)
-            Separator4 = Separator(OtherOptions, orient='horizontal', takefocus=0)
-            CopyDownloadPage = Button(self, text="Copy", width=10, takefocus=0)
-            OpenDownloadLink = Button(self, text="Open in browser", width=17, command=lambda: openweb(str(Version.json()["html_url"])), takefocus=0)
-            CopyDownloadLink = Button(DownloadLinks, text="Copy", width=10, takefocus=0)
-            DownloadTheLinkBrowser = Button(DownloadLinks, text="Download from browser", width=25, command=lambda: openweb(Version.json()["assets"][0]["browser_download_url"]), takefocus=0)
-            DownloadTheLinkBuiltin = Button(DownloadLinks, text="Download", width=13, command=lambda: None, takefocus=0)
-            CopyDownloadLink2 = Button(DownloadLinks, text="Copy", width=10, takefocus=0)
-            DownloadTheLinkBrowser2 = Button(DownloadLinks, text="Download from browser", width=25, command=lambda: openweb(Version.json()["assets"][1]["browser_download_url"]), takefocus=0)
-            DownloadTheLinkBuiltin2 = Button(DownloadLinks, text="Download", width=13, command=lambda: None, takefocus=0)
             DownloadPage = Entry(self, width=57, takefocus=0)
-            DownloadPage.insert(0, str(self.json()["html_url"]))
+            DownloadPage.insert(0, latest["html_url"])
             DownloadPage.configure(state=DISABLED)
             DownloadLink = Entry(DownloadLinks, width=54, takefocus=0)
-            DownloadLink.insert(0, str(self.json()["assets"][0]["browser_download_url"]))
+            DownloadLink.insert(0, latest["assets"][0]["browser_download_url"])
             DownloadLink.configure(state=DISABLED)
             DownloadLink2 = Entry(DownloadLinks, width=54, takefocus=0)
-            DownloadLink2.insert(0, str(self.json()["assets"][1]["browser_download_url"]))
+            DownloadLink2.insert(0, latest["assets"][1]["browser_download_url"])
             DownloadLink2.configure(state=DISABLED)
-            AssetSize = Label(DownloadLinks, text=("{:.2f} MB".format(int(size) / MBFACTOR)), foreground="#474747", takefocus=0)
-            AssetSize2 = Label(DownloadLinks, text=("{:.2f} MB".format(int(size2) / MBFACTOR)), foreground="#474747", takefocus=0)
-            DateVariable = response.headers.get('Last-Modified', 0)[:16 if response.headers.get('Last-Modified', 0)[:17][16] == " " else 17]
-            Date = Label(DownloadLinks, text=DateVariable, foreground="gray", takefocus=0)
-            Date2 = Label(DownloadLinks, text=DateVariable, foreground="gray", takefocus=0)
+            CopyDownloadPage = Button(self, text="Copy", width=10, command=lambda: self.master.clipboard_set(DownloadPage.get()), takefocus=0)
+            OpenDownloadLink = Button(self, text="Open in browser", width=17, command=lambda: openweb(str(latest["html_url"])), takefocus=0)
+            CopyDownloadLink = Button(DownloadLinks, text="Copy", width=10, takefocus=0, command=lambda: self.master.clipboard_set(DownloadLink.get()))
+            DownloadTheLinkBrowser = Button(DownloadLinks, text="Download from browser", width=25, command=lambda: openweb(latest["assets"][0]["browser_download_url"]), takefocus=0)
+            DownloadTheLinkBuiltin = Button(DownloadLinks, text="Download", width=13, command=lambda: None, takefocus=0)
+            CopyDownloadLink2 = Button(DownloadLinks, text="Copy", width=10, takefocus=0, command=lambda: self.master.clipboard_set(DownloadLink2.get()))
+            DownloadTheLinkBrowser2 = Button(DownloadLinks, text="Download from browser", width=25, command=lambda: openweb(latest["assets"][1]["browser_download_url"]), takefocus=0)
+            DownloadTheLinkBuiltin2 = Button(DownloadLinks, text="Download", width=13, command=lambda: None, takefocus=0)
+            AssetSize = Label(DownloadLinks, text=asset_0_size, foreground="#474747", takefocus=0)
+            AssetSize2 = Label(DownloadLinks, text=asset_1_size, foreground="#474747", takefocus=0)
+            Date = Label(DownloadLinks, text=asset_0_date, foreground="gray", takefocus=0)
+            Date2 = Label(DownloadLinks, text=asset_1_date, foreground="gray", takefocus=0)
             downloadProgress = IntVar()
             downloadProgress.set(0)
-            ProgressBar = Progressbar(DownloadLinks, length=329, mode='determinate', orient=HORIZONTAL, variable=downloadProgress, maximum=int(size), takefocus=0)
+            ProgressBar = Progressbar(DownloadLinks, length=329, mode='determinate', orient=HORIZONTAL, variable=downloadProgress, maximum=asset_0["Content-Length"], takefocus=0)
             ProgressLabel = Label(DownloadLinks, text="Download progress:", takefocus=0)
-            DownloadPathLabel = Label(OtherOptions, text="Download directory:", takefocus=0)
-            DownloadPathEntry = Entry(OtherOptions, width=54, takefocus=0)
-            DownloadPathEntry.insert(0, r"C:\Users\{}\Downloads".format(getuser()))
-            DownloadPathStatus = Label(OtherOptions, text="Status: OK", foreground="green", takefocus=0)
-            def directoryRevert():
-                DownloadPathEntry.delete(0, 'end')
-                DownloadPathEntry.insert(0, r"C:\Users\{}\Downloads".format(getuser()))
-            DownloadPathReset = Button(OtherOptions, text="Revert to default directory", width=24, command=directoryRevert, takefocus=0)
-            DownloadPathBrowse = Button(OtherOptions, text="Browse", width=10, takefocus=0)
-            ExtractContent = IntVar()
-            ExtractContent.set(0)
-            ExtractContentsCheck = Checkbutton(OtherOptions, text="Extract downloaded files", onvalue=1, offvalue=0, variable=ExtractContent, takefocus=0)
-            DownloadPathLabel.place(x=5, y=0)
-            DownloadPathEntry.place(x=7, y=21)
-            DownloadPathStatus.place(x=116, y=0)
-            DownloadPathReset.place(x=6, y=47)
-            DownloadPathBrowse.place(x=267, y=47)
-            Separator4.place(x=7, y=78, width=329)
-            ExtractContentsCheck.place(x=6, y=83)
+            
             ProgressBar.place(x=7, y=195)
             ProgressLabel.place(x=5, y=173)
             LatestVersionLabel.place(x=309, y=43)
@@ -907,8 +898,8 @@ class Interface(Tk):
             DownloadLabel.place(x=309, y=89)
             DownloadLinkLabel.place(x=6, y=0)
             AssetSize.place(x=175, y=0)
-            Date.place(x=237 if len(DateVariable) == 17 else 240, y=0)
-            Date2.place(x=237 if len(DateVariable) == 17 else 240, y=86)
+            Date.place(x=237, y=0)
+            Date2.place(x=237, y=86)
             DownloadLinkLabel2.place(x=6, y=86)
             AssetSize2.place(x=175, y=86)
             CopyDownloadPage.place(x=310, y=138)
@@ -923,8 +914,9 @@ class Interface(Tk):
             DownloadTheLinkBrowser2.place(x=177, y=135)
             CopyDownloadLink2.place(x=6, y=135)
             DownloadLinks.place(x=310, y=168)
-            OtherOptions.place(x=310, y=420)
             self.focus_force()
+
+            self.mainloop()
 
     class ToolTip:
         def __init__(self, widget, justify, background, foreground, relief, borderwidth, font, locationinvert, heightinvert):
