@@ -71,39 +71,91 @@ class Crypto:
 
     def encrypt(self):
         if not bool(self.master.dataSourceVar.get()):
-            key = self.generateKey(int(self.master.generateRandomAESVar.get() / 8)) if not bool(self.master.keySourceSelection.get()) else self.master.keyEntryVar.get()
-            iv = get_random_bytes(AES.block_size)
+            if not bool(self.master.keySourceSelection.get()):
+                if not bool(self.master.generateAlgorithmSelection.get()):
+                    key = self.generateKey(int(self.master.generateRandomAESVar.get() / 8))
+                else:
+                    key = self.generateKey(int(self.master.generateRandomDESVar.get() / 8))
+            else:
+                key = self.master.keyEntryVar.get()
             if type(key) is str:
                 key = bytes(key, "utf-8")
 
-            aes = AES.new(key, AES.MODE_CFB, iv=iv)
+            try:
+                if (not bool(self.master.generateAlgorithmSelection.get()) and not bool(self.master.keySourceSelection.get())) or (not bool(self.master.entryAlgorithmSelection.get()) and bool(self.master.keySourceSelection.get())):
+                    iv = get_random_bytes(AES.block_size)
+                    cipher = AES.new(key, AES.MODE_CFB, iv=iv)
+                else:
+                    iv = get_random_bytes(DES3.block_size)
+                    cipher = DES3.new(key, mode=DES3.MODE_OFB, iv=iv)
+            except ValueError as details:
+                print(details)
+                if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
+                    messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
+                    self.master.logger.error("Key with invalid length specified.")
+                    return
+                else:
+                    messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
+                    self.master.logger.error("Invalid key specified.")
+                    return
 
             self.master.outputText.configure(state=NORMAL)
-            self.master.outputText.replace(base64.urlsafe_b64encode(iv + aes.encrypt(bytes(self.master.textEntryVar.get(), "utf-8"))).decode("utf-8"))
+            self.master.outputText.configure(foreground="black", wrap=None)
+            self.master.outputText.replace(base64.urlsafe_b64encode(iv + cipher.encrypt(bytes(self.master.textEntryVar.get(), "utf-8"))).decode("utf-8"))
             self.master.outputText.configure(state=DISABLED)
 
             self.master.AESKeyText.configure(state=NORMAL)
             self.master.AESKeyText.replace(key.decode("utf-8"))
             self.master.AESKeyText.configure(state=DISABLED)
-        """self.showTextChar = IntVar(value=0)
-        self.showTooltip = IntVar(value=1)
-        self.showInfoBox = IntVar(value=1)
-        self.showWarnBox = IntVar(value=1)
-        self.showErrorBox = IntVar(value=1)
-        self.windowAlpha = IntVar(value=1)
+        else:
+            path = self.master.fileEntry.get()
+            with open(path, mode="r", encoding="latin-1") as file:
+                index = file.read()
+            if not bool(self.master.keySourceSelection.get()):
+                if not bool(self.master.generateAlgorithmSelection.get()):
+                    key = self.generateKey(int(self.master.generateRandomAESVar.get() / 8))
+                else:
+                    key = self.generateKey(int(self.master.generateRandomDESVar.get() / 8))
+            else:
+                key = self.master.keyEntryVar.get()
+            if type(key) is str:
+                key = bytes(key, "utf-8")
 
-        self.generateRandomAESVar = IntVar(value=256)
-        self.generateRandomDESVar = IntVar(value=192)
-        self.keySourceSelection = IntVar(value=0)
-        self.generateAlgorithmSelection = IntVar(value=0)
-        self.entryAlgorithmSelection = IntVar(value=0)
-        self.keyEntryVar = StringVar()
-        self.keyEntryHideCharVar = IntVar()
+            try:
+                if (not bool(self.master.generateAlgorithmSelection.get()) and not bool(self.master.keySourceSelection.get())) or (not bool(self.master.entryAlgorithmSelection.get()) and bool(self.master.keySourceSelection.get())):
+                    iv = get_random_bytes(AES.block_size)
+                    cipher = AES.new(key, AES.MODE_CFB, iv=iv)
+                else:
+                    iv = get_random_bytes(DES3.block_size)
+                    cipher = DES3.new(key, mode=DES3.MODE_OFB, iv=iv)
+            except ValueError as details:
+                print(details)
+                if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
+                    messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
+                    self.master.logger.error("Key with invalid length specified.")
+                    return
+                else:
+                    messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
+                    self.master.logger.error("Invalid key specified.")
+                    return
 
-        self.dataSourceVar = IntVar(value=0)
-        self.textEntryVar = StringVar()
-        self.fileEntryVar = StringVar()
-        self.textEntryHideCharVar = IntVar(value=0)"""
+            result = base64.urlsafe_b64encode(iv + cipher.encrypt(bytes(index, "utf-8"))).decode("utf-8")
+
+            self.master.outputText.configure(state=NORMAL)
+            if not len(result) > 15000:
+                self.master.outputText.configure(foreground="black", wrap=None)
+                self.master.outputText.replace(result)
+            else:
+                self.master.outputText.configure(foreground="gray", wrap=WORD)
+                self.master.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
+            self.master.outputText.configure(state=DISABLED)
+
+            self.master.AESKeyText.configure(state=NORMAL)
+            self.master.AESKeyText.replace(key.decode("utf-8"))
+            self.master.AESKeyText.configure(state=DISABLED)
+
+            with open(path, mode="w", encoding="latin-1") as file:
+                file.write(result)
 
 class loggingHandler(logging.Handler):
     def __init__(self, widget: Text):
@@ -217,8 +269,10 @@ class Text(Text):
             self._textvariable.trace("wu", self._on_var_change)
 
     def replace(self, chars: str):
+        self.configure(state=NORMAL)
         self.delete("1.0", END)
         self.insert("1.0", chars)
+        self.configure(state=
 
     def _on_var_change(self, *args):
         text_current = self.get("1.0", "end-1c")
@@ -280,6 +334,7 @@ class Interface(Tk):
         self.initialize_vars()
         self.initialize_menu()
         self.initialize_widgets()
+        self.initialize_bindings()
 
     @property
     def logging_level(self) -> int:
@@ -454,12 +509,23 @@ class Interface(Tk):
             if len(value) == 0:
                 self.keyValidityStatusLabel.configure(foreground="gray", text="Validity: [Blank]")
             else:
-                cond = bool(self.generateAlgorithmSelection.get())
-                iv = get_random_bytes(AES.block_size) if not cond else Random.new().read(DES3.block_size)
+                if not bool(self.keySourceSelection.get()):
+                    cond = bool(self.generateAlgorithmSelection.get())
+                else:
+                    cond = bool(self.entryAlgorithmSelection.get())
+                iv = get_random_bytes(AES.block_size if not cond else DES3.block_size)
                 try:
-                    AES.new(bytes(value, 'utf-8'), AES.MODE_OFB, iv)
+                    if not cond:
+                        AES.new(bytes(value, 'utf-8'), mode=AES.MODE_OFB, iv=iv)
+                    else:
+                        DES3.new(bytes(value, 'utf-8'), mode=DES3.MODE_OFB, iv=iv)
                 except:
-                    self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
+                    if not len(value) in [16, 24, 32]:
+                        self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid Key")
+                    else:
+                        self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
+                    if "3DES-256" in self.keyValidityStatusLabel["text"]:
+                        self.keyValidityStatusLabel.configure(text="Validity: Invalid Key")
                 else:
                     self.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
 
@@ -492,6 +558,7 @@ class Interface(Tk):
         self.keyEnteredAlgAES = Radiobutton(self.symmetricEncryption, text="AES (Advanced Encryption Standard)", value=0, variable=self.entryAlgorithmSelection, command=limitKeyEntry, state=DISABLED, takefocus=0)
         self.keyEnteredAlgDES = Radiobutton(self.symmetricEncryption, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.entryAlgorithmSelection, command=limitKeyEntry, state=DISABLED, takefocus=0)
         
+        self.keyEntryVar.trace("w", limitKeyEntry)
         self.algorithmSelect.place(x=10, y=155)
         self.generateRandomKeyCheck.place(x=5, y=5)
         self.AESAlgorithmCheck.place(x=16, y=25)
@@ -789,6 +856,15 @@ class Interface(Tk):
         self.menuBar.add_cascade(label = "Preferences", menu=self.viewMenu)
         self.menuBar.add_command(label = "Help", command=self.helpMenu)
 
+    def initialize_bindings(self):
+        def encrypt(*args, **kwargs):
+            self.crypto.encrypt
+        def give_focus(*args, **kwargs):
+            self.after(50, self.textEntry.focus_set())
+
+        self.bind("<Return>", encrypt)
+        self.bind("<Tab>", give_focus)
+
     def clipboard_get(self) -> Optional[str]:
         return pyperclip.paste()
 
@@ -1003,3 +1079,5 @@ class Interface(Tk):
 if __name__ == "__main__":
     root = Interface()
     root.mainloop()
+else:
+    print("This is the source code of a Windows app, therefore it's not intended to be imported in another code for any usage.")
