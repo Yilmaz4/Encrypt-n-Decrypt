@@ -89,7 +89,6 @@ class Crypto:
                     iv = get_random_bytes(DES3.block_size)
                     cipher = DES3.new(key, mode=DES3.MODE_OFB, iv=iv)
             except ValueError as details:
-                print(details)
                 if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
                     messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
                     self.master.logger.error("Key with invalid length specified.")
@@ -99,9 +98,11 @@ class Crypto:
                     self.master.logger.error("Invalid key specified.")
                     return
 
+            self.master.lastResult = base64.urlsafe_b64encode(iv + cipher.encrypt(bytes(self.master.textEntryVar.get(), "utf-8"))).decode("utf-8")
+
             self.master.outputText.configure(state=NORMAL)
             self.master.outputText.configure(foreground="black", wrap=None)
-            self.master.outputText.replace(base64.urlsafe_b64encode(iv + cipher.encrypt(bytes(self.master.textEntryVar.get(), "utf-8"))).decode("utf-8"))
+            self.master.outputText.replace(self.master.lastResult)
             self.master.outputText.configure(state=DISABLED)
 
             self.master.AESKeyText.configure(state=NORMAL)
@@ -139,12 +140,12 @@ class Crypto:
                     self.master.logger.error("Invalid key specified.")
                     return
 
-            result = base64.urlsafe_b64encode(iv + cipher.encrypt(bytes(index, "utf-8"))).decode("utf-8")
+            self.master.lastResult = base64.urlsafe_b64encode(iv + cipher.encrypt(bytes(index, "utf-8"))).decode("utf-8")
 
             self.master.outputText.configure(state=NORMAL)
-            if not len(result) > 15000:
+            if not len(self.master.lastResult) > 15000:
                 self.master.outputText.configure(foreground="black", wrap=None)
-                self.master.outputText.replace(result)
+                self.master.outputText.replace(self.master.lastResult)
             else:
                 self.master.outputText.configure(foreground="gray", wrap=WORD)
                 self.master.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
@@ -155,7 +156,7 @@ class Crypto:
             self.master.AESKeyText.configure(state=DISABLED)
 
             with open(path, mode="w", encoding="latin-1") as file:
-                file.write(result)
+                file.write(self.master.lastResult)
 
 class loggingHandler(logging.Handler):
     def __init__(self, widget: Text):
@@ -269,10 +270,11 @@ class Text(Text):
             self._textvariable.trace("wu", self._on_var_change)
 
     def replace(self, chars: str):
+        old_val = self["state"]
         self.configure(state=NORMAL)
         self.delete("1.0", END)
         self.insert("1.0", chars)
-        self.configure(state=
+        self.configure(state=old_val)
 
     def _on_var_change(self, *args):
         text_current = self.get("1.0", "end-1c")
@@ -284,6 +286,14 @@ class Text(Text):
     def _on_widget_change(self, event=None):
         if self._textvariable is not None:
             self._textvariable.set(self.get("1.0", "end-1c"))
+
+class Entry(Entry):
+    def replace(self, string: str):
+        old_val = self["state"]
+        self.configure(state=NORMAL)
+        self.delete(0, END)
+        self.insert(0, string)
+        self.configure(state=old_val)
 
 class Interface(Tk):
     def __init__(self):
@@ -454,6 +464,9 @@ class Interface(Tk):
             changeDESState(state = DISABLED if bool(self.keySourceSelection.get()) else NORMAL if bool(self.generateAlgorithmSelection.get()) else DISABLED)
             changeEnterKeySectionState(state = NORMAL if bool(self.keySourceSelection.get()) else DISABLED)
 
+            if bool(self.keySourceSelection.get()) and not len(self.keyEntry.get()) in [16, 24, 32]:
+                self.encryptButton.configure(state=DISABLED)
+
         def getKey(path: str) -> Optional[Union[str, bytes]]:
             with open(path, encoding = 'utf-8', mode="r") as file:
                 global index
@@ -508,6 +521,7 @@ class Interface(Tk):
             value = self.keyEntryVar.get()
             if len(value) == 0:
                 self.keyValidityStatusLabel.configure(foreground="gray", text="Validity: [Blank]")
+                self.encryptButton.configure(state=DISABLED)
             else:
                 if not bool(self.keySourceSelection.get()):
                     cond = bool(self.generateAlgorithmSelection.get())
@@ -526,8 +540,10 @@ class Interface(Tk):
                         self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
                     if "3DES-256" in self.keyValidityStatusLabel["text"]:
                         self.keyValidityStatusLabel.configure(text="Validity: Invalid Key")
+                    self.encryptButton.configure(state=DISABLED)
                 else:
                     self.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
+                    self.encryptButton.configure(state=NORMAL)
 
         self.algorithmSelect = Notebook(self.encryptionFrame, width=355, height=280, takefocus=0)
         self.symmetricEncryption = Frame(self.algorithmSelect, takefocus=0)
@@ -650,7 +666,7 @@ class Interface(Tk):
         self.outputVar.trace("w", outputTextCallback)
         self.AESKeyVar.trace("w", AESKeyTextCallback)
 
-        self.copyOutputButton = Button(self.outputFrame, text = "Copy", width=10, command=lambda: self.clipboard_set(self.outputText.get("1.0", END)), state=DISABLED, takefocus=0)
+        self.copyOutputButton = Button(self.outputFrame, text = "Copy", width=10, command=lambda: self.clipboard_set(self.lastResult), state=DISABLED, takefocus=0)
         self.clearOutputButton = Button(self.outputFrame, text = "Clear", width=10, command=lambda: (self.outputText.configure(state=NORMAL), self.outputText.delete("1.0", END), self.outputText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
         self.saveOutputButton = Button(self.outputFrame, width=15, text="Save as...", command=saveOutput, state=DISABLED, takefocus=0)
         self.copyAESKeyButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.clipboard_set(self.AESKeyText.get("1.0", END)), state=DISABLED, takefocus=0)
@@ -691,54 +707,71 @@ class Interface(Tk):
         # ┌──────────────────┐
         # │ Decryption Frame │
         # └──────────────────┘
-        """TextToDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted text:", value=1, variable=DecryptSourceVar, command=ChangeWhatToDecrypt, takefocus=0)
-        TextToDecryptPaste = Button(self.decryptionFrame, width=15, text="Paste", command=PasteEncryptedFunc, takefocus=0)
-        TextToDecryptClear = Button(self.decryptionFrame, width=15, text="Clear", command=lambda: TextToDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
-        FileToDecryptBrowse = Button(self.decryptionFrame, width=15, text="Browse...", state=DISABLED, command=BrowseEncryptedFunc, takefocus=0)
-        FileToDecryptClear = Button(self.decryptionFrame, width=15, text="Clear", state=DISABLED, command=lambda: FileToDecryptEntry.delete(0, END), takefocus=0)
-        FileToDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted file:", value=2, variable=DecryptSourceVar, command=ChangeWhatToDecrypt, takefocus=0)
-        TextToDecryptEntry = Text(self.decryptionFrame, width=105, height=6, font=("Consolas", 9), takefocus=0)
-        FileToDecryptEntry = Entry(self.decryptionFrame, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
-        TextToDecryptScroll = Scrollbar(self.decryptionFrame, command=TextToDecryptEntry.yview, takefocus=0)
-        TextToDecryptEntry.configure(yscrollcommand=TextToDecryptScroll.set)
-        KeyEntryToDecrypt = Notebook(self.decryptionFrame, height=160, width=765, takefocus=0)
-        SymKeyDecrypt = Frame(KeyEntryToDecrypt, takefocus=0)
-        AsymKeyDecrypt = Frame(KeyEntryToDecrypt, takefocus=0)
-        KeyEntryToDecrypt.add(SymKeyDecrypt, text="Symmetric Key Decryption")
-        KeyEntryToDecrypt.add(AsymKeyDecrypt, text="Asymmetric Key Decryption")
-        SelectAlgorithmDecryptFrame = LabelFrame(SymKeyDecrypt, text="Select algorithm", height=63, width=749, takefocus=0)
-        SelectAESradio = Radiobutton(SelectAlgorithmDecryptFrame, text="AES (Advanced Encryption Standard)", value=1, variable=DecryptAlg, takefocus=0)
-        SelectDESradio = Radiobutton(SelectAlgorithmDecryptFrame, text="3DES (Triple Data Encryption Standard)", value=2, variable=DecryptAlg, takefocus=0)
-        EnterKeyFrame = LabelFrame(SymKeyDecrypt, text="Enter encryption key", height=84, width=749, takefocus=0)
-        SymKeyEntry = Entry(EnterKeyFrame, width=103, font=("Consolas", 9), takefocus=0)
-        SymKeyBrowseButton = Button(EnterKeyFrame, width=21, text="Browse key file...", takefocus=0)
-        SymKeyPasteButton = Button(EnterKeyFrame, width=15, text="Paste", takefocus=0, command=PasteKeyFunc)
-        SymKeyClearButton = Button(EnterKeyFrame, width=15, text="Clear", takefocus=0, state=DISABLED)
-        DecryptButton = Button(self.decryptionFrame, width=18, text="Decrypt", takefocus=0)
-        OutputFrame = LabelFrame(self.decryptionFrame, text="Decrypted text", height=84, width=766, takefocus=0)
-        OutputEntry = Text(OutputFrame, width=103, height=1, font=("Consolas", 9), state=DISABLED, takefocus=0)
+        def changeDecryptSource():
+            if not bool(self.decryptSourceVar.get()):
+                self.textDecryptEntry.configure(state=NORMAL, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                self.textDecryptPasteButton.configure(state=NORMAL)
+                self.textDecryptClearButton.configure(state=NORMAL)
+                self.fileDecryptEntry.configure(state=DISABLED)
+                self.fileDecryptBrowseButton.configure(state=DISABLED)
+                self.fileDecryptClearButton.configure(state=DISABLED)
+            else:
+                self.textDecryptEntry.configure(state=DISABLED, bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+                self.textDecryptPasteButton.configure(state=DISABLED)
+                self.textDecryptClearButton.configure(state=DISABLED)
+                self.fileDecryptEntry.configure(state=NORMAL)
+                self.fileDecryptBrowseButton.configure(state=NORMAL)
+                self.fileDecryptClearButton.configure(state=NORMAL)
+
+        self.textDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted text:", value=0, variable=self.decryptSourceVar, command=changeDecryptSource, takefocus=0)
+        self.textDecryptEntry = ScrolledText(self.decryptionFrame, width=105, height=6, font=("Consolas", 9), takefocus=0)
+        self.textDecryptPasteButton = Button(self.decryptionFrame, width=15, text="Paste", command=lambda: self.textDecryptEntry.replace(self.clipboard_get()), takefocus=0)
+        self.textDecryptClearButton = Button(self.decryptionFrame, width=15, text="Clear", command=lambda: self.textDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
         
-        TextToDecryptRadio.place(x=8, y=2)
-        FileToDecryptRadio.place(x=8, y=145)
-        TextToDecryptEntry.place(x=24, y=24)
-        TextToDecryptPaste.place(x=23, y=120)
-        TextToDecryptClear.place(x=130, y=120)
-        FileToDecryptBrowse.place(x=23, y=195)
-        FileToDecryptClear.place(x=130, y=195)
-        FileToDecryptEntry.place(x=24, y=166)
-        TextToDecryptScroll.place(x=762, y=23, height=88)
-        KeyEntryToDecrypt.place(x=10, y=228)
-        SelectAlgorithmDecryptFrame.place(x=8, y=2)
-        SelectAESradio.place(x=5, y=0)
-        SelectDESradio.place(x=5, y=19)
-        EnterKeyFrame.place(x=8, y=68)
-        SymKeyEntry.place(x=9, y=3)
-        SymKeyPasteButton.place(x=8, y=30)
-        SymKeyBrowseButton.place(x=601, y=30)
-        SymKeyClearButton.place(x=115, y=30)
-        DecryptButton.place(x=9, y=421)
-        OutputFrame.place(x=10, y=442)
-        OutputEntry.place(x=9, y=3)"""
+        self.fileDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted file:", value=1, variable=self.decryptSourceVar, command=changeDecryptSource, takefocus=0)
+        self.fileDecryptEntry = Entry(self.decryptionFrame, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
+        self.fileDecryptBrowseButton = Button(self.decryptionFrame, width=15, text="Browse...", state=DISABLED, command=lambda: self.fileDecryptEntry.replace(self.clipboard_get()), takefocus=0)
+        self.fileDecryptClearButton = Button(self.decryptionFrame, width=15, text="Clear", state=DISABLED, command=lambda: self.fileDecryptEntry.delete(0, END), takefocus=0)
+        
+        self.decryptNotebook = Notebook(self.decryptionFrame, height=160, width=765, takefocus=0)
+        self.symmetricDecryption = Frame(self.decryptNotebook, takefocus=0)
+        self.asymmetricEncryption = Frame(self.decryptNotebook, takefocus=0)
+        self.decryptNotebook.add(self.symmetricDecryption, text="Symmetric Key Decryption")
+        self.decryptNotebook.add(self.asymmetricEncryption, text="Asymmetric Key Decryption")
+        self.decryptAlgorithmFrame = LabelFrame(self.symmetricDecryption, text="Select algorithm", height=63, width=749, takefocus=0)
+        self.decryptAESCheck = Radiobutton(self.decryptAlgorithmFrame, text="AES (Advanced Encryption Standard)", value=0, variable=self.decryptAlgorithmVar, takefocus=0)
+        self.decryptDESCheck = Radiobutton(self.decryptAlgorithmFrame, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.decryptAlgorithmVar, takefocus=0)
+        self.decryptKeyFrame = LabelFrame(self.symmetricDecryption, text="Enter encryption key", height=84, width=749, takefocus=0)
+        self.decryptKeyEntry = Entry(self.decryptKeyFrame, width=103, font=("Consolas", 9), takefocus=0)
+        self.decryptKeyBrowseButton = Button(self.decryptKeyFrame, width=21, text="Browse key file...", takefocus=0)
+        self.decryptKeyPasteButton = Button(self.decryptKeyFrame, width=15, text="Paste", takefocus=0, command=lambda: self.decryptKeyEntry.replace(self.clipboard_get()))
+        self.decryptKeyClearButton = Button(self.decryptKeyFrame, width=15, text="Clear", takefocus=0, command=lambda: self.decryptKeyEntry.delete(0, END), state=DISABLED)
+
+        self.decryptButton = Button(self.decryptionFrame, width=18, text="Decrypt", takefocus=0)
+        self.decryptOutputFrame = LabelFrame(self.decryptionFrame, text="Decrypted text", height=84, width=766, takefocus=0)
+        self.decryptOutputText = Text(self.decryptOutputFrame, width=103, height=1, font=("Consolas", 9), state=DISABLED, takefocus=0)
+        
+        self.textDecryptRadio.place(x=8, y=2)
+        self.textDecryptEntry.place(x=24, y=24)
+        self.textDecryptPasteButton.place(x=23, y=120)
+        self.textDecryptClearButton.place(x=130, y=120)
+        self.fileDecryptRadio.place(x=8, y=145)
+        self.fileDecryptEntry.place(x=24, y=166)
+        self.fileDecryptBrowseButton.place(x=23, y=195)
+        self.fileDecryptClearButton.place(x=130, y=195)
+        self.decryptNotebook.place(x=10, y=228)
+        self.decryptAlgorithmFrame.place(x=8, y=2)
+        self.decryptAESCheck.place(x=5, y=0)
+        self.decryptDESCheck.place(x=5, y=19)
+        self.decryptKeyFrame.place(x=8, y=68)
+        self.decryptKeyEntry.place(x=9, y=3)
+
+        self.decryptKeyBrowseButton.place(x=601, y=30)
+        self.decryptKeyPasteButton.place(x=8, y=30)
+        self.decryptKeyClearButton.place(x=115, y=30)
+        self.decryptButton.place(x=9, y=421)
+        self.decryptOutputFrame.place(x=10, y=442)
+        self.decryptOutputText.place(x=9, y=3)
 
         # ┌───────────────┐
         # │ Logging Frame │
@@ -777,6 +810,9 @@ class Interface(Tk):
         self.AESKeyVar = StringVar()
         self.RSAPublicVar = StringVar()
         self.RSAPrivateVar = StringVar()
+
+        self.decryptSourceVar = IntVar(value=0)
+        self.decryptAlgorithmVar = IntVar(value=0)
 
     def initialize_menu(self):
         self.menuBar = Menu(self)
@@ -866,11 +902,18 @@ class Interface(Tk):
         self.bind("<Tab>", give_focus)
 
     def clipboard_get(self) -> Optional[str]:
-        return pyperclip.paste()
+        clipboard = pyperclip.paste()
+        if not clipboard:
+            return ""
+        elif len(clipboard) > 15000:
+            if messagebox.askyesno("Super long text", "The text you're trying to paste is too long (longer than 15.000 characters) which can cause the program to freeze. Are you sure?"):
+                return clipboard
+            else:
+                return ""
+        else:
+            return clipboard
 
     def clipboard_set(self, text: str = None):
-        if text.endswith("\n"):
-            text = ''.join(text.split())[:-2].upper()
         pyperclip.copy(text)
 
     class Updates(Toplevel):
