@@ -75,104 +75,72 @@ class Crypto:
 
     def encrypt(self):
         if not bool(self.master.dataSourceVar.get()):
-            if not bool(self.master.keySourceSelection.get()):
-                self.updateStatus("Generating key...")
-                if not bool(self.master.generateAlgorithmSelection.get()):
-                    key = self.generateKey(int(self.master.generateRandomAESVar.get() / 8))
-                else:
-                    key = self.generateKey(int(self.master.generateRandomDESVar.get() / 8))
-            else:
-                key = self.master.keyEntryVar.get()
-            if type(key) is str:
-                key = bytes(key, "utf-8")
-
-            self.updateStatus("Defining cipher...")
-            try:
-                if (not bool(self.master.generateAlgorithmSelection.get()) and not bool(self.master.keySourceSelection.get())) or (not bool(self.master.entryAlgorithmSelection.get()) and bool(self.master.keySourceSelection.get())):
-                    iv = get_random_bytes(AES.block_size)
-                    cipher = AES.new(key, AES.MODE_CFB, iv=iv)
-                else:
-                    iv = get_random_bytes(DES3.block_size)
-                    cipher = DES3.new(key, mode=DES3.MODE_OFB, iv=iv)
-            except ValueError as details:
-                if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
-                    messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
-                    self.master.logger.error("Key with invalid length specified.")
-                    return
-                else:
-                    messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
-                    self.master.logger.error("Invalid key specified.")
-                    return
-
-            self.updateStatus("Encrypting...")
-            self.master.lastResult = base64.urlsafe_b64encode(iv + cipher.encrypt(bytes(self.master.textEntryVar.get(), "utf-8"))).decode("utf-8")
-            self.master.lastKey = key
-
-            self.master.outputText.configure(state=NORMAL)
-            self.master.outputText.configure(foreground="black", wrap=None)
-            self.master.outputText.replace(self.master.lastResult)
-            self.master.outputText.configure(state=DISABLED)
-
-            self.master.AESKeyText.configure(state=NORMAL)
-            self.master.AESKeyText.replace(key.decode("utf-8"))
-            self.master.AESKeyText.configure(state=DISABLED)
-            self.updateStatus("Ready")
-            if not bool(self.master.keySourceSelection.get()):
-                self.master.logger.info(f"Entered text has been successfully encrypted using {'AES' if not bool(self.master.generateAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
-            else:
-                self.master.logger.info(f"Entered text has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
+            data = self.master.textEntryVar.get()
         else:
             self.updateStatus("Reading the file...")
             path = self.master.fileEntry.get()
             with open(path, mode="r", encoding="latin-1") as file:
-                index = file.read()
-            if not bool(self.master.keySourceSelection.get()):
-                self.updateStatus("Generating key...")
-                if not bool(self.master.generateAlgorithmSelection.get()):
-                    key = self.generateKey(int(self.master.generateRandomAESVar.get() / 8))
-                else:
-                    key = self.generateKey(int(self.master.generateRandomDESVar.get() / 8))
+                data = file.read()
+        if not bool(self.master.keySourceSelection.get()):
+            self.updateStatus("Generating the key...")
+            if not bool(self.master.generateAlgorithmSelection.get()):
+                key = self.generateKey(int(self.master.generateRandomAESVar.get() / 8))
             else:
-                key = self.master.keyEntryVar.get()
-            if type(key) is str:
-                key = bytes(key, "utf-8")
+                key = self.generateKey(int(self.master.generateRandomDESVar.get() / 8))
+        else:
+            key = self.master.keyEntryVar.get()
+        if type(key) is str:
+            key = bytes(key, "utf-8")
 
-            self.updateStatus("Defining cipher...")
-            try:
-                if (not bool(self.master.generateAlgorithmSelection.get()) and not bool(self.master.keySourceSelection.get())) or (not bool(self.master.entryAlgorithmSelection.get()) and bool(self.master.keySourceSelection.get())):
-                    iv = get_random_bytes(AES.block_size)
-                    cipher = AES.new(key, AES.MODE_CFB, iv=iv)
-                else:
-                    iv = get_random_bytes(DES3.block_size)
-                    cipher = DES3.new(key, mode=DES3.MODE_OFB, iv=iv)
-            except ValueError as details:
-                if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
-                    messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
-                    self.master.logger.error("Key with invalid length specified for encryption.")
-                    return
-                else:
-                    messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
-                    self.master.logger.error("Invalid key specified for encryption.")
-                    return
-
-            self.updateStatus("Encrypting...")
-            self.master.lastResult = base64.urlsafe_b64encode(iv + cipher.encrypt(bytes(index, "utf-8"))).decode("utf-8")
-            self.master.lastKey = key
-
-            self.updateStatus("Displaying the result...")
-            if not len(self.master.lastResult) > 15000:
-                self.master.outputText.configure(foreground="black", wrap=None)
-                self.master.outputText.replace(self.master.lastResult)
+        self.updateStatus("Creating the cipher...")
+        try:
+            if (not bool(self.master.generateAlgorithmSelection.get()) and not bool(self.master.keySourceSelection.get())) or (not bool(self.master.entryAlgorithmSelection.get()) and bool(self.master.keySourceSelection.get())):
+                iv = get_random_bytes(AES.block_size)
+                cipher = AES.new(key, AES.MODE_CFB, iv=iv)
             else:
-                self.master.outputText.configure(foreground="gray", wrap=WORD)
-                self.master.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
-            self.master.AESKeyText.replace(key.decode("utf-8"))
+                iv = get_random_bytes(DES3.block_size)
+                cipher = DES3.new(key, mode=DES3.MODE_OFB, iv=iv)
+        except ValueError as details:
+            if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
+                messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
+                self.master.logger.error("Key with invalid length specified.")
+                return
+            else:
+                messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
+                self.master.logger.error("Invalid key specified.")
+                return
 
+        self.updateStatus("Encrypting...")
+        self.master.lastResult = iv + cipher.encrypt(bytes(data, "utf-8"))
+        self.updateStatus("Encoding the result...")
+        self.master.lastResult = base64.urlsafe_b64encode(self.master.lastResult).decode("utf-8")
+        self.master.lastKey = key
+
+        if bool(self.master.dataSourceVar.get()):
             if bool(self.master.writeFileContentVar.get()):
                 self.updateStatus("Writing to the file...")
                 with open(path, mode="w", encoding="latin-1") as file:
                     file.write(self.master.lastResult)
-            self.updateStatus("Ready")
+
+        self.updateStatus("Displaying the result...")
+        self.master.outputText.configure(state=NORMAL)
+        if not len(self.master.lastResult) > 15000:
+            self.master.outputText.configure(foreground="black", wrap=None)
+            self.master.outputText.replace(self.master.lastResult)
+        else:
+            self.master.outputText.configure(foreground="gray", wrap=WORD)
+            self.master.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
+        self.master.outputText.configure(state=DISABLED)
+
+        self.master.AESKeyText.configure(state=NORMAL)
+        self.master.AESKeyText.replace(key.decode("utf-8"))
+        self.master.AESKeyText.configure(state=DISABLED)
+
+        self.updateStatus("Ready")
+        if not bool(self.master.keySourceSelection.get()):
+            self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.generateAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
+        else:
+            self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
 
     def decrypt(self):
         self.updateStatus("Decoding encrypted data...")
@@ -203,7 +171,9 @@ class Crypto:
             self.master.logger.error("Wrong key entered for decryption.")
             return
 
+        self.updateStatus("Displaying the result...")
         self.master.decryptOutputText.replace(result)
+        self.updateStatus("Ready")
 
 class loggingHandler(logging.Handler):
     def __init__(self, widget: Text):
@@ -247,18 +217,8 @@ class ScrolledText(Text):
 
         if self._textvariable is not None:
             self.insert("1.0", self._textvariable.get())
-        self.tk.eval('''
-            proc widget_proxy {widget widget_command args} {
-
-                set result [uplevel [linsert $args 0 $widget_command]]
-
-                if {([lindex $args 0] in {insert replace delete})} {
-                    event generate $widget <<Change>> -when tail
-                }
-
-                return $result
-            }
-            ''')
+        with open("textvariable.tcl", mode="r", encoding="utf-8") as tclfile:
+            self.tk.eval(tclfile.read())
         self.tk.eval('''
             rename {widget} _{widget}
             interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
