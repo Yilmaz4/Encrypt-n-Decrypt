@@ -21,423 +21,45 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-try:
-    import pyperclip, os, base64, time, collections
+version = "0.2.1"
 
-    if not __import__("sys").version_info.major == 2:
-        from tkinter import *
-        from tkinter.commondialog import Dialog
-        from tkinter import filedialog
-        from tkinter import ttk
-        from tkinter.ttk import *
-    else:
-        from tkinter import messagebox, Tk
-        root = Tk()
-        root.withdraw()
-        messagebox.showerror("ERR_INCOMPATIBLE_PYTHON_VERSION", "This program is not compatible with Python 2.x. Please consider using Python 3.6 or higher.")
-        __import__("sys").exit()
+from tkinter import *
+TkLabel = Label
+from tkinter import messagebox, filedialog
+from tkinter.scrolledtext import ScrolledText
+from tkinter.commondialog import Dialog
+from tkinter.ttk import *
 
-    from Crypto.Cipher import AES, PKCS1_OAEP, DES3
-    from Crypto.Util import Counter
-    from Crypto import Random
-    from Crypto.PublicKey import RSA
-    from Crypto.Random import get_random_bytes
+from typing import Any, Union, Optional, Literal
+from urllib.request import urlopen
+from markdown import markdown
+from tkinterweb import HtmlFrame
+from requests import get, head
+from webbrowser import open as openweb
+from string import ascii_letters, digits
+from getpass import getuser
+from ctypes import windll
+from zipfile import ZipFile
+from datetime import datetime
+from random import randint, choice
+from hurry.filesize import size, alternative
 
-    from requests import get, head
-    from webbrowser import open as openweb
-    from random import randint, choice
-    from string import ascii_letters, digits
-    from sys import exit, platform, exc_info
-    from markdown import markdown
-    from tkinterweb import HtmlFrame
-    from getpass import getuser
-    from ctypes import windll
-    from zipfile import ZipFile
-    from traceback import format_exc
-    from time import strftime
-    from typing import Union, Any, Optional
-except ImportError or ModuleNotFoundError:
-    from tkinter import messagebox, Tk
-    from traceback import format_exc
-    root = Tk()
-    root.withdraw()
-    messagebox.showerror("ERR_MISSING_LIBRARIES", format_exc())
-    __import__("sys").exit()
+from Crypto.Cipher import AES, PKCS1_OAEP, DES3
+from Crypto.Util import Counter
+from Crypto import Random
+from Crypto.PublicKey import RSA
+from Crypto.Random import get_random_bytes
 
-version = "0.2.0"
+import base64, os, logging, pyperclip
 
-def is_admin():
-    try:
-        return windll.shell32.IsUserAnAdmin()
-    except:
-        return False
+class Crypto:
+    def __init__(self, master: Tk):
+        self.master = master
 
-ERROR = "error"
-INFO = "info"
-QUESTION = "question"
-WARNING = "warning"
-ABORTRETRYIGNORE = "abortretryignore"
-OK = "ok"
-OKCANCEL = "okcancel"
-RETRYCANCEL = "retrycancel"
-YESNO = "yesno"
-YESNOCANCEL = "yesnocancel"
-ABORT = "abort"
-RETRY = "retry"
-IGNORE = "ignore"
-OK = "ok"
-CANCEL = "cancel"
-YES = "yes"
-NO = "no"
-
-class Message(Dialog):
-    command  = "tk_messageBox"
-
-def _show(title=None, message=None, _icon=None, _type=None, **options):
-    if _icon and "icon" not in options:
-        options["icon"] = _icon
-    if _type and "type" not in options:
-        options["type"] = _type
-    if title:
-        options["title"] = title
-    if message:
-        options["message"] = message
-    res = Message(**options).show()
-    if isinstance(res, bool):
-        if res:
-            return YES
-        return NO
-    return str(res)
-
-class messagebox():
     @staticmethod
-    def showinfo(title=None, message=None, **options):
-        if InfoVar.get() == 1:
-            return _show(title, message, INFO, OK, **options)
-    @staticmethod
-    def showwarning(title=None, message=None, **options):
-        if WarningVar.get() == 1:
-            return _show(title, message, WARNING, OK, **options)
-    @staticmethod
-    def showerror(title=None, message=None, **options):
-        if ErrorVar.get() == 1:
-            return _show(title, message, ERROR, OK, **options)
-    @staticmethod
-    def askquestion(title=None, message=None, **options):
-        return _show(title, message, QUESTION, YESNO, **options)
-    @staticmethod
-    def askokcancel(title=None, message=None, **options):
-        s = _show(title, message, QUESTION, OKCANCEL, **options)
-        return s == OK
-    @staticmethod
-    def askyesno(title=None, message=None, **options):
-        s = _show(title, message, QUESTION, YESNO, **options)
-        if s == YES:
-            return True
-        else:
-            return False
-    @staticmethod
-    def askyesnocancel(title=None, message=None, **options):
-        s = _show(title, message, QUESTION, YESNOCANCEL, **options)
-        s = str(s)
-        if s == CANCEL:
-            return None
-        return s == YES
-    @staticmethod
-    def askretrycancel(title=None, message=None, **options):
-        s = _show(title, message, WARNING, RETRYCANCEL, **options)
-        return s == RETRY
-    @staticmethod
-    def abortretryignore(title=None, message=None, **options):
-        s = _show(title, message, WARNING, ABORTRETRYIGNORE, **options)
-        if s == ABORT:
-            return False
-        elif s == RETRY:
-            return True
-        elif s == IGNORE:
-            return None
-
-try:
-    appWidth = 800
-    appHeight = 600
-    root=Tk()
-    root.title(f"Eɲcrƴpʈ'n'Decrƴpʈ {version} {time.strftime(r'%H:%M:%S - %d/%m/%Y')}")
-    root.resizable(width=FALSE, height=FALSE)
-    root.geometry(f"{appWidth}x{appHeight}")
-    root.attributes("-fullscreen", False)
-    try:
-        root.iconbitmap("Encrypt-n-Decrypt.ico")
-    except:
-        pass
-    root.minsize(appWidth, appHeight)
-    MainScreen = ttk.Notebook(root, width=380, height=340, takefocus=0)
-    LogFrame = Frame(MainScreen, takefocus=0)
-    logTextWidget = Text(LogFrame, height=22, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
-    menu = Menu(root)
-    root.config(menu = menu)
-    enterMenu = Menu(menu, tearoff=0)
-    viewMenu = Menu(menu, tearoff=0)
-    titleMenu = Menu(viewMenu, tearoff=0)
-    helpMenu = Menu(menu, tearoff=0)
-    transMenu = Menu(viewMenu, tearoff=0)
-    langMenu = Menu(viewMenu, tearoff=0)
-    def CheckUpdates():
-        def Asset0DownloadBrowser():
-            openweb(Version.json()["assets"][0]["browser_download_url"])
-        def Asset1DownloadBrowser():
-            openweb(Version.json()["assets"][1]["browser_download_url"])
-        def AssetDownload(downloadPath, ProgressBar, downloadProgress, ProgressLabel, size, ExtractContent, Asset=0, chunkSize=2197318):
-            startTime = time.time()
-            size = int(size)
-            MBFACTOR = float(1 << 20)
-            try:
-                os.remove(downloadPath)
-            except:
-                pass
-            ProgressBar.configure(maximum=int(chunkSize))
-            downloadProgress.set(0)
-            downloadedSize = 0
-            try:
-                ProgressLabel.configure(text="Download progress: Creating the file in specified location . . .")
-                update.update()
-                file = open(downloadPath, mode='wb')
-                downloadedContent = ""
-                ProgressLabel.configure(text="Download progress: Getting ready for download operation . . .")
-                update.update()
-                for chunk in range(0, int(size), int(chunkSize)):
-                    try:
-                        ProgressLabel.configure(text="Download progress: {:.1f} MB ({:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize), int(size)/MBFACTOR))
-                        update.update()
-                        downloadURL = get(Version.json()["assets"][int(Asset)]["browser_download_url"], headers={"Range":"bytes={}-{}".format(chunk, chunk+chunkSize-1)})
-                    except Exception as e:
-                        messagebox.showerror("ERR_UNABLE_TO_CONNECT","An error occured while trying to connect to the GitHub servers. Please check your internet connection and firewall settings.\n\nError details: {}".format(e))
-                        logTextWidget.config(state=NORMAL)
-                        logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: GitHub server connection failed ({})".format(e))+"\n")
-                        logTextWidget.config(state=DISABLED)
-                        try:
-                            os.remove(downloadPath)
-                        except:
-                            pass
-                        break
-                    ProgressLabel.configure(text="Download progress: {:.1f} MB ({:.1f}%) out of {:.1f} MB downloaded".format(int(downloadedSize)/MBFACTOR, (100/size)*(downloadedSize), int(size)/MBFACTOR))
-                    update.update()
-                    downloadedContent = bytes(str(downloadedContent), "utf-8") + downloadURL.content
-                    update.update()
-                    downloadedSize = downloadedSize + len(downloadURL.content)
-                    update.update()
-                    downloadProgress.set(downloadProgress.get()+len(downloadURL.content))
-                    update.update()
-                    ProgressBar.configure(maximum=size)
-                    update.update()
-                try:
-                    file.write(downloadedContent)
-                except Exception as e:
-                    if not is_admin():
-                        messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e))
-                        logTextWidget.config(state=NORMAL)
-                        logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: File write operation failed ({})".format(e))+"\n")
-                        logTextWidget.config(state=DISABLED)
-                        try:
-                            os.remove(downloadPath)
-                        except:
-                            pass
-                    else:
-                        messagebox.showerror("ERR_INVALID_PATH","An error occured while trying to write downloaded data to '{}' path. Path may be invalid or inaccessible. Please select another path.")
-                        try:
-                            os.remove(downloadPath)
-                        except:
-                            pass
-            except Exception as e:
-                if not is_admin():
-                    messagebox.showerror("ERR_DESTINATION_ACCESS_DENIED","An error occured while trying to write downloaded data to '{}' path. Please try again; if problem persists, try to run the program as administrator or change the download path.\n\nError details: {}".format(downloadPath,e))
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: File write operation failed ({})".format(e))+"\n")
-                    logTextWidget.config(state=DISABLED)
-                    try:
-                        os.remove(downloadPath)
-                    except:
-                        pass
-                else:
-                    messagebox.showerror("ERR_INVALID_PATH","An error occured while trying to write downloaded data to '{}' path. Path may be invalid or inaccessible. Please select another path.")
-                    try:
-                        os.remove(downloadPath)
-                    except:
-                        pass
-            else:
-                ProgressLabel.configure(text="Download progress: Finishing download operation...")
-                update.update()
-                if ExtractContent.get() == 1:
-                    if DownloadPathEntry.get()[1:] == "\\":
-                        try:
-                            os.mkdir(DownloadPathEntry.get())
-                        except:
-                            pass
-                        with ZipFile("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:
-                            zip_ref.extractall(DownloadPathEntry.get())
-                    else:
-                        try:
-                            os.mkdir(DownloadPathEntry.get()+"/")
-                        except:
-                            pass
-                        with ZipFile("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][int(Asset)]["name"]), 'r') as zip_ref:zip_ref.extractall(DownloadPathEntry.get())
-                ProgressLabel.configure(text="Download progress:")
-                downloadProgress.set(0)
-                finishTime = time.time()
-                messagebox.showinfo("Download complete","Downloading '{}' file from 'github.com' completed successfully. File has been saved to '{}'.\n\nDownload time: {}\nDownload Speed: {} MB/s\nFile size: {:.2f} MB".format(str(Version.json()["assets"][0]["name"]),("C:/Users/{}/Downloads/{}".format(getuser(), Version.json()["assets"][0]["name"])),str(finishTime-startTime)[:4]+" "+"Seconds",str(int(size) / MBFACTOR / float(str(finishTime-startTime)[:4]))[:4],int(size) / MBFACTOR))
-        def Asset0Download():
-            if DownloadPathEntry.get()[1:] == "\\":
-                AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
-            else:
-                AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][0]["name"])), Asset=0, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size, ExtractContent=ExtractContent)
-        def Asset1Download():
-            if DownloadPathEntry.get()[1:] == "\\":
-                AssetDownload(downloadPath=("{}{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2, ExtractContent=ExtractContent)
-            else:
-                AssetDownload(downloadPath=("{}/{}".format(str(DownloadPathEntry.get()).replace("\\","/"),Version.json()["assets"][1]["name"])), Asset=1, ProgressBar=ProgressBar, downloadProgress=downloadProgress, ProgressLabel=ProgressLabel, size=size2, ExtractContent=ExtractContent)
-        try:
-            Version = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases/latest")
-        except Exception as e:
-            messagebox.showerror("ERR_INTERNET_DISCONNECTED","An error occured while trying to connect to the GitHub API. Please check your internet connection.")
-            logTextWidget.config(state=NORMAL)
-            logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: GitHub API connection failed ({})\n".format(e))+"\n")
-            logTextWidget.config(state=DISABLED)
-        else:
-            MBFACTOR = float(1 << 20)
-            try:
-                response = head(Version.json()["assets"][0]["browser_download_url"], allow_redirects=True)
-            except KeyError as e:
-                messagebox.showerror("ERR_API_LIMIT_EXCEED","An error occured while trying to connect to the GitHub API servers. GitHub API limit may be exceed as servers has only 5000 connections limit per hour and per IP adress. Please try again after 1 hours.")
-                logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, "ERROR: GitHub API limit exceeded, connection failed. ({})\n".format(e))
-                logTextWidget.config(state=DISABLED)
-            else:
-                size = response.headers.get('content-length', 0)
-                response2 = head(Version.json()["assets"][1]["browser_download_url"], allow_redirects=True)
-                size2 = response2.headers.get('content-length', 0)
-                if Version.json()["tag_name"] == version:
-                    messagebox.showinfo("No updates available","There are currently no updates available. Please check again later.\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
-                else:
-                    if version.replace("b","").replace("v","").replace(".","") > (Version.json()["tag_name"]).replace("b","").replace("v","").replace(".",""):
-                        messagebox.showinfo("Interesting.","It looks like you're using a newer version than official GitHub page. Your version may be a beta, or you're the author of this program :)\n\nYour version: {}\nLatest version: {}".format(version, Version.json()["tag_name"]))
-                    else:
-                        def TestDirectory():
-                            pass
-                        update = Toplevel(root)
-                        update.grab_set()
-                        update.title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
-                        update.resizable(height=False, width=False)
-                        update.attributes("-fullscreen", False)
-                        update.geometry("669x558")
-                        update.maxsize("669","558")
-                        update.minsize("669","558")
-                        update.iconbitmap("Encrypt-n-Decrypt.ico")
-                        HTML = markdown(Version.json()["body"]).replace("<h2>Screenshot:</h2>","")
-                        frame = HtmlFrame(update, height=558, width=300, messages_enabled=False, vertical_scrollbar=True)
-                        frame.load_html(HTML)
-                        frame.set_zoom(0.8)
-                        frame.grid_propagate(0)
-                        frame.enable_images(0)
-                        frame.place(x=0, y=0)
-                        UpdateAvailableLabel = Label(update, text="An update is available!", font=('Segoe UI', 22), foreground="#189200", takefocus=0)
-                        LatestVersionLabel = Label(update, text="Latest version: {}".format(Version.json()["name"], font=('Segoe UI', 11)), takefocus=0)
-                        YourVersionLabel = Label(update, text="Current version: Encrypt'n'Decrypt {}".format(version), font=('Segoe UI', 9), takefocus=0)
-                        DownloadLabel = Label(update, text="Download page for more information and asset files:", takefocus=0)
-                        DownloadLinks = LabelFrame(update, text="Download links", height=248, width=349, takefocus=0)
-                        OtherOptions = LabelFrame(update, text="Other options", height=128, width=349, takefocus=0)
-                        DownloadLinkLabel = Label(DownloadLinks, text=Version.json()["assets"][0]["name"], takefocus=0)
-                        DownloadLinkLabel2 = Label(DownloadLinks, text=Version.json()["assets"][1]["name"], takefocus=0)
-                        Separator1 = Separator(update, orient='horizontal', takefocus=0)
-                        Separator2 = Separator(DownloadLinks, orient='horizontal', takefocus=0)
-                        Separator3 = Separator(DownloadLinks, orient='horizontal', takefocus=0)
-                        Separator4 = Separator(OtherOptions, orient='horizontal', takefocus=0)
-                        CopyDownloadPage = Button(update, text="Copy", width=10, takefocus=0)
-                        OpenDownloadLink = Button(update, text="Open in browser", width=17, command=lambda: openweb(str(Version.json()["html_url"])), takefocus=0)
-                        CopyDownloadLink = Button(DownloadLinks, text="Copy", width=10, takefocus=0)
-                        DownloadTheLinkBrowser = Button(DownloadLinks, text="Download from browser", width=25, command=Asset0DownloadBrowser, takefocus=0)
-                        DownloadTheLinkBuiltin = Button(DownloadLinks, text="Download", width=13, command=Asset0Download, takefocus=0)
-                        CopyDownloadLink2 = Button(DownloadLinks, text="Copy", width=10, takefocus=0)
-                        DownloadTheLinkBrowser2 = Button(DownloadLinks, text="Download from browser", width=25, command=Asset1DownloadBrowser, takefocus=0)
-                        DownloadTheLinkBuiltin2 = Button(DownloadLinks, text="Download", width=13, command=Asset1Download, takefocus=0)
-                        DownloadPage = Entry(update, width=57, takefocus=0)
-                        DownloadPage.insert(0, str(Version.json()["html_url"]))
-                        DownloadPage.configure(state=DISABLED)
-                        DownloadLink = Entry(DownloadLinks, width=54, takefocus=0)
-                        DownloadLink.insert(0, str(Version.json()["assets"][0]["browser_download_url"]))
-                        DownloadLink.configure(state=DISABLED)
-                        DownloadLink2 = Entry(DownloadLinks, width=54, takefocus=0)
-                        DownloadLink2.insert(0, str(Version.json()["assets"][1]["browser_download_url"]))
-                        DownloadLink2.configure(state=DISABLED)
-                        AssetSize = Label(DownloadLinks, text=("{:.2f} MB".format(int(size) / MBFACTOR)), foreground="#474747", takefocus=0)
-                        AssetSize2 = Label(DownloadLinks, text=("{:.2f} MB".format(int(size2) / MBFACTOR)), foreground="#474747", takefocus=0)
-                        if response.headers.get('Last-Modified', 0)[:17][16] == " ":
-                            DateVariable = response.headers.get('Last-Modified', 0)[:16]
-                        else:
-                            DateVariable = response.headers.get('Last-Modified', 0)[:17]
-                        Date = Label(DownloadLinks, text=DateVariable, foreground="gray", takefocus=0)
-                        Date2 = Label(DownloadLinks, text=DateVariable, foreground="gray", takefocus=0)
-                        downloadProgress = IntVar()
-                        downloadProgress.set(0)
-                        ProgressBar = Progressbar(DownloadLinks, length=329, mode='determinate', orient=HORIZONTAL, variable=downloadProgress, maximum=int(size), takefocus=0)
-                        ProgressLabel = Label(DownloadLinks, text="Download progress:", takefocus=0)
-                        DownloadPathLabel = Label(OtherOptions, text="Download directory:", takefocus=0)
-                        DownloadPathEntry = Entry(OtherOptions, width=54, takefocus=0)
-                        DownloadPathEntry.insert(0, r"C:\Users\{}\Downloads".format(getuser()))
-                        DownloadPathStatus = Label(OtherOptions, text="Status: OK", foreground="green", takefocus=0)
-                        def directoryRevert():
-                            DownloadPathEntry.delete(0,'end')
-                            DownloadPathEntry.insert(0, r"C:\Users\{}\Downloads".format(getuser()))
-                        DownloadPathReset = Button(OtherOptions, text="Revert to default directory", width=24, command=directoryRevert, takefocus=0)
-                        DownloadPathTest = Button(OtherOptions, text="Check directory", width=14, command=TestDirectory, takefocus=0)
-                        DownloadPathBrowse = Button(OtherOptions, text="Browse", width=10, takefocus=0)
-                        ExtractContent = IntVar()
-                        ExtractContent.set(0)
-                        ExtractContentsCheck = Checkbutton(OtherOptions, text="Extract downloaded files", onvalue=1, offvalue=0, variable=ExtractContent, takefocus=0)
-                        DownloadPathLabel.place(x=5, y=0)
-                        DownloadPathEntry.place(x=7, y=21)
-                        DownloadPathStatus.place(x=116, y=0)
-                        DownloadPathReset.place(x=6, y=47)
-                        DownloadPathTest.place(x=166, y=47)
-                        DownloadPathBrowse.place(x=267, y=47)
-                        Separator4.place(x=7, y=78, width=329)
-                        ExtractContentsCheck.place(x=6, y=83)
-                        ProgressBar.place(x=7, y=195)
-                        ProgressLabel.place(x=5, y=173)
-                        LatestVersionLabel.place(x=309, y=43)
-                        YourVersionLabel.place(x=309, y=63)
-                        UpdateAvailableLabel.place(x=310, y=2)
-                        Separator1.place(x=312, y=86, width=346)
-                        Separator2.place(x=7, y=81, width=329)
-                        Separator3.place(x=7, y=167, width=329)
-                        DownloadLabel.place(x=309, y=89)
-                        DownloadLinkLabel.place(x=6, y=0)
-                        AssetSize.place(x=175, y=0)
-                        if len(DateVariable) == 16:
-                            Date.place(x=240, y=0)
-                            Date2.place(x=240, y=86)
-                        elif len(DateVariable) == 17:
-                            Date.place(x=237, y=0)
-                            Date2.place(x=237, y=86)
-                        DownloadLinkLabel2.place(x=6, y=86)
-                        AssetSize2.place(x=175, y=86)
-                        CopyDownloadPage.place(x=310, y=138)
-                        OpenDownloadLink.place(x=385, y=138)
-                        DownloadPage.place(x=311, y=111)
-                        DownloadLink.place(x=7, y=22)
-                        DownloadLink2.place(x=7, y=108)
-                        DownloadTheLinkBuiltin.place(x=83, y=49)
-                        DownloadTheLinkBrowser.place(x=177, y=49)
-                        CopyDownloadLink.place(x=6, y=49)
-                        DownloadTheLinkBuiltin2.place(x=83, y=135)
-                        DownloadTheLinkBrowser2.place(x=177, y=135)
-                        CopyDownloadLink2.place(x=6, y=135)
-                        DownloadLinks.place(x=310, y=168)
-                        OtherOptions.place(x=310, y=420)
-                        update.focus_force()
-                        update.mainloop()
-
-    def GenerateAES(length: int = 32) -> str:
-        key = ""
-        for i in range(length):
+    def generateKey(length: int = 32) -> str:
+        key = str()
+        for i in range(int(length)):
             random = randint(1,32)
             if random < 25:
                 key += str(choice(ascii_letters))
@@ -446,1149 +68,1196 @@ try:
             elif random >= 30:
                 key += str(choice("!'^+%&/()=?_<>#${[]}\|__--$__--"))
         return key
+    
+    def updateStatus(self, status: str):
+        self.master.statusBar.configure(text=f"Status: {status}")
+        self.master.update()
 
-    showCharState = IntVar(value=0)
-    deshowCharState = IntVar(value=0)
-    showChar = True
-    genPassword = IntVar()
-    genPassword.set(16)
-    Base64Check = IntVar()
-    Base64Check.set(0)
-    ToolTipActive = False
+    def encrypt(self):
+        if not bool(self.master.dataSourceVar.get()):
+            data = self.master.textEntryVar.get()
+        else:
+            self.updateStatus("Reading the file...")
+            path = self.master.fileEntry.get()
+            with open(path, mode="r", encoding="latin-1") as file:
+                data = file.read()
+        if not bool(self.master.keySourceSelection.get()):
+            self.updateStatus("Generating the key...")
+            if not bool(self.master.generateAlgorithmSelection.get()):
+                key = self.generateKey(int(self.master.generateRandomAESVar.get() / 8))
+            else:
+                key = self.generateKey(int(self.master.generateRandomDESVar.get() / 8))
+        else:
+            key = self.master.keyEntryVar.get()
+        if type(key) is str:
+            key = bytes(key, "utf-8")
 
-    class ToolTip(object):
-        def __init__(self, widget):
+        self.updateStatus("Creating the cipher...")
+        try:
+            if (not bool(self.master.generateAlgorithmSelection.get()) and not bool(self.master.keySourceSelection.get())) or (not bool(self.master.entryAlgorithmSelection.get()) and bool(self.master.keySourceSelection.get())):
+                iv = get_random_bytes(AES.block_size)
+                cipher = AES.new(key, AES.MODE_CFB, iv=iv)
+            else:
+                iv = get_random_bytes(DES3.block_size)
+                cipher = DES3.new(key, mode=DES3.MODE_OFB, iv=iv)
+        except ValueError as details:
+            if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
+                messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
+                self.master.logger.error("Key with invalid length specified.")
+                return
+            else:
+                messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
+                self.master.logger.error("Invalid key specified.")
+                return
+
+        self.updateStatus("Encrypting...")
+        self.master.lastResult = iv + cipher.encrypt(bytes(data, "utf-8"))
+        self.updateStatus("Encoding the result...")
+        self.master.lastResult = base64.urlsafe_b64encode(self.master.lastResult).decode("utf-8")
+        self.master.lastKey = key
+
+        if bool(self.master.dataSourceVar.get()):
+            if bool(self.master.writeFileContentVar.get()):
+                self.updateStatus("Writing to the file...")
+                with open(path, mode="w", encoding="latin-1") as file:
+                    file.write(self.master.lastResult)
+
+        self.updateStatus("Displaying the result...")
+        self.master.outputText.configure(state=NORMAL)
+        if not len(self.master.lastResult) > 15000:
+            self.master.outputText.configure(foreground="black", wrap=None)
+            self.master.outputText.replace(self.master.lastResult)
+        else:
+            self.master.outputText.configure(foreground="gray", wrap=WORD)
+            self.master.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
+        self.master.outputText.configure(state=DISABLED)
+
+        self.master.AESKeyText.configure(state=NORMAL)
+        self.master.AESKeyText.replace(key.decode("utf-8"))
+        self.master.AESKeyText.configure(state=DISABLED)
+
+        self.updateStatus("Ready")
+        if not bool(self.master.keySourceSelection.get()):
+            self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.generateAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
+        else:
+            self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
+
+    def decrypt(self):
+        self.updateStatus("Decoding encrypted data...")
+        data = base64.urlsafe_b64decode(self.master.textDecryptVar.get().encode("utf-8"))
+        iv = data[:16 if not bool(self.master.decryptAlgorithmVar.get()) else 8]
+        key = self.master.decryptKeyVar.get()[:-1 if self.master.decryptKeyVar.get().endswith("\n") else None].encode("utf-8")
+
+        self.updateStatus("Defining cipher...")
+        try:
+            if not bool(self.master.decryptAlgorithmVar.get()):
+                cipher = AES.new(key, AES.MODE_CFB, iv=iv)
+            else:
+                cipher = DES3.new(key, DES3.MODE_OFB, iv=iv)
+        except ValueError as details:
+            if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
+                messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
+                self.master.logger.error("Key with invalid length specified for decryption.")
+                return
+            else:
+                messagebox.showerror("Invalid key", "The key you've entered is invalid.")
+                self.master.logger.error("Invalid key specified for decryption.")
+                return
+        self.updateStatus("Decrypting...")
+        try:
+            result = cipher.decrypt(data.replace(iv, b"")).decode("utf-8")
+        except UnicodeDecodeError:
+            messagebox.showerror("Invalid key", "The encryption key you've entered seems to be not the right key. Make sure you've entered the correct key.")
+            self.master.logger.error("Wrong key entered for decryption.")
+            return
+
+        self.updateStatus("Displaying the result...")
+        self.master.decryptOutputText.replace(result)
+        self.updateStatus("Ready")
+
+class loggingHandler(logging.Handler):
+    def __init__(self, widget: Text):
+        super().__init__()
+        self.widget = widget
+
+    def emit(self, record):
+        message = self.format(record)
+        def append():
+            self.widget.configure(state=NORMAL)
+            self.widget.insert(END, message + '\n')
+            self.widget.configure(state=DISABLED)
+
+            self.widget.yview(END)
+
+        self.widget.after(0, append)
+    
+    def format(self, record: logging.LogRecord) -> str:
+        return str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S') + " [" + record.levelname + "] " + record.getMessage())
+
+class ScrolledText(Text):
+    def __init__(self, master=None, *args, **kwargs):
+        try:
+            self._textvariable = kwargs.pop("textvariable")
+        except KeyError:
+            self._textvariable = None
+        self.frame = Frame(master)
+        self.vbar = Scrollbar(self.frame)
+        self.vbar.pack(side=RIGHT, fill=Y)
+        kwargs.update({'yscrollcommand': self.vbar.set})
+        super().__init__(self.frame, **kwargs)
+        self.pack(side=LEFT, fill=BOTH, expand=True)
+        self.vbar['command'] = self.yview
+        text_meths = vars(Text).keys()
+        methods = vars(Pack).keys() | vars(Grid).keys() | vars(Place).keys()
+        methods = methods.difference(text_meths)
+
+        for m in methods:
+            if m[0] != '_' and m != 'config' and m != 'configure':
+                setattr(self, m, getattr(self.frame, m))
+
+        if self._textvariable is not None:
+            self.insert("1.0", self._textvariable.get())
+        with open("textvariable.tcl", mode="r", encoding="utf-8") as tclfile:
+            self.tk.eval(tclfile.read())
+        self.tk.eval('''
+            rename {widget} _{widget}
+            interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
+        '''.format(widget=str(Text.__str__(self))))
+        self.bind("<<Change>>", self._on_widget_change)
+
+        if self._textvariable is not None:
+            self._textvariable.trace("wu", self._on_var_change)
+
+    def replace(self, chars: str):
+        old_val = self["state"]
+        self.configure(state=NORMAL)
+        self.delete("1.0", END)
+        self.insert("1.0", chars)
+        self.configure(state=old_val)
+
+    def _on_var_change(self, *args):
+        text_current = self.get("1.0", "end-1c")
+        var_current = self._textvariable.get()
+        if text_current != var_current:
+            self.delete("1.0", "end")
+            self.insert("1.0", var_current)
+
+    def _on_widget_change(self, event=None):
+        if self._textvariable is not None:
+            self._textvariable.set(self.get("1.0", "end-1c"))
+
+    def __str__(self):
+        return str(self.frame)
+
+class Text(Text):
+    def __init__(self, parent, *args, **kwargs):
+        try:
+            self._textvariable = kwargs.pop("textvariable")
+        except KeyError:
+            self._textvariable = None
+        super().__init__(parent, *args, **kwargs)
+        if self._textvariable is not None:
+            self.insert("1.0", self._textvariable.get())
+        self.tk.eval('''
+            proc widget_proxy {widget widget_command args} {
+
+                set result [uplevel [linsert $args 0 $widget_command]]
+
+                if {([lindex $args 0] in {insert replace delete})} {
+                    event generate $widget <<Change>> -when tail
+                }
+
+                return $result
+            }
+            ''')
+        self.tk.eval('''
+            rename {widget} _{widget}
+            interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
+        '''.format(widget=str(self)))
+        self.bind("<<Change>>", self._on_widget_change)
+
+        if self._textvariable is not None:
+            self._textvariable.trace("wu", self._on_var_change)
+
+    def replace(self, chars: str):
+        old_val = self["state"]
+        self.configure(state=NORMAL)
+        self.delete("1.0", END)
+        self.insert("1.0", chars)
+        self.configure(state=old_val)
+
+    def _on_var_change(self, *args):
+        text_current = self.get("1.0", "end-1c")
+        var_current = self._textvariable.get()
+        if text_current != var_current:
+            self.delete("1.0", "end")
+            self.insert("1.0", var_current)
+
+    def _on_widget_change(self, event=None):
+        if self._textvariable is not None:
+            self._textvariable.set(self.get("1.0", "end-1c"))
+
+class Entry(Entry):
+    def replace(self, string: str):
+        old_val = self["state"]
+        self.configure(state=NORMAL)
+        self.delete(0, END)
+        self.insert(0, string)
+        self.configure(state=old_val)
+
+class Interface(Tk):
+    def __init__(self):
+        global version
+        super().__init__()
+
+        self.height = 600
+        self.width = 800
+        self.version = version
+        del version
+
+        self.title(f"Encrypt-n-Decrypt v{self.version}")
+        self.geometry(f"{self.width}x{self.height}")
+        self.resizable(width=False, height=False)
+        self.minsize(width = self.width, height = self.height)
+        self.maxsize(width = self.width, height = self.height)
+        try:
+            self.iconbitmap("icon.ico")
+        except TclError:
+            pass
+        
+        self.mainNotebook = Notebook(self, width=380, height=340, takefocus=0)
+        self.encryptionFrame = Frame(self.mainNotebook, takefocus=0)
+        self.decryptionFrame = Frame(self.mainNotebook, takefocus=0)
+        self.loggingFrame = Frame(self.mainNotebook, takefocus=0)
+        self.helpFrame = Frame(self.mainNotebook, takefocus=0)
+
+        self.mainNotebook.add(self.encryptionFrame, text="Encryption")
+        self.mainNotebook.add(self.decryptionFrame, text="Decryption")
+        self.mainNotebook.add(self.loggingFrame, text="Logs")
+        self.mainNotebook.add(self.helpFrame, text="Help & About")
+
+        self.mainNotebook.pack(fill=BOTH, expand=1, pady=4, padx=4, side=TOP)
+        self.loggingWidget = ScrolledText(self.loggingFrame, height=22, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
+
+        loghandler = loggingHandler(widget = self.loggingWidget)
+        logging.basicConfig(
+            format = '%(asctime)s [%(levelname)s] %(message)s',
+            level = logging.DEBUG,
+            datefmt = r'%Y-%m-%d %H:%M:%S',
+            handlers = [loghandler]
+        )
+        self.logger = logging.getLogger()
+        self.logger.propagate = False
+
+        self.crypto = Crypto(self)
+
+        self.initialize_vars()
+        self.initialize_menu()
+        self.initialize_widgets()
+        self.initialize_bindings()
+
+    @property
+    def logging_level(self) -> int:
+        return self.logger.level
+
+    @logging_level.setter
+    def logging_level(self, level: Optional[Literal[0, 10, 20, 30, 40, 50]] = None) -> None:
+        if not not level:
+            self.logger.setLevel(level=level)
+            self.logger.disabled = False
+        else:
+            self.logger.setLevel(level=logging.CRITICAL + 1)
+            self.logger.disabled = True
+
+    def initialize_widgets(self):
+        # ┌──────────────────┐
+        # │ Encryption Frame │
+        # └──────────────────┘
+
+        # Plain text & file entries frame
+        def changeDataSource():
+            if bool(self.dataSourceVar.get()):
+                self.writeFileContentCheck.configure(state=NORMAL)
+                self.textEntry.configure(state=DISABLED)
+                self.textEntryHideCharCheck.configure(state=DISABLED)
+                self.textClearButton.configure(state=DISABLED)
+                self.textPasteButton.configure(state=DISABLED)
+
+                self.fileEntry.configure(state=NORMAL)
+                self.fileBrowseButton.configure(state=NORMAL)
+                if self.fileEntryVar.get() != "":
+                    self.fileClearButton.configure(state=NORMAL)
+                    self.encryptButton.configure(state=NORMAL)
+                else:
+                    self.fileClearButton.configure(state=DISABLED)
+                    self.encryptButton.configure(state=DISABLED)
+            else:
+                self.writeFileContentCheck.configure(state=DISABLED)
+                self.textEntry.configure(state=NORMAL)
+                if self.textEntryVar.get() != "":
+                    self.textClearButton.configure(state=NORMAL)
+                else:
+                    self.textClearButton.configure(state=DISABLED)
+                self.textEntryHideCharCheck.configure(state=NORMAL)
+                self.textPasteButton.configure(state=NORMAL)
+
+                self.fileEntry.configure(state=DISABLED)
+                self.fileBrowseButton.configure(state=DISABLED)
+                self.fileClearButton.configure(state=DISABLED)
+                self.encryptButton.configure(state=NORMAL)
+                if bool(self.keySourceSelection.get()):
+                    limitKeyEntry()
+            if not bool(self.dataSourceVar.get()):
+                not self.fileValidityLabel["foreground"] in ["gray", "grey"] and not "[Blank]" in self.fileValidityLabel["text"]
+                if not self.fileValidityLabel["foreground"] in ["gray", "grey"] and not "[Blank]" in self.fileValidityLabel["text"]:
+                    self.fileValidityStatusColor = self.fileValidityLabel["foreground"]
+                self.fileValidityLabel.configure(foreground="gray")
+            else:
+                try:
+                    self.fileValidityLabel.configure(foreground=self.fileValidityStatusColor)
+                except AttributeError:
+                    self.fileValidityLabel.configure(foreground="gray")
+
+        def fileEntryBrowse():
+            files = [("All files","*.*")]
+            filePath = filedialog.askopenfilename(title = "Open a file to encrypt", filetypes=files)
+            self.fileEntry.delete(0, END)
+            self.fileEntry.insert(0, filePath)
+
+        def toggleHideChar():
+            self.textEntry.configure(show="●" if bool(self.textEntryHideCharVar.get()) else "")
+
+        def textEntryCallback(*args, **kwargs):
+            self.textClearButton.configure(state=DISABLED if self.textEntryVar.get() == "" else NORMAL)
+        
+        def fileEntryCallback(*args, **kwargs):
+            self.fileClearButton.configure(state=DISABLED if self.fileEntryVar.get() == "" else NORMAL)
+            self.encryptButton.configure(state=DISABLED if self.fileEntryVar.get() == "" else NORMAL)
+            if os.path.isfile(self.fileEntry.get()):
+                self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
+            else:
+                self.fileValidityLabel.configure(text="Validity: Not a file", foreground="red")
+
+        self.textEntryCheck = Radiobutton(self.encryptionFrame, text="Plain text:", value=0, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
+        self.textEntry = Entry(self.encryptionFrame, width=48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.textEntryVar)
+        self.textPasteButton = Button(self.encryptionFrame, text="Paste", width=14, state=NORMAL, command=lambda: (self.textEntry.delete(0, END), self.textEntry.insert(0, str(self.clipboard_get()))), takefocus=0)
+        self.textClearButton = Button(self.encryptionFrame, text="Clear", width=14, command=lambda: self.textEntry.delete(0, END), takefocus=0, state=DISABLED)
+        self.textEntryHideCharCheck = Checkbutton(self.encryptionFrame, text="Hide characters", variable=self.textEntryHideCharVar, onvalue=1, offvalue=0, command=toggleHideChar, takefocus=0)
+
+        self.fileEntryCheck = Radiobutton(self.encryptionFrame, text="File:", value=1, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
+        self.fileValidityLabel = Label(self.encryptionFrame, text="Validity: [Blank]", foreground="gray")
+        self.fileEntry = Entry(self.encryptionFrame, width=48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=self.fileEntryVar)
+        self.fileBrowseButton = Button(self.encryptionFrame, text="Browse...", width=14, state=DISABLED, command=fileEntryBrowse, takefocus=0)
+        self.fileClearButton = Button(self.encryptionFrame, text="Clear", width=14, state=DISABLED, command=lambda: self.fileEntry.delete(0, END), takefocus=0)
+
+        self.textEntryVar.trace("w", textEntryCallback)
+        self.fileEntryVar.trace("w", fileEntryCallback)
+
+        self.textEntryCheck.place(x=8, y=2)
+        self.textEntry.place(x=24, y=22)
+        self.textPasteButton.place(x=23, y=49)
+        self.textClearButton.place(x=124, y=49)
+        self.textEntryHideCharCheck.place(x=261, y=50)
+
+        self.fileEntryCheck.place(x=8, y=76)
+        self.fileValidityLabel.place(x=51, y=77)
+        self.fileEntry.place(x=24, y=96)
+        self.fileBrowseButton.place(x=23, y=123)
+        self.fileClearButton.place(x=124, y=123)
+
+        # Algorithm selection frame
+        def changeEnterKeySectionState(state = DISABLED):
+            self.keyEntry.configure(state=state)
+            self.keyEntryHideCharCheck.configure(state=state)
+            self.keyClearButton.configure(state=state)
+            self.keyPasteButton.configure(state=state)
+            self.keyBrowseButton.configure(state=state)
+            self.keyEnteredAlgDES.configure(state=state)
+            self.keyEnteredAlgAES.configure(state=state)
+
+        def changeGenerateKeySectionState(state = NORMAL):
+            self.AESAlgorithmCheck.configure(state=state)
+            self.DESAlgorithmCheck.configure(state=state)
+
+        def changeAESState(state = NORMAL):
+            self.AES128Check.configure(state=state)
+            self.AES192Check.configure(state=state)
+            self.AES256Check.configure(state=state)
+        
+        def changeDESState(state = DISABLED):
+            self.DES128Check.configure(state=state)
+            self.DES192Check.configure(state=state)
+
+        def changeAlgorithmSelection():
+            changeAESState(state = DISABLED if bool(self.generateAlgorithmSelection.get()) else NORMAL)
+            changeDESState(state = NORMAL if bool(self.generateAlgorithmSelection.get()) else DISABLED)
+
+        def changeSourceSelection():
+            changeGenerateKeySectionState(state = DISABLED if bool(self.keySourceSelection.get()) else NORMAL)
+            changeAESState(state = DISABLED if bool(self.keySourceSelection.get()) else DISABLED if bool(self.generateAlgorithmSelection.get()) else NORMAL)
+            changeDESState(state = DISABLED if bool(self.keySourceSelection.get()) else NORMAL if bool(self.generateAlgorithmSelection.get()) else DISABLED)
+            changeEnterKeySectionState(state = NORMAL if bool(self.keySourceSelection.get()) else DISABLED)
+
+            if bool(self.keySourceSelection.get()) and not len(self.keyEntry.get()) in [16, 24, 32]:
+                self.encryptButton.configure(state=DISABLED)
+
+            if not bool(self.keySourceSelection.get()):
+                if not self.keyValidityStatusLabel["foreground"] != "gray" and not "[Blank]" in self.keyValidityStatusLabel["text"]:
+                    self.keyValidityStatusColor = self.keyValidityStatusLabel["foreground"]
+                self.keyValidityStatusLabel.configure(foreground="gray")
+            else:
+                try:
+                    self.keyValidityStatusLabel.configure(foreground=self.keyValidityStatusColor)
+                except AttributeError:
+                    self.keyValidityStatusLabel.configure(foreground="gray")
+
+        def getKey(path: str) -> Optional[Union[str, bytes]]:
+            with open(path, encoding = 'utf-8', mode="r") as file:
+                global index
+                index = file.read()
+            index = str(index)
+            where = -1
+            for i in range(0, len(index)):
+                where += 1
+                key_to_try = index[where:where+32]
+                try:
+                    iv = base64.urlsafe_b64decode(index.replace(key_to_try, ""))[:16]
+                    aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CFB, iv=iv)
+                except:
+                    continue
+                else:
+                    try:
+                        output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")).replace(iv, b""))
+                        output_key = output_key.decode("utf-8")
+                    except:
+                        continue
+                    else:
+                        try:
+                            if len(output_key) == 16 or len(output_key) == 24 or len(output_key) == 32:
+                                return output_key
+                        except:
+                            continue
+            with open(path, encoding = 'utf-8', mode="r") as file:
+                if len(file.read()) == 16 or len(file.read()) == 24 or len(file.read()) == 32:
+                    return str(file.read())
+                else:
+                    return None
+
+        def getKeyFromFile():
+            path = filedialog.askopenfilename(title="Select key file", filetypes=[("Encrypt'n'Decrypt key file","*.key"),("Text document","*.txt"),("All files","*.*")])
+            if path == "":
+                return
+            if os.path.splitext(path)[1] != ".txt":
+                key = getKey(path)
+                if not key:
+                    messagebox.showwarning("ERR_INVALID_KEY_FILE","The specified file does not contain any valid key for encryption.")
+                    return
+            else:
+                with open(path, encoding="utf-8", mode="r") as file:
+                    key = file.read()
+            self.keyEntry.delete(0, END)
+            self.keyEntry.insert(0, key)
+
+        def limitKeyEntry(*args, **kwargs):
+            global value
+            if len(self.keyEntryVar.get()) > 32:
+                self.keyEntryVar.set(self.keyEntryVar.get()[:32])
+            value = self.keyEntryVar.get()
+            if len(value) == 0:
+                self.keyValidityStatusLabel.configure(foreground="gray", text="Validity: [Blank]")
+                self.encryptButton.configure(state=DISABLED)
+            else:
+                if not bool(self.keySourceSelection.get()):
+                    cond = bool(self.generateAlgorithmSelection.get())
+                else:
+                    cond = bool(self.entryAlgorithmSelection.get())
+                iv = get_random_bytes(AES.block_size if not cond else DES3.block_size)
+                try:
+                    if not cond:
+                        AES.new(bytes(value, 'utf-8'), mode=AES.MODE_OFB, iv=iv)
+                    else:
+                        DES3.new(bytes(value, 'utf-8'), mode=DES3.MODE_OFB, iv=iv)
+                except:
+                    if not len(value) in [16, 24, 32]:
+                        self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid Key")
+                    else:
+                        self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
+                    if "3DES-256" in self.keyValidityStatusLabel["text"]:
+                        self.keyValidityStatusLabel.configure(text="Validity: Invalid Key")
+                    self.encryptButton.configure(state=DISABLED)
+                else:
+                    self.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
+                    self.encryptButton.configure(state=NORMAL)
+
+        self.algorithmSelect = Notebook(self.encryptionFrame, width=355, height=290, takefocus=0)
+        self.symmetricEncryption = Frame(self.algorithmSelect, takefocus=0)
+        self.asymmetricEncryption = Frame(self.algorithmSelect, takefocus=0)
+
+        self.algorithmSelect.add(self.symmetricEncryption, text="Symmetric Key Encryption")
+        self.algorithmSelect.add(self.symmetricEncryption, text="Asymmetric Key Encryption")
+
+        self.generateRandomKeyCheck = Radiobutton(self.symmetricEncryption, text="Generate a random key", value=0, variable=self.keySourceSelection, command=changeSourceSelection, takefocus=0)
+
+        self.AESAlgorithmCheck = Radiobutton(self.symmetricEncryption, text="AES (Advanced Encryption Standard)", value=0, variable=self.generateAlgorithmSelection, command=changeAlgorithmSelection, takefocus=0)
+        self.AES128Check = Radiobutton(self.symmetricEncryption, text="AES-128 Key", value=128, variable=self.generateRandomAESVar, takefocus=0)
+        self.AES192Check = Radiobutton(self.symmetricEncryption, text="AES-192 Key", value=192, variable=self.generateRandomAESVar, takefocus=0)
+        self.AES256Check = Radiobutton(self.symmetricEncryption, text="AES-256 Key", value=256, variable=self.generateRandomAESVar, takefocus=0)
+
+        self.DESAlgorithmCheck = Radiobutton(self.symmetricEncryption, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.generateAlgorithmSelection, command=changeAlgorithmSelection, takefocus=0)
+        self.DES128Check = Radiobutton(self.symmetricEncryption, text="3DES-128 Key", value=128, state=DISABLED, variable=self.generateRandomDESVar, takefocus=0)
+        self.DES192Check = Radiobutton(self.symmetricEncryption, text="3DES-192 Key", value=192, state=DISABLED, variable=self.generateRandomDESVar, takefocus=0)
+        
+        self.selectKeyCheck = Radiobutton(self.symmetricEncryption, text="Use this key:", value=1, variable=self.keySourceSelection, command=changeSourceSelection, takefocus=0)
+        
+        self.keyEntry = Entry(self.symmetricEncryption, width=46, font=("Consolas",9), state=DISABLED, textvariable=self.keyEntryVar, takefocus=0)
+        self.keyValidityStatusLabel = Label(self.symmetricEncryption, text="Validity: [Blank]", foreground="gray", takefocus=0)
+        self.keyEntryHideCharCheck = Checkbutton(self.symmetricEncryption, text="Hide characters", onvalue=1, offvalue=0, variable=self.keyEntryHideCharVar, state=DISABLED, takefocus=0)
+        self.keyBrowseButton = Button(self.symmetricEncryption, text="Browse key file...", width=21, state=DISABLED, command=getKeyFromFile, takefocus=0)
+        self.keyPasteButton = Button(self.symmetricEncryption, text="Paste", width=13, state=DISABLED, command=lambda: (self.keyEntry.delete(0, END), self.keyEntry.insert(0, self.clipboard_get())), takefocus=0)
+        self.keyClearButton = Button(self.symmetricEncryption, text="Clear", width=13, state=DISABLED, command=lambda: self.keyEntry.delete(0, END), takefocus=0)
+        self.keyEnteredAlgAES = Radiobutton(self.symmetricEncryption, text="AES (Advanced Encryption Standard)", value=0, variable=self.entryAlgorithmSelection, command=limitKeyEntry, state=DISABLED, takefocus=0)
+        self.keyEnteredAlgDES = Radiobutton(self.symmetricEncryption, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.entryAlgorithmSelection, command=limitKeyEntry, state=DISABLED, takefocus=0)
+        
+        self.keyEntryVar.trace("w", limitKeyEntry)
+        self.algorithmSelect.place(x=10, y=155)
+        self.generateRandomKeyCheck.place(x=5, y=5)
+        self.AESAlgorithmCheck.place(x=16, y=25)
+        self.AES128Check.place(x=27, y=44)
+        self.AES192Check.place(x=27, y=63)
+        self.AES256Check.place(x=27, y=82)
+        self.DESAlgorithmCheck.place(x=16, y=101)
+        self.DES128Check.place(x=27, y=120)
+        self.DES192Check.place(x=27, y=139)
+        self.keyEntry.place(x=18, y=181)
+        self.keyValidityStatusLabel.place(x=92, y=159)
+        self.keyClearButton.place(x=114, y=207)
+        self.keyPasteButton.place(x=17, y=207)
+        self.keyBrowseButton.place(x=211, y=207)
+        self.keyEntryHideCharCheck.place(x=244, y=158)
+        self.selectKeyCheck.place(x=5, y=158)
+        self.keyEnteredAlgAES.place(x=16, y=235)
+        self.keyEnteredAlgDES.place(x=16, y=254)
+
+        # Output section & encrypt 
+        def saveOutput():
+            files = [("Text document","*.txt"),("All files","*.*")]
+            path = filedialog.asksaveasfilename(title="Save encrypted data", initialfile="Encrypted Data.txt", filetypes=files, defaultextension="*.txt")
+            if path == "":
+                return
+            with open(path, encoding="utf-8", mode="w") as file:
+                file.write(self.outputVar.get())
+
+        def saveKey(path, key):
+            key_to_use = self.crypto.generateKey(32)
+
+            data = bytes(key, "utf-8")
+            iv = get_random_bytes(AES.block_size)
+            cipher = AES.new(bytes(key_to_use, "utf-8"), AES.MODE_CFB, iv=iv)
+            rawResult = iv + cipher.encrypt(data)
+
+            result = base64.urlsafe_b64encode(rawResult).decode()
+            iv = rawResult[:16]
+            aes = AES.new(bytes(key_to_use, "utf-8"), AES.MODE_CFB, iv=iv)
+            plaintext = aes.decrypt(rawResult.replace(iv, b""))
+
+            if plaintext.decode("utf-8") == key:
+                first_part = randint(0, len(result))
+                encrypted_key = result[:first_part] + key_to_use + result[first_part:]
+                try:
+                    os.remove(path)
+                except:
+                    pass
+                finally:
+                    with open(path, encoding = 'utf-8', mode="w") as file:
+                        file.write(str(encrypted_key))
+
+        def saveAESKey():
+            files = [("Encrypt'n'Decrypt key file","*.key"),("Text document","*.txt"),("All files","*.*")]
+            path = filedialog.asksaveasfilename(title="Save encryption key", initialfile="Encryption Key.key", filetypes=files, defaultextension="*.key")
+            if path == "":
+                return
+            if os.path.splitext(path)[1] == ".key":
+                saveKey(path, self.AESKeyVar.get())
+            else:
+                with open(path, encoding="utf-8", mode="w") as file:
+                    file.write(self.AESKeyVar.get())
+
+        def saveRSAPublic():
+            files = [("Text document","*.txt"),("All files","*.*")]
+            path = filedialog.asksaveasfilename(title="Save public key", initialfile="Public Key.txt", filetypes=files, defaultextension="*.txt")
+            if path == "":
+                return
+            with open(path, encoding="utf-8", mode="w") as file:
+                file.write(self.RSAPublicVar.get())
+
+        def saveRSAPrivate():
+            files = [("Text document","*.txt"),("All files","*.*")]
+            path = filedialog.asksaveasfilename(title="Save private key", initialfile="Private Key.txt", filetypes=files, defaultextension="*.txt")
+            if path == "":
+                return
+            with open(path, encoding="utf-8", mode="w") as file:
+                file.write(self.RSAPrivateVar.get())
+
+        def outputTextCallback(*args, **kwargs):
+            if self.outputVar.get() == "":
+                self.outputText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+                self.clearOutputButton.configure(state=DISABLED)
+                self.copyOutputButton.configure(state=DISABLED)
+                self.saveOutputButton.configure(state=DISABLED)
+            else:
+                self.outputText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                self.clearOutputButton.configure(state=NORMAL)
+                self.copyOutputButton.configure(state=NORMAL)
+                self.saveOutputButton.configure(state=NORMAL)
+
+        def AESKeyTextCallback(*args, **kwargs):
+            if self.AESKeyVar.get() == "":
+                self.AESKeyText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+                self.clearAESKeyButton.configure(state=DISABLED)
+                self.copyAESKeyButton.configure(state=DISABLED)
+                self.saveAESKeyButton.configure(state=DISABLED)
+            else:
+                self.AESKeyText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                self.clearAESKeyButton.configure(state=NORMAL)
+                self.copyAESKeyButton.configure(state=NORMAL)
+                self.saveAESKeyButton.configure(state=NORMAL)
+
+        self.encryptButton = Button(self.encryptionFrame, text="Encrypt", width=22, command=self.crypto.encrypt, takefocus=0)
+        self.writeFileContentCheck = Checkbutton(self.encryptionFrame, text="Write encrypted data to the file", variable=self.writeFileContentVar, state=DISABLED, takefocus=0)
+
+        self.outputFrame = LabelFrame(self.encryptionFrame, text="Output", height=502, width=403, takefocus=0)
+
+        self.outputText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.outputVar)
+        self.AESKeyText = Text(self.outputFrame, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.AESKeyVar)
+        self.RSAPublicText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+        self.RSAPrivateText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+        self.AESKeyLabel = Label(self.outputFrame, text="AES/3DES Key:", takefocus=0)
+        self.RSAPublicLabel = Label(self.outputFrame, text="RSA Public Key:", takefocus=0)
+        self.RSAPrivateLabel = Label(self.outputFrame, text="RSA Private Key:", takefocus=0)
+
+        self.outputVar.trace("w", outputTextCallback)
+        self.AESKeyVar.trace("w", AESKeyTextCallback)
+
+        self.copyOutputButton = Button(self.outputFrame, text = "Copy", width=10, command=lambda: self.clipboard_set(self.lastResult), state=DISABLED, takefocus=0)
+        self.clearOutputButton = Button(self.outputFrame, text = "Clear", width=10, command=lambda: (self.outputText.configure(state=NORMAL), self.outputText.delete("1.0", END), self.outputText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+        self.saveOutputButton = Button(self.outputFrame, width=15, text="Save as...", command=saveOutput, state=DISABLED, takefocus=0)
+        self.copyAESKeyButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.clipboard_set(self.AESKeyText.get("1.0", END)), state=DISABLED, takefocus=0)
+        self.clearAESKeyButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.AESKeyText.configure(state=NORMAL), self.AESKeyText.delete("1.0", END), self.AESKeyText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+        self.saveAESKeyButton = Button(self.outputFrame, width=15, text="Save as...", command=saveAESKey, state=DISABLED, takefocus=0)
+        self.copyRSAPublicButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.clipboard_set(self.RSAPublicText.get("1.0", END)), state=DISABLED, takefocus=0)
+        self.clearRSAPublicButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.RSAPublicText.configure(state=NORMAL), self.RSAPublicText.delete("1.0", END), self.RSAPublicText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+        self.saveRSAPublicButton = Button(self.outputFrame, width=15, text="Save as...", command=saveRSAPublic, state=DISABLED, takefocus=0)
+        self.copyRSAPrivateButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.clipboard_set(self.RSAPrivateText.get("1.0", END)), state=DISABLED, takefocus=0)
+        self.clearRSAPrivateButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.RSAPrivateText.configure(state=NORMAL), self.RSAPrivateText.delete("1.0", END), self.RSAPrivateText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+        self.saveRSAPrivateButton = Button(self.outputFrame, width=15, text="Save as...", command=saveRSAPrivate, state=DISABLED, takefocus=0)
+
+        self.statusBar = TkLabel(self, text="Status: Ready", bd=1, relief=SUNKEN, anchor=W)
+
+        self.encryptButton.place(x=9, y=480)
+        self.writeFileContentCheck.place(x=160, y=482)
+        self.outputText.place(x=9, y=5)
+
+        self.AESKeyText.place(x=9, y=145)
+        self.RSAPublicText.place(x=9, y=215)
+        self.RSAPrivateText.place(x=9, y=355)
+        self.AESKeyLabel.place(x=8, y=125)
+        self.RSAPublicLabel.place(x=8, y=194)
+        self.RSAPrivateLabel.place(x=8, y=334)
+
+        self.copyOutputButton.place(x=8, y=100)
+        self.clearOutputButton.place(x=85, y=100)
+        self.saveOutputButton.place(x=162, y=100)
+        self.copyAESKeyButton.place(x=8, y=170)
+        self.clearAESKeyButton.place(x=85, y=170)
+        self.saveAESKeyButton.place(x=162, y=170)
+        self.copyRSAPublicButton.place(x=8, y=309)
+        self.clearRSAPublicButton.place(x=85, y=309)
+        self.saveRSAPublicButton.place(x=162, y=309)
+        self.copyRSAPrivateButton.place(x=8, y=449)
+        self.clearRSAPrivateButton.place(x=85, y=449)
+        self.saveRSAPrivateButton.place(x=162, y=449)
+
+        self.statusBar.pack(side=BOTTOM, fill=X)
+
+        self.outputFrame.place(x=377, y=4)
+
+        # ┌──────────────────┐
+        # │ Decryption Frame │
+        # └──────────────────┘
+        def changeDecryptSource():
+            if not bool(self.decryptSourceVar.get()):
+                self.textDecryptEntry.configure(state=NORMAL, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                self.textDecryptPasteButton.configure(state=NORMAL)
+                self.textDecryptClearButton.configure(state=NORMAL)
+                self.fileDecryptEntry.configure(state=DISABLED)
+                self.fileDecryptBrowseButton.configure(state=DISABLED)
+                self.fileDecryptClearButton.configure(state=DISABLED)
+            else:
+                self.textDecryptEntry.configure(state=DISABLED, bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+                self.textDecryptPasteButton.configure(state=DISABLED)
+                self.textDecryptClearButton.configure(state=DISABLED)
+                self.fileDecryptEntry.configure(state=NORMAL)
+                self.fileDecryptBrowseButton.configure(state=NORMAL)
+                self.fileDecryptClearButton.configure(state=NORMAL)
+
+        def textDecryptCallback(*args, **kwargs):
+            try:
+                base64.urlsafe_b64decode(self.textDecryptEntry.get("1.0", END).encode("utf-8"))
+            except:
+                self.textDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
+                self.decryptButton.configure(state=DISABLED)
+            else:
+                self.textDecryptValidityLabel.configure(text="Validity: Valid base64 encoded data", foreground="green")
+                self.decryptButton.configure(state=NORMAL)
+
+        def decryptLimitKeyEntry(*args, **kwargs):
+            global value
+            if len(self.keyEntryVar.get()) > 32:
+                self.keyEntryVar.set(self.keyEntryVar.get()[:32])
+            value = self.keyEntryVar.get()
+            if len(value) == 0:
+                self.keyValidityStatusLabel.configure(foreground="gray", text="Validity: [Blank]")
+                self.decryptButton.configure(state=DISABLED)
+            else:
+                if not bool(self.keySourceSelection.get()):
+                    cond = bool(self.generateAlgorithmSelection.get())
+                else:
+                    cond = bool(self.entryAlgorithmSelection.get())
+                iv = get_random_bytes(AES.block_size if not cond else DES3.block_size)
+                try:
+                    if not cond:
+                        AES.new(bytes(value, 'utf-8'), mode=AES.MODE_OFB, iv=iv)
+                    else:
+                        DES3.new(bytes(value, 'utf-8'), mode=DES3.MODE_OFB, iv=iv)
+                except:
+                    if not len(value) in [16, 24, 32]:
+                        self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid Key")
+                    else:
+                        self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
+                    if "3DES-256" in self.keyValidityStatusLabel["text"]:
+                        self.keyValidityStatusLabel.configure(text="Validity: Invalid Key")
+                    self.encryptButton.configure(state=DISABLED)
+                else:
+                    self.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
+                    self.encryptButton.configure(state=NORMAL)
+
+        self.textDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted text:", value=0, variable=self.decryptSourceVar, command=changeDecryptSource, takefocus=0)
+        self.textDecryptValidityLabel = Label(self.decryptionFrame, text="Validity: [Blank]", foreground="gray")
+        self.textDecryptEntry = ScrolledText(self.decryptionFrame, width=105, height=5, font=("Consolas", 9), textvariable=self.textDecryptVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+        self.textDecryptPasteButton = Button(self.decryptionFrame, width=15, text="Paste", command=lambda: self.textDecryptEntry.replace(self.clipboard_get()), takefocus=0)
+        self.textDecryptClearButton = Button(self.decryptionFrame, width=15, text="Clear", command=lambda: self.textDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
+
+        self.textDecryptVar.trace("w", textDecryptCallback)
+        
+        self.fileDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted file:", value=1, variable=self.decryptSourceVar, command=changeDecryptSource, takefocus=0)
+        self.fileDecryptEntry = Entry(self.decryptionFrame, width=107, font=("Consolas", 9), textvariable=self.fileDecryptVar, state=DISABLED, takefocus=0)
+        self.fileDecryptBrowseButton = Button(self.decryptionFrame, width=15, text="Browse...", state=DISABLED, command=lambda: self.fileDecryptEntry.replace(self.clipboard_get()), takefocus=0)
+        self.fileDecryptClearButton = Button(self.decryptionFrame, width=15, text="Clear", state=DISABLED, command=lambda: self.fileDecryptEntry.delete(0, END), takefocus=0)
+        
+        self.decryptNotebook = Notebook(self.decryptionFrame, height=160, width=765, takefocus=0)
+        self.symmetricDecryption = Frame(self.decryptNotebook, takefocus=0)
+        self.asymmetricEncryption = Frame(self.decryptNotebook, takefocus=0)
+        self.decryptNotebook.add(self.symmetricDecryption, text="Symmetric Key Decryption")
+        self.decryptNotebook.add(self.asymmetricEncryption, text="Asymmetric Key Decryption")
+        self.decryptAlgorithmFrame = LabelFrame(self.symmetricDecryption, text="Select algorithm", height=63, width=749, takefocus=0)
+        self.decryptAESCheck = Radiobutton(self.decryptAlgorithmFrame, text="AES (Advanced Encryption Standard)", value=0, variable=self.decryptAlgorithmVar, takefocus=0)
+        self.decryptDESCheck = Radiobutton(self.decryptAlgorithmFrame, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.decryptAlgorithmVar, takefocus=0)
+        self.decryptKeyFrame = LabelFrame(self.symmetricDecryption, text="Enter encryption key", height=84, width=749, takefocus=0)
+        self.decryptKeyEntry = Entry(self.decryptKeyFrame, width=103, font=("Consolas", 9), textvariable=self.decryptKeyVar, takefocus=0)
+        self.decryptKeyBrowseButton = Button(self.decryptKeyFrame, width=21, text="Browse key file...", takefocus=0)
+        self.decryptKeyPasteButton = Button(self.decryptKeyFrame, width=15, text="Paste", takefocus=0, command=lambda: self.decryptKeyEntry.replace(self.clipboard_get()))
+        self.decryptKeyClearButton = Button(self.decryptKeyFrame, width=15, text="Clear", takefocus=0, command=lambda: self.decryptKeyEntry.delete(0, END), state=DISABLED)
+
+        self.decryptButton = Button(self.decryptionFrame, width=22, text="Decrypt", command=self.crypto.decrypt, takefocus=0, state=DISABLED)
+        self.decryptOutputFrame = LabelFrame(self.decryptionFrame, text="Decrypted text", height=84, width=766, takefocus=0)
+        self.decryptOutputText = Text(self.decryptOutputFrame, width=105, height=1, font=("Consolas", 9), state=DISABLED, bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+
+        self.textDecryptRadio.place(x=8, y=2)
+        self.textDecryptValidityLabel.place(x=108, y=3)
+        self.textDecryptEntry.place(x=24, y=24)
+        self.textDecryptPasteButton.place(x=23, y=107)
+        self.textDecryptClearButton.place(x=130, y=107)
+        self.fileDecryptRadio.place(x=8, y=132)
+        self.fileDecryptEntry.place(x=24, y=153)
+        self.fileDecryptBrowseButton.place(x=23, y=182)
+        self.fileDecryptClearButton.place(x=130, y=182)
+        self.decryptNotebook.place(x=10, y=215)
+        self.decryptAlgorithmFrame.place(x=8, y=2)
+        self.decryptAESCheck.place(x=5, y=0)
+        self.decryptDESCheck.place(x=5, y=19)
+        self.decryptKeyFrame.place(x=8, y=68)
+        self.decryptKeyEntry.place(x=9, y=3)
+
+        self.decryptKeyBrowseButton.place(x=601, y=30)
+        self.decryptKeyPasteButton.place(x=8, y=30)
+        self.decryptKeyClearButton.place(x=115, y=30)
+        self.decryptButton.place(x=9, y=406)
+        self.decryptOutputFrame.place(x=10, y=435)
+        self.decryptOutputText.place(x=10, y=3)
+
+        # ┌───────────────┐
+        # │ Logging Frame │
+        # └───────────────┘
+        self.loggingClearButton = Button(self.loggingFrame, text="Clear", width=15, takefocus=0, state=DISABLED)
+        self.loggingSaveAsButton = Button(self.loggingFrame, text="Save as...", width=15, takefocus=0)
+        self.loggingSaveButton = Button(self.loggingFrame, text="Save to 'Encrypt-n-Decrypt.log'", width=28, takefocus=0)
+
+        self.loggingWidget.place(x=10, y=10)
+        self.loggingClearButton.place(x=9, y=330)
+        self.loggingSaveAsButton.place(x=494, y=330)
+        self.loggingSaveButton.place(x=601, y=330)
+
+        # ┌────────────┐
+        # │ Help Frame │
+        # └────────────┘
+        request = get("https://raw.githubusercontent.com/Yilmaz4/Encrypt-n-Decrypt/main/README.md").text
+        HTML = markdown(request)
+        self.readmePage = HtmlFrame(self.helpFrame, messages_enabled=False, vertical_scrollbar=True)
+        self.readmePage.load_html(HTML)
+        self.readmePage.set_zoom(0.8)
+        self.readmePage.grid_propagate(0)
+        self.readmePage.enable_images(0)
+        self.readmePage.pack(fill=BOTH, expand=True)
+
+    def initialize_vars(self):
+        self.showTextChar = IntVar(value=0)
+        self.showTooltip = IntVar(value=1)
+        self.showInfoBox = IntVar(value=1)
+        self.showWarnBox = IntVar(value=1)
+        self.showErrorBox = IntVar(value=1)
+        self.windowAlpha = IntVar(value=1)
+
+        self.generateRandomAESVar = IntVar(value=256)
+        self.generateRandomDESVar = IntVar(value=192)
+        self.keySourceSelection = IntVar(value=0)
+        self.generateAlgorithmSelection = IntVar(value=0)
+        self.entryAlgorithmSelection = IntVar(value=0)
+        self.keyEntryVar = StringVar()
+        self.keyEntryHideCharVar = IntVar()
+
+        self.dataSourceVar = IntVar(value=0)
+        self.textEntryVar = StringVar()
+        self.fileEntryVar = StringVar()
+        self.textEntryHideCharVar = IntVar(value=0)
+        self.writeFileContentVar = IntVar(value=1)
+        self.outputVar = StringVar()
+        self.AESKeyVar = StringVar()
+        self.RSAPublicVar = StringVar()
+        self.RSAPrivateVar = StringVar()
+
+        self.decryptSourceVar = IntVar(value=0)
+        self.decryptAlgorithmVar = IntVar(value=0)
+        self.textDecryptVar = StringVar()
+        self.fileDecryptVar = StringVar()
+        self.decryptKeyVar = StringVar()
+
+    def initialize_menu(self):
+        self.menuBar = Menu(self)
+        self.config(menu = self.menuBar)
+
+        self.fileMenu = Menu(self.menuBar, tearoff=0)
+        self.viewMenu = Menu(self.menuBar, tearoff=0)
+        self.helpMenu = Menu(self.menuBar, tearoff=0)
+
+        self.titleMenu = Menu(self.viewMenu, tearoff=0)
+        self.opacityMenu = Menu(self.viewMenu, tearoff=0)
+        self.langMenu = Menu(self.viewMenu, tearoff=0)
+
+        self.speedMenu = Menu(self.titleMenu, tearoff=0)
+
+        def changeAlpha(alpha: int = 100):
+            self.attributes("-alpha", alpha/100)
+
+        # Menu-bar
+        self.fileMenu.add_command(label = "Encryption", command=lambda: self.mainNotebook.select(0), accelerator="Ctrl+E", underline=0)
+        self.fileMenu.add_command(label = "Decryption", command=lambda: self.mainNotebook.select(1), accelerator="Ctrl+D", underline=0)
+        self.fileMenu.add_command(label = "Logs", command=lambda: self.mainNotebook.select(2), accelerator="Ctrl+L", underline=0)
+        self.fileMenu.add_command(label = "Help & About", command=lambda: self.mainNotebook.select(3), accelerator="F1", underline=0)
+        self.fileMenu.add_separator()
+        self.fileMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=lambda: self.Updates(self), underline=10)
+        self.fileMenu.add_separator()
+        self.fileMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda:root.destroy())
+        # View menu
+        self.viewMenu.add_checkbutton(label = "Show tooltips on hover", accelerator="Ctrl+Alt+T", onvalue=1, offvalue=0, variable=self.showTooltip, underline=5)
+        self.viewMenu.add_separator()
+        self.viewMenu.add_checkbutton(label = "Show info message dialogs", accelerator="Ctrl+Alt+I", onvalue=1, offvalue=0, variable=self.showInfoBox, underline=5)
+        self.viewMenu.add_checkbutton(label = "Show warning message dialogs", accelerator="Ctrl+Alt+W", onvalue=1, offvalue=0, variable=self.showWarnBox, underline=5)
+        self.viewMenu.add_checkbutton(label = "Show error message dialogs", accelerator="Ctrl+Alt+E", onvalue=1, offvalue=0, variable=self.showErrorBox, underline=5)
+        self.viewMenu.add_separator()
+        # Title bar sub-menu
+        self.titleMenu.add_checkbutton(label = "Show program name in titlebar")
+        self.titleMenu.add_checkbutton(label = "Show program version in titlebar")
+        self.titleMenu.add_checkbutton(label = "Show program build number in titlebar")
+        self.titleMenu.add_checkbutton(label = "Show time in titlebar")
+        self.titleMenu.add_checkbutton(label = "Show date in titlebar")
+        self.titleMenu.add_separator()
+        
+        UpdateValue = IntVar()
+        UpdateValue.set(200)
+        self.speedMenu.add_radiobutton(label = "Fast", value=50, variable=UpdateValue)
+        self.speedMenu.add_radiobutton(label = "Moderate", value=200, variable=UpdateValue)
+        self.speedMenu.add_radiobutton(label = "Slow", value=800, variable=UpdateValue)
+        self.speedMenu.add_radiobutton(label = "Paused", value=0, variable=UpdateValue)
+        self.speedMenu.add_separator()
+        self.speedMenu.add_command(label = "Update now")
+        self.titleMenu.add_cascade(menu=self.speedMenu, label = "Titlebar update rate")
+        self.viewMenu.add_cascade(menu=self.titleMenu, label = "Window titlebar configuration")
+        self.viewMenu.add_separator()
+        # Transparency sub-menu
+        self.opacityMenu.add_radiobutton(label = "%20", value=20, variable=self.windowAlpha, command=lambda:changeAlpha(20), accelerator="Ctrl+Alt+2")
+        self.opacityMenu.add_radiobutton(label = "%40", value=40, variable=self.windowAlpha, command=lambda:changeAlpha(40), accelerator="Ctrl+Alt+4")
+        self.opacityMenu.add_radiobutton(label = "%60", value=60, variable=self.windowAlpha, command=lambda:changeAlpha(60), accelerator="Ctrl+Alt+6")
+        self.opacityMenu.add_radiobutton(label = "%80", value=80, variable=self.windowAlpha, command=lambda:changeAlpha(80), accelerator="Ctrl+Alt+8")
+        self.opacityMenu.add_radiobutton(label = "%90", value=90, variable=self.windowAlpha, command=lambda:changeAlpha(90), accelerator="Ctrl+Alt+9")
+        self.opacityMenu.add_radiobutton(label = "Opaque", value=100, variable=self.windowAlpha, command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+1")
+        self.opacityMenu.add_separator()
+        self.opacityMenu.add_command(label = "Reset opacity", command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+O", underline=6)
+        # End transparency sub-menu
+        self.viewMenu.add_cascade(menu=self.opacityMenu, label = "Window opacity configuration")
+        self.viewMenu.add_separator()
+        # Language sub-menu
+        self.langMenu.add_radiobutton(label = "English [Coming Soon]")
+        self.langMenu.add_radiobutton(label = "Türkçe [Yakında Geliyor]", state=DISABLED)
+        self.langMenu.add_radiobutton(label = "Deutsche [Kommt Bald]", state=DISABLED)
+        self.langMenu.add_radiobutton(label = "中国人 [即将推出]", state=DISABLED)
+        self.langMenu.add_separator()
+        self.langMenu.add_command(label = "Reset language to default", accelerator="Ctrl+Alt+L")
+        # End language sub-menu
+        self.viewMenu.add_cascade(menu=self.langMenu, label ="Language")
+        # End view menu
+        self.menuBar.add_cascade(label = "Main", menu=self.fileMenu)
+        self.menuBar.add_cascade(label = "Preferences", menu=self.viewMenu)
+        self.menuBar.add_command(label = "Help", command=self.helpMenu)
+
+    def initialize_bindings(self):
+        def encrypt(*args, **kwargs):
+            self.crypto.encrypt
+        def give_focus(*args, **kwargs):
+            self.after(50, self.textEntry.focus_set())
+
+        self.bind("<Return>", encrypt)
+        self.bind("<Tab>", give_focus)
+
+    def clipboard_get(self) -> Optional[str]:
+        clipboard = pyperclip.paste()
+        if not clipboard:
+            return ""
+        elif len(clipboard) > 15000:
+            if messagebox.askyesno("Super long text", "The text you're trying to paste is too long (longer than 15.000 characters) which can cause the program to freeze. Are you sure?"):
+                return clipboard
+            else:
+                return ""
+        else:
+            return clipboard
+
+    def clipboard_set(self, text: str = None):
+        pyperclip.copy(text)
+
+    class Updates(Toplevel):
+        def __init__(self, master: Tk):
+            self.master = master
+            releases = get("https://api.github.com/repos/Yilmaz4/Encrypt-n-Decrypt/releases").json()
+
+            latest = None
+            for release in releases:
+                if not release["draft"] and not release["prerelease"]:
+                    latest = release
+                    break
+
+            success = False
+            for i in range(len(latest["tag_name"].split("."))):
+                if latest["tag_name"].split(".")[i] > self.master.version.split(".")[i]:
+                    success = True
+                    break
+                else:
+                    continue
+
+            if not success:
+                messagebox.showinfo("No updates available", "No updates avaliable yet. Please check back later.")
+                self.master.logger.info("Updates checked. No updates available.")
+                super().__init__(self.master)
+                self.withdraw()
+                self.destroy()
+                return
+
+            asset_0 = urlopen(latest["assets"][0]["browser_download_url"]).info()
+            asset_1 = urlopen(latest["assets"][1]["browser_download_url"]).info()
+            asset_0_size, asset_0_date = size(int(asset_0["Content-Length"]), system=alternative), asset_0["Last-Modified"]
+            asset_1_size, asset_1_date = size(int(asset_1["Content-Length"]), system=alternative), asset_0["Last-Modified"]
+            super().__init__(master)
+            self.grab_set()
+            self.width = 669
+            self.height = 558
+
+            self.title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
+            self.geometry(f"{self.width}x{self.height}")
+            self.resizable(height=False, width=False)
+            self.attributes("-fullscreen", False)
+            self.maxsize(self.width, self.height)
+            self.minsize(self.width, self.height)
+            try:
+                self.iconbitmap("icon.ico")
+            except TclError:
+                pass
+
+            HTML = markdown(latest["body"])
+            frame = HtmlFrame(self, height=558, width=300, messages_enabled=False, vertical_scrollbar=True)
+            frame.load_html(HTML)
+            frame.set_zoom(0.8)
+            frame.grid_propagate(0)
+            frame.enable_images(0)
+            frame.place(x=0, y=0)
+            UpdateAvailableLabel = Label(self, text="An update is available!", font=('Segoe UI', 22), foreground="#189200", takefocus=0)
+            LatestVersionLabel = Label(self, text="Latest version: Encrypt-n-Decrypt {}".format(latest["tag_name"]), font=('Segoe UI', 9, 'bold'), takefocus=0)
+            YourVersionLabel = Label(self, text="Current version: Encrypt-n-Decrypt v{}".format(master.version), font=('Segoe UI', 9), takefocus=0)
+            DownloadLabel = Label(self, text="Download page for more information and asset files:", takefocus=0)
+            DownloadLinks = LabelFrame(self, text="Download links", height=248, width=349, takefocus=0)
+            DownloadLinkLabel = Label(DownloadLinks, text=latest["assets"][0]["name"], takefocus=0)
+            DownloadLinkLabel2 = Label(DownloadLinks, text=latest["assets"][1]["name"], takefocus=0)
+            Separator1 = Separator(self, orient='horizontal', takefocus=0)
+            Separator2 = Separator(DownloadLinks, orient='horizontal', takefocus=0)
+            Separator3 = Separator(DownloadLinks, orient='horizontal', takefocus=0)
+            DownloadPage = Entry(self, width=57, takefocus=0)
+            DownloadPage.insert(0, latest["html_url"])
+            DownloadPage.configure(state=DISABLED)
+            DownloadLink = Entry(DownloadLinks, width=54, takefocus=0)
+            DownloadLink.insert(0, latest["assets"][0]["browser_download_url"])
+            DownloadLink.configure(state=DISABLED)
+            DownloadLink2 = Entry(DownloadLinks, width=54, takefocus=0)
+            DownloadLink2.insert(0, latest["assets"][1]["browser_download_url"])
+            DownloadLink2.configure(state=DISABLED)
+            CopyDownloadPage = Button(self, text="Copy", width=10, command=lambda: self.master.clipboard_set(DownloadPage.get()), takefocus=0)
+            OpenDownloadLink = Button(self, text="Open in browser", width=17, command=lambda: openweb(str(latest["html_url"])), takefocus=0)
+            CopyDownloadLink = Button(DownloadLinks, text="Copy", width=10, takefocus=0, command=lambda: self.master.clipboard_set(DownloadLink.get()))
+            DownloadTheLinkBrowser = Button(DownloadLinks, text="Download from browser", width=25, command=lambda: openweb(latest["assets"][0]["browser_download_url"]), takefocus=0)
+            DownloadTheLinkBuiltin = Button(DownloadLinks, text="Download", width=13, command=lambda: None, takefocus=0)
+            CopyDownloadLink2 = Button(DownloadLinks, text="Copy", width=10, takefocus=0, command=lambda: self.master.clipboard_set(DownloadLink2.get()))
+            DownloadTheLinkBrowser2 = Button(DownloadLinks, text="Download from browser", width=25, command=lambda: openweb(latest["assets"][1]["browser_download_url"]), takefocus=0)
+            DownloadTheLinkBuiltin2 = Button(DownloadLinks, text="Download", width=13, command=lambda: None, takefocus=0)
+            AssetSize = Label(DownloadLinks, text=asset_0_size, foreground="#474747", takefocus=0)
+            AssetSize2 = Label(DownloadLinks, text=asset_1_size, foreground="#474747", takefocus=0)
+            Date = Label(DownloadLinks, text=asset_0_date, foreground="gray", takefocus=0)
+            Date2 = Label(DownloadLinks, text=asset_1_date, foreground="gray", takefocus=0)
+            downloadProgress = IntVar()
+            downloadProgress.set(0)
+            ProgressBar = Progressbar(DownloadLinks, length=329, mode='determinate', orient=HORIZONTAL, variable=downloadProgress, maximum=asset_0["Content-Length"], takefocus=0)
+            ProgressLabel = Label(DownloadLinks, text="Download progress:", takefocus=0)
+            
+            ProgressBar.place(x=7, y=195)
+            ProgressLabel.place(x=5, y=173)
+            LatestVersionLabel.place(x=309, y=43)
+            YourVersionLabel.place(x=309, y=63)
+            UpdateAvailableLabel.place(x=310, y=2)
+            Separator1.place(x=312, y=86, width=346)
+            Separator2.place(x=7, y=81, width=329)
+            Separator3.place(x=7, y=167, width=329)
+            DownloadLabel.place(x=309, y=89)
+            DownloadLinkLabel.place(x=6, y=0)
+            AssetSize.place(x=175, y=0)
+            Date.place(x=237, y=0)
+            Date2.place(x=237, y=86)
+            DownloadLinkLabel2.place(x=6, y=86)
+            AssetSize2.place(x=175, y=86)
+            CopyDownloadPage.place(x=310, y=138)
+            OpenDownloadLink.place(x=385, y=138)
+            DownloadPage.place(x=311, y=111)
+            DownloadLink.place(x=7, y=22)
+            DownloadLink2.place(x=7, y=108)
+            DownloadTheLinkBuiltin.place(x=83, y=49)
+            DownloadTheLinkBrowser.place(x=177, y=49)
+            CopyDownloadLink.place(x=6, y=49)
+            DownloadTheLinkBuiltin2.place(x=83, y=135)
+            DownloadTheLinkBrowser2.place(x=177, y=135)
+            CopyDownloadLink2.place(x=6, y=135)
+            DownloadLinks.place(x=310, y=168)
+            self.focus_force()
+
+            self.mainloop()
+
+    class ToolTip:
+        def __init__(self, widget, justify, background, foreground, relief, borderwidth, font, locationinvert, heightinvert):
             self.widget = widget
             self.tipwindow = None
             self.id = None
             self.x = self.y = 0
+            
+            self.transition = 10
 
-        def showtip(self, text, *args, **kwargs) -> None:
-            global tw
+            self.justify = justify
+            self.background = background
+            self.foreground = foreground
+            self.relief = relief
+            self.borderwidth = borderwidth
+            self.font = font
+            self.locationinvert = locationinvert
+            self.heightinvert = heightinvert
+
+        def showtip(self, text):
             self.text = text
             if self.tipwindow or not self.text:
                 return
+
             x, y, _, cy = self.widget.bbox("insert")
-            x = x + root.winfo_pointerx() + 2
-            y = y + cy + root.winfo_pointery() + 15
+            x = x + self.winfo_pointerx() + 2
+            y = y + cy + self.winfo_pointery() + 15
             self.tipwindow = tw = Toplevel(self.widget)
+
             tw.wm_overrideredirect(1)
             tw.wm_geometry("+%d+%d" % (x, y))
             tw.attributes("-alpha", 0)
             label = Label(tw, text=self.text, justify=LEFT, relief=SOLID, borderwidth=1, foreground="#6f6f6f", background="white", takefocus=0)
             label.pack(ipadx=1)
-            tw.attributes("-alpha", root.attributes("-alpha"))
+            tw.attributes("-alpha", 0)
             try:
                 tw.tk.call("::tk::unsupported::MacWindowStyle", "style", tw._w, "help", "noActivates")
             except TclError:
                 pass
 
-        def hidetip(self, *args, **kwargs) -> None:
+            def fade_in():
+                alpha = tw.attributes("-alpha")
+                if alpha != self.attributes("-alpha"):
+                    alpha += .1
+                    tw.attributes("-alpha", alpha)
+                    tw.after(self.transition, fade_in)
+                else:
+                    tw.attributes("-alpha", self.attributes("-alpha"))
+            fade_in()
+        
+        def hidetip(self):
+            tw = self.tipwindow
+            self.tipwindow = None
             try:
-                tw = self.tipwindow
-                tw.title("Tooltip")
-                self.tipwindow = None
                 def fade_away():
                     alpha = tw.attributes("-alpha")
                     if alpha > 0:
                         alpha -= .1
                         tw.attributes("-alpha", alpha)
-                        tw.after(10, fade_away)
+                        tw.after(self.transition, fade_away)
                     else:
                         tw.destroy()
-                fade_away()
+                if not tw.attributes("-alpha") in [0, 1]:
+                    tw.destroy()
+                else:
+                    fade_away()
             except:
-                root.after_cancel(task)
+                if tw:
+                    tw.destoy()
 
-    def createToolTip(widget, text: Union[str, bytes] = "Undefined") -> None:
-        global task
-        if type(text) != str:
-            text = str(text)
-        toolTip = ToolTip(widget)
-        def enter(event):
-            if not ToolTipVar.get() == 0:
-                global task
-                task = root.after(1000, toolTip.showtip, text, widget, event)
-        def leave(event):
+    def createToolTip(self, widget: Any, text: str):
+        toolTip = self.ToolTip(widget)
+
+        def enter(event = None):
+            if not self.showTooltip.get() == 0:
+                self.task = self.after(1000, toolTip.showtip, text, widget, event)
+        def leave(event = None):
             toolTip.hidetip(widget)
+
         widget.bind('<Enter>', enter)
         widget.bind('<Leave>', leave)
         widget.bind('<Button-1>', leave)
 
-    def toggleHideChar():
-        global plainTextEntry
-        if showCharState.get() == 1:
-            plainTextEntry.configure(show = "●")
-        else:
-            plainTextEntry.config(show = "")
-
-    def FileEncrypt(algorithm, key):
-        global encrypted, index
-        try:
-            if AlgSel.get() == 1:
-                with open(FilePathEntry.get().replace("\"",""), encoding="Latin-1", mode="r") as file:
-                    index = bytes(file.read(), "utf-8")
-            elif AlgSel.get() == 2:
-                with open(FilePathEntry.get().replace("\"",""), encoding="Latin-1", mode="r") as file:
-                    index = bytes(file.read(), "utf-8")
-        except FileNotFoundError:
-            if FilePathEntry.get().replace(" ","") == "":
-                messagebox.showwarning("ERR_FILE_FIELD_EMPTY","You selected to encrypt a file but not entered file location. Either select to encrypt plain text or enter file location.")
-                return
-            messagebox.showwarning("ERR_FILE_NOT_FOUND",f"The file \"{FilePathEntry.get()}\" is not found. Please check spelling and try again.")
-        else:
-            if algorithm == 1:
-                iv = get_random_bytes(AES.block_size)
-                try:
-                    aes = AES.new(key, AES.MODE_CFB, iv=iv)
-                except Exception as e:
-                    if key.decode("utf-8").replace(" ","") == "":
-                        messagebox.showwarning("ERR_KEY_FIELD_EMPTY","You selected to enter a key but leaved the key entry field empty. Either select to generate a new key or enter a key to encrypt data.")
-                        return
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: An error occured while trying to define entered key into AES.")+f"({e}) \n")
-                    logTextWidget.config(state=DISABLED)
-                    messagebox.showerror("ERR_UNABLE_TO_DEFINE_KEY","An error occured while trying to define entered key into AES. Key might invalid for AES (Advanced Encryption Standard). Either select to generate a new key or try another key.")
-                    return
-                try:
-                    encrypted_raw = iv + aes.encrypt(index)
-                except:
-                    pass # Error code encryption failed
-                encrypted = base64.urlsafe_b64encode(encrypted_raw).decode("utf-8")
-                if encrypted == "":
-                    encrypted = "[Blank]"
-                iv = encrypted_raw[:16]
-                aes = AES.new(key, AES.MODE_CFB, iv=iv)
-                plaintext = aes.decrypt(encrypted_raw.replace(iv, b""))
-                if plaintext.decode("utf-8") == index.decode("utf-8"):
-                    encryptedTextWidget.configure(state=NORMAL)
-                    encryptedTextWidget.delete('1.0', END)
-                    if len(encrypted) > 15000:
-                        encryptedTextWidget.insert(INSERT, "Encrypted data is not being displayed because it is longer than 15.000 characters.")
-                        encryptedTextWidget.configure(fg="gray")
-                    else:
-                        encryptedTextWidget.configure(fg="black")
-                        encryptedTextWidget.insert(INSERT, encrypted)
-                    encryptedTextWidget.configure(state=DISABLED)
-                    AESkeyEntry.configure(state=NORMAL)
-                    AESkeyEntry.delete('1.0', END)
-                    AESkeyEntry.insert('1.0', key)
-                    AESkeyEntry.configure(state=DISABLED)
-                    RSApublicKeyWidget.configure(state=NORMAL)
-                    RSApublicKeyWidget.delete('1.0', END)
-                    RSApublicKeyWidget.configure(state=DISABLED)
-                    RSAprivateKeyWidget.configure(state=NORMAL)
-                    RSAprivateKeyWidget.delete('1.0', END)
-                    RSAprivateKeyWidget.configure(state=DISABLED)
-                    try:
-                        os.remove(FilePathEntry.get())
-                    except:
-                        pass
-                    finally:
-                        try:
-                            with open(FilePathEntry.get(), encoding="Latin-1", mode="w") as file:
-                                file.write(encrypted)
-                        except PermissionError as e:
-                            logTextWidget.config(state=NORMAL)
-                            logTextWidget.insert(INSERT, strftime(f"[%I:%M:%S %p] ERROR: Permission is denied while trying to write encrypted data into file. ({e})"+"\n"))
-                            logTextWidget.config(state=DISABLED)
-                            messagebox.showerror("ERR_PERMISSION_DENIED","Permission is denied while trying to write encrypted data into file. Try running the program as administrator; if problem persists, be sure specified file is not set to read-only.")
-                            return
-                else:
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] WARNING: Specified file is not encryptable.")+"\n")
-                    logTextWidget.config(state=DISABLED)
-                    messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Specified file is not encryptable. Please report this text to me.")
-                    return
-                logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCCESS: Specified file successfully encrypted using AES-{} symmetric key encryption.".format(len(key)*8))+"\n")
-                logTextWidget.config(state=DISABLED)
-            elif algorithm == 2:
-                iv = Random.new().read(DES3.block_size)
-                try:
-                    des = DES3.new(key, DES3.MODE_OFB, iv)
-                except Exception as e:
-                    if key.decode("utf-8").replace(" ","") == "":
-                        messagebox.showwarning("ERR_KEY_FIELD_EMPTY","You selected to enter a key but leaved the key entry field empty. Either select to generate a new key or enter a key to encrypt data.")
-                        return
-                    if str(e) == "Triple DES key degenerates to single DES":
-                        if len(key) == 16:
-                            messagebox.showwarning("ERR_INVALID_3DES_KEY","There should be at least 2 different characters in a 3DES-128 key.")
-                            return
-                        elif len(key) == 24:
-                            messagebox.showwarning("ERR_INVALID_3DES_KEY","There should be at least 9 different characters in a 3DES-192 key.")
-                            return
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: An error occured while trying to define entered key into 3DES.")+f"({e}) \n")
-                    logTextWidget.config(state=DISABLED)
-                    messagebox.showerror("ERR_UNABLE_TO_DEFINE_KEY","An error occured while trying to define entered key into 3DES. Key might invalid for 3DES (Triple Data Encryption Standard). Either select to generate a new key or try another key.")
-                    return
-                try:
-                    encrypted_raw = iv + des.encrypt(index)
-                except:
-                    pass # Error code encryption failed
-                encrypted = base64.urlsafe_b64encode(encrypted_raw).decode("utf-8")
-                iv = encrypted_raw[:8]
-                des = DES3.new(key, DES3.MODE_OFB, iv)
-                decrypted_text = des.decrypt(encrypted_raw.replace(iv, b""))
-                if index.decode("utf-8") == decrypted_text.decode("utf-8"):
-                    encryptedTextWidget.configure(state=NORMAL)
-                    encryptedTextWidget.delete('1.0', END)
-                    if len(encrypted) > 15000:
-                        encryptedTextWidget.insert(INSERT, "Encrypted data is not being displayed because it is longer than 15.000 characters.")
-                        encryptedTextWidget.configure(fg="gray")
-                    else:
-                        encryptedTextWidget.configure(fg="black")
-                        encryptedTextWidget.insert(INSERT, encrypted)
-                    encryptedTextWidget.configure(state=DISABLED)
-                    AESkeyEntry.configure(state=NORMAL)
-                    AESkeyEntry.delete('1.0', END)
-                    AESkeyEntry.insert('1.0', key)
-                    AESkeyEntry.configure(state=DISABLED)
-                    RSApublicKeyWidget.configure(state=NORMAL)
-                    RSApublicKeyWidget.delete('1.0', END)
-                    RSApublicKeyWidget.configure(state=DISABLED)
-                    RSAprivateKeyWidget.configure(state=NORMAL)
-                    RSAprivateKeyWidget.delete('1.0', END)
-                    RSAprivateKeyWidget.configure(state=DISABLED)
-                    try:
-                        os.remove(FilePathEntry.get())
-                    except:
-                        pass
-                    finally:
-                        try:
-                            with open(FilePathEntry.get(), encoding="Latin-1", mode="w") as file:
-                                file.write(encrypted)
-                        except PermissionError as e:
-                            logTextWidget.config(state=NORMAL)
-                            logTextWidget.insert(INSERT, strftime(f"[%I:%M:%S %p] ERROR: Permission is denied while trying to write encrypted data into file. ({e})"+"\n"))
-                            logTextWidget.config(state=DISABLED)
-                            messagebox.showerror("ERR_PERMISSION_DENIED","Permission is denied while trying to write encrypted data into file. Try running the program as administrator; if problem persists, be sure specified file is not set to read-only.")
-                            return
-                else:
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] WARNING: Entered text is not encryptable.")+"\n")
-                    logTextWidget.config(state=DISABLED)
-                    messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Entered text is not encryptable. Please report this text to me.")
-                    return
-                logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCCESS: Specified file successfully encrypted using 3DES-{} symmetric key encryption.".format(len(key)*8))+"\n")
-                logTextWidget.config(state=DISABLED)
-    def Encrypt(*args, **kwargs):
-        if MainScreen.tab(MainScreen.select(), "text") == "Encryption":
-            global plainTextEntry, encryptedTextWidget, key, KeySelectVar
-            def encryptAES(key: Union[str, bytes] = GenerateAES(32)):
-                global encrypted, encryptedTextWidget
-                plaintext = bytes(plainTextEntry.get(), "utf-8")
-                iv = get_random_bytes(AES.block_size)
-                try:
-                    aes = AES.new(key, AES.MODE_CFB, iv=iv)
-                    encrypted_raw = iv + aes.encrypt(plaintext)
-                    encrypted = base64.urlsafe_b64encode(encrypted_raw).decode("utf-8")
-                except Exception as e:
-                    if key.decode("utf-8").replace(" ","") == "":
-                        messagebox.showwarning("ERR_KEY_FIELD_EMPTY","You selected to enter a key but leaved the key entry field empty. Either select to generate a new key or enter a key to encrypt data.")
-                        return
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: An error occured while trying to define entered key into AES.")+f"({e}) \n")
-                    logTextWidget.config(state=DISABLED)
-                    messagebox.showerror("ERR_UNABLE_TO_DEFINE_KEY","An error occured while trying to define entered key into AES. Key might invalid for AES (Advanced Encryption Standard). Either select to generate a new key or try another key.")
-                    return
-                if encrypted == "":
-                    encrypted = "[Blank]"
-                iv = encrypted_raw[:16]
-                aes = AES.new(key, AES.MODE_CFB, iv=iv)
-                plaintext = aes.decrypt(encrypted_raw.replace(iv, b""))
-                if plaintext.decode("utf-8") == plainTextEntry.get():
-                    encryptedTextWidget.configure(state=NORMAL)
-                    encryptedTextWidget.delete('1.0', END)
-                    if len(encrypted) > 15000:
-                        encryptedTextWidget.insert(INSERT, "Encrypted data is not being displayed as it is longer than 15.000 characters.")
-                        encryptedTextWidget.configure(fg="gray")
-                    else:
-                        encryptedTextWidget.configure(fg="black")
-                        encryptedTextWidget.insert(INSERT, encrypted)
-                    encryptedTextWidget.configure(state=DISABLED)
-                    AESkeyEntry.configure(state=NORMAL)
-                    AESkeyEntry.delete('1.0', END)
-                    AESkeyEntry.insert('1.0', key)
-                    AESkeyEntry.configure(state=DISABLED)
-                    RSApublicKeyWidget.configure(state=NORMAL)
-                    RSApublicKeyWidget.delete('1.0', END)
-                    RSApublicKeyWidget.configure(state=DISABLED)
-                    RSAprivateKeyWidget.configure(state=NORMAL)
-                    RSAprivateKeyWidget.delete('1.0', END)
-                    RSAprivateKeyWidget.configure(state=DISABLED)
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime(f"[%I:%M:%S %p] SUCCESS: Entered text has been successfully encrypted using AES-{len(key) * 8} symmetric key encryption.\n"))
-                    logTextWidget.config(state=DISABLED)
-                else:
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] WARNING: Entered text is not encryptable.")+"\n")
-                    logTextWidget.config(state=DISABLED)
-                    messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Entered text is not encryptable. Please report this text to me.")
-            def encryptDES(key: Union[str, bytes] = GenerateAES(32)):
-                global encrypted
-                plaintext = bytes(plainTextEntry.get(), "utf-8")
-                iv = Random.new().read(DES3.block_size)
-                try:
-                    des = DES3.new(key, DES3.MODE_OFB, iv)
-                except Exception as e:
-                    if key.replace(" ","") == "":
-                        messagebox.showwarning("ERR_KEY_FIELD_EMPTY","You selected to enter a key but leaved the key entry field empty. Either select to generate a new key or enter a key to encrypt data.")
-                        return
-                    if str(e) == "Triple DES key degenerates to single DES":
-                        if len(key) == 16:
-                            messagebox.showwarning("ERR_INVALID_3DES_KEY","There should be at least 2 different characters in a 3DES-128 key.")
-                            return
-                        elif len(key) == 24:
-                            messagebox.showwarning("ERR_INVALID_3DES_KEY","There should be at least 9 different characters in a 3DES-192 key.")
-                            return
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] ERROR: An error occured while trying to define entered key into 3DES.")+f"({e}) \n")
-                    logTextWidget.config(state=DISABLED)
-                    messagebox.showerror("ERR_UNABLE_TO_DEFINE_KEY","An error occured while trying to define entered key into 3DES. Key might invalid for 3DES (Triple Data Encryption Standard). Either select to generate a new key or try another key.")
-                    return
-                encrypted_raw = iv + des.encrypt(plaintext)
-                encrypted = base64.urlsafe_b64encode(encrypted_raw).decode("utf-8")
-                iv = encrypted_raw[:8]
-                des = DES3.new(key, DES3.MODE_OFB, iv)
-                decrypted_text = des.decrypt(encrypted_raw.replace(iv, b"")).decode("utf-8")
-                if plaintext.decode("utf-8") == decrypted_text:
-                    encryptedTextWidget.configure(state=NORMAL)
-                    encryptedTextWidget.delete('1.0', END)
-                    if len(encrypted) > 15000:
-                        encryptedTextWidget.insert(INSERT, "Encrypted data is not being displayed because it is longer than 15.000 characters.")
-                        encryptedTextWidget.configure(fg="gray")
-                    else:
-                        encryptedTextWidget.configure(fg="black")
-                        encryptedTextWidget.insert(INSERT, encrypted)
-                    encryptedTextWidget.configure(state=DISABLED)
-                    AESkeyEntry.configure(state=NORMAL)
-                    AESkeyEntry.delete('1.0', END)
-                    AESkeyEntry.insert('1.0', key)
-                    AESkeyEntry.configure(state=DISABLED)
-                    RSApublicKeyWidget.configure(state=NORMAL)
-                    RSApublicKeyWidget.delete('1.0', END)
-                    RSApublicKeyWidget.configure(state=DISABLED)
-                    RSAprivateKeyWidget.configure(state=NORMAL)
-                    RSAprivateKeyWidget.delete('1.0', END)
-                    RSAprivateKeyWidget.configure(state=DISABLED)
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime(f"[%I:%M:%S %p] SUCCESS: Entered text has been successfully encrypted using 3DES-{len(key)*8} symmetric key encryption algorithm.") + "\n")
-                    logTextWidget.config(state=DISABLED)
-                else:
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime(f"[%I:%M:%S %p] WARNING: Entered text is not encryptable.")+"\n")
-                    logTextWidget.config(state=DISABLED)
-                    messagebox.showwarning("ERR_UNENCRYPTABLE_TEXT","Entered text is not encryptable. Please report this text to me.")
-            def encryptRSA(public, private, plaintext):
-                try:
-                    ciphertext=PKCS1_OAEP.new(public).encrypt(bytes(plaintext,"utf-8"))
-                except ValueError:
-                    messagebox.showwarning("ERR_PLAIN_TEXT_IS_TOO_LONG","The text you entered to encrypt is too long with {} encoding for RSA-{} asymmetric encryption. Please select a longer RSA key to encrypt this data like RSA-{} or RSA-{}".format("utf-8", RSAkeyVar.get(), RSAkeyVar.get()*2, RSAkeyVar.get()*4))
-                cipher = base64.urlsafe_b64encode(ciphertext).decode()
-                if cipher == "":
-                    cipher = "[Blank]"
-                output = PKCS1_OAEP.new(RSA.import_key(private)).decrypt(ciphertext).decode("utf-8")
-                if output == plainTextEntry.get():
-                    encryptedTextWidget.configure(state=NORMAL, fg="black")
-                    encryptedTextWidget.delete('1.0', END)
-                    encryptedTextWidget.insert(INSERT, cipher)
-                    encryptedTextWidget.configure(state=DISABLED)
-                    RSApublicKeyWidget.configure(state=NORMAL)
-                    RSApublicKeyWidget.delete('1.0', END)
-                    RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode())
-                    RSApublicKeyWidget.configure(state=DISABLED)
-                    RSAprivateKeyWidget.configure(state=NORMAL)
-                    RSAprivateKeyWidget.delete('1.0', END)
-                    RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode())
-                    RSAprivateKeyWidget.configure(state=DISABLED)
-                    AESkeyEntry.configure(state=NORMAL)
-                    AESkeyEntry.delete('1.0', END)
-                    AESkeyEntry.configure(state=DISABLED)
-                    logTextWidget.config(state=NORMAL)
-                    logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCCESS: Entered text successfully encrypted using RSA-{} symmetric key encryption.".format(RSAkeyVar.get()))+"\n")
-                    logTextWidget.config(state=DISABLED)
-                else:
-                    pass # Add error code to here
-            if WhatToEncrypt.get() == 1:
-                if Encryption.index(Encryption.select()) == 0:
-                    copyButton.configure(state=NORMAL)
-                    clearButton.configure(state=NORMAL)
-                    SaveENCbutton.configure(state=NORMAL)
-                    CopyAESbutton.configure(state=NORMAL)
-                    ClearAESbutton.configure(state=NORMAL)
-                    SaveAESbutton.configure(state=NORMAL)
-                    if KeySelectVar.get() == 1:
-                        if AlgSel.get() == 1:
-                            encryptAES(key=GenerateAES(int(RandomKeyVar.get()/8)).encode("utf-8"))
-                        elif AlgSel.get() == 2:
-                            encryptDES(key=GenerateAES(int(TripleVar.get()/8)).encode("utf-8"))
-                    elif KeySelectVar.get() == 2:
-                        if SelectKeyAlg.get() == 1:
-                            encryptAES(key=KeyValue.get().encode("utf-8"))
-                        elif SelectKeyAlg.get() == 2:
-                            encryptDES(key=KeyValue.get())
-                elif Encryption.index(Encryption.select()) == 1:
-                    CopyPubKeybutton.configure(state=NORMAL)
-                    ClearPubKeybutton.configure(state=NORMAL)
-                    SavePubKeybutton.configure(state=NORMAL)
-                    CopyPrivKeybutton.configure(state=NORMAL)
-                    ClearPrivKeybutton.configure(state=NORMAL)
-                    SavePrivKeybutton.configure(state=NORMAL)
-                    pass # RSA
-            elif WhatToEncrypt.get() == 2:
-                if Encryption.index(Encryption.select()) == 0:
-                    copyButton.configure(state=NORMAL)
-                    clearButton.configure(state=NORMAL)
-                    SaveENCbutton.configure(state=NORMAL)
-                    CopyAESbutton.configure(state=NORMAL)
-                    ClearAESbutton.configure(state=NORMAL)
-                    SaveAESbutton.configure(state=NORMAL)
-                    if KeySelectVar.get() == 1:
-                        if AlgSel.get() == 1:
-                            FileEncrypt(1, GenerateAES(int(RandomKeyVar.get()/8)).encode("utf-8"))
-                        elif AlgSel.get() == 2:
-                            FileEncrypt(2, GenerateAES(int(TripleVar.get()/8)).encode("utf-8"))
-                    elif KeySelectVar.get() == 2:
-                        if SelectKeyAlg.get() == 1:
-                            FileEncrypt(1, KeyValue.get().encode("utf-8"))
-                        elif SelectKeyAlg.get() == 2:
-                            FileEncrypt(2, KeyValue.get().encode("utf-8"))
-                elif Encryption.index(Encryption.select()) == 1:
-                    CopyPubKeybutton.configure(state=NORMAL)
-                    ClearPubKeybutton.configure(state=NORMAL)
-                    SavePubKeybutton.configure(state=NORMAL)
-                    CopyPrivKeybutton.configure(state=NORMAL)
-                    ClearPrivKeybutton.configure(state=NORMAL)
-                    SavePrivKeybutton.configure(state=NORMAL)
-                    pass # RSA
-    def SaveKey(path, key):
-        global cipher, Mode, encryptedTextWidget
-        key_to_use = GenerateAES(32)
-        plaintext = bytes(key, "utf-8")
-        iv = get_random_bytes(AES.block_size)
-        aes = AES.new(bytes(key_to_use, "utf-8"), AES.MODE_CFB, iv=iv)
-        ciphertext = iv + aes.encrypt(plaintext)
-        cipher = base64.urlsafe_b64encode(ciphertext).decode()
-        iv = ciphertext[:16]
-        aes = AES.new(bytes(key_to_use, "utf-8"), AES.MODE_CFB, iv=iv)
-        plaintext = aes.decrypt(ciphertext.replace(iv, b""))
-        if plaintext.decode("utf-8") == key:
-            first_part = randint(0, len(cipher))
-            encrypted_key = cipher[:first_part] + key_to_use + cipher[first_part:]
-            try:
-                os.remove(path)
-            except:
-                pass
-            finally:
-                with open(path, encoding = 'utf-8', mode="w") as file:
-                    file.write(str(encrypted_key))
-
-    def GetKey(path: str = "Encryption Key.key"):
-        with open(path, encoding = 'utf-8', mode="r") as file:
-            global index
-            index = file.read()
-        index = str(index)
-        where = -1
-        for i in range(0, len(index)):
-            where += 1
-            key_to_try = index[where:where+32]
-            try:
-                iv = base64.urlsafe_b64decode(index.replace(key_to_try, ""))[:16]
-                aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CFB, iv=iv)
-            except:
-                continue
-            else:
-                try:
-                    output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")).replace(iv, b""))
-                    output_key = output_key.decode("utf-8")
-                except:
-                    continue
-                else:
-                    try:
-                        if len(output_key) == 16 or len(output_key) == 24 or len(output_key) == 32:
-                            return output_key
-                    except:
-                        continue
-        with open(path, encoding = 'utf-8', mode="r") as file:
-            if len(file.read()) == 16 or len(file.read()) == 24 or len(file.read()) == 32:
-                return str(file.read())
-            else:
-                return False
-
-    def Copy():
-        global encryptedTextWidget
-        try:
-            pyperclip.copy(encrypted)
-        except NameError:
-            return
-        copyed = pyperclip.paste()
-        if copyed == encrypted:
-            messagebox.showinfo("Copied","Encrypted text copied to clipboard successfully.")
-    def Clear():
-        global encryptedTextWidget
-        copyButton.configure(state=DISABLED)
-        clearButton.configure(state=DISABLED)
-        SaveENCbutton.configure(state=DISABLED)
-        encryptedTextWidget.configure(state=NORMAL)
-        encryptedTextWidget.delete('1.0', END)
-        encryptedTextWidget.configure(state=DISABLED)
-    def SaveENC():
-        files = [("Text document","*.txt"),("All files","*.*")]
-        path = filedialog.asksaveasfilename(title="Save encrypted data", initialfile="Encrypted Data.txt", filetypes=files, defaultextension="*.txt")
-        if path == "":
-            return
-        with open(path, encoding="utf-8", mode="w") as file:
-            file.write(encrypted)
-    def CopyAES():
-        global AESkeyEntry
-        pyperclip.copy(AESkeyEntry.get('1.0', END)[:-1])
-        copyed = pyperclip.paste()
-        if copyed == (AESkeyEntry.get('1.0', END)[:-1]):
-            messagebox.showinfo("Copied","AES/3DES key copied to clipboard successfully.")
-    def ClearAES():
-        global AESkeyEntry
-        CopyAESbutton.configure(state=DISABLED)
-        ClearAESbutton.configure(state=DISABLED)
-        SaveAESbutton.configure(state=DISABLED)
-        AESkeyEntry.configure(state=NORMAL)
-        AESkeyEntry.delete('1.0', END)
-        AESkeyEntry.configure(state=DISABLED)
-    def SaveAES():
-        files = [("Encrypt'n'Decrypt key file","*.key"),("Text document","*.txt"),("All files","*.*")]
-        path = filedialog.asksaveasfilename(title="Save encryption key", initialfile="Encryption Key.key", filetypes=files, defaultextension="*.key")
-        if path == "":
-            return
-        SaveKey(path, AESkeyEntry.get('1.0', END)[:-1])
-    def CopyPublic():
-        global RSApublicKeyWidget
-        pyperclip.copy(RSApublicKeyWidget.get('1.0', END)[:-1])
-        copyed = pyperclip.paste()
-        if copyed == (RSApublicKeyWidget.get('1.0', END)[:-1]):
-            messagebox.showinfo("Copied","RSA public key copied to clipboard successfully.")
-    def ClearPublic():
-        global RSApublicKeyWidget
-        CopyPubKeybutton.configure(state=DISABLED)
-        ClearPubKeybutton.configure(state=DISABLED)
-        SavePubKeybutton.configure(state=DISABLED)
-        RSApublicKeyWidget.configure(state=NORMAL)
-        RSApublicKeyWidget.delete('1.0', END)
-        RSApublicKeyWidget.configure(state=DISABLED)
-    def SavePub():
-        files = [("Text document","*.txt"),("All files","*.*")]
-        path = filedialog.asksaveasfilename(title="Save public key", initialfile="Public Key.txt", filetypes=files, defaultextension="*.txt")
-        if path == "":
-            return
-        with open(path, encoding="utf-8", mode="w") as file:
-            file.write(RSApublicKeyWidget.get('1.0', END)[:-1])
-    def CopyPriv():
-        global RSAprivateKeyWidget
-        pyperclip.copy(RSAprivateKeyWidget.get('1.0', END)[:-1])
-        copyed = pyperclip.paste()
-        if copyed == (RSAprivateKeyWidget.get('1.0', END)[:-1]):
-            messagebox.showinfo("Copied","RSA private key copied to clipboard successfully.")
-    def ClearPriv():
-        global RSAprivateKeyWidget
-        CopyPrivKeybutton.configure(state=DISABLED)
-        ClearPrivKeybutton.configure(state=DISABLED)
-        SavePrivKeybutton.configure(state=DISABLED)
-        RSAprivateKeyWidget.configure(state=NORMAL)
-        RSAprivateKeyWidget.delete('1.0', END)
-        RSAprivateKeyWidget.configure(state=DISABLED)
-    def SavePriv():
-        files = [("Text document","*.txt"),("All files","*.*")]
-        path = filedialog.asksaveasfilename(title="Save private key", initialfile="Private Key.txt", filetypes=files, defaultextension="*.txt")
-        if path == "":
-            return
-        with open(path, encoding="utf-8", mode="w") as file:
-            file.write(RSAprivateKeyWidget.get('1.0', END)[:-1])
-
-    def CheckEncrypt():
-        pass
-    def EncryptPage(*args, **kwargs):
-        MainScreen.select(0)
-    def DecryptPage(*args, **kwargs):
-        MainScreen.select(1)
-    def LogsPage(*args, **kwargs):
-        MainScreen.select(2)
-    def HelpPage(*args, **kwargs):
-        MainScreen.select(3)
-
-    Alpha = IntVar()
-    Alpha.set(100)
-
-    def changeAlpha(alpha: int = 100) -> None:
-        if alpha != 100:
-            alpha = '0.{}'.format(alpha)
-        else:
-            alpha = 1
-            Alpha.set(100)
-        root.attributes("-alpha", float(alpha))
-
-    logTextWidget.config(state=NORMAL)
-    logTextWidget.config(state=DISABLED)
-    screenWidth = root.winfo_screenwidth()
-    screenHeight = root.winfo_screenheight()
-    logTextWidget.config(state=NORMAL)
-    logTextWidget.config(state=DISABLED)
-    EncryptFrame = Frame(MainScreen, takefocus=0)
-    DecryptFrame = Frame(MainScreen, takefocus=0)
-    AboutFrame = Frame(MainScreen, takefocus=0)
-    FileEncryptFrame = Frame(MainScreen, takefocus=0)
-    PasswordGeneration = Frame(MainScreen, takefocus=0)
-    RandomKeyVar = IntVar()
-    RandomKeyVar.set(256)
-    KeySelectVar = IntVar()
-    KeySelectVar.set(1)
-    OverrideTimeVar = IntVar()
-    OverrideTimeVar.set(0)
-    def ChangeKeySelection():
-        global KeySelectVar, value
-        try:
-            value = value
-        except:
-            value = "TemporaryValue"
-        if KeySelectVar.get() == 2:
-            AESCheck.configure(state=DISABLED)
-            TripleDESCheck.config(state=DISABLED)
-            Triple128Check.config(state=DISABLED)
-            Triple192Check.config(state=DISABLED)
-            AES128Check.config(state=DISABLED)
-            AES192Check.config(state=DISABLED)
-            AES256Check.config(state=DISABLED)
-            SelectKeyEntry.config(state=NORMAL)
-            KeyEntryHideChar.config(state=NORMAL)
-            KeyEntryClearButton.config(state=NORMAL)
-            KeyEntryPasteButton.config(state=NORMAL)
-            KeyFileBrowseButton.config(state=NORMAL)
-            SelAlg3DESradio.config(state=NORMAL)
-            SelAlgAESradio.config(state=NORMAL)
-        elif KeySelectVar.get() == 1:
-            AESCheck.configure(state=NORMAL)
-            TripleDESCheck.config(state=NORMAL)
-            SelectKeyEntry.config(state=DISABLED)
-            if AlgSel.get() == 1:
-                AES128Check.config(state=NORMAL)
-                AES192Check.config(state=NORMAL)
-                AES256Check.config(state=NORMAL)
-                Triple128Check.config(state=DISABLED)
-                Triple192Check.config(state=DISABLED)
-            else:
-                AES128Check.config(state=DISABLED)
-                AES192Check.config(state=DISABLED)
-                AES256Check.config(state=DISABLED)
-                Triple128Check.config(state=NORMAL)
-                Triple192Check.config(state=NORMAL)
-            KeyEntryHideChar.config(state=DISABLED)
-            KeyEntryClearButton.config(state=DISABLED)
-            KeyEntryPasteButton.config(state=DISABLED)
-            KeyFileBrowseButton.config(state=DISABLED)
-            SelAlg3DESradio.config(state=DISABLED)
-            SelAlgAESradio.config(state=DISABLED)
-    def limitKeyEntry(*args):
-        global value
-        value = KeyValue.get()
-        if len(value) > 32:
-            KeyValue.set(value[:32])
-        if len(value) == 0:
-            StatusLabelAES.configure(foreground="gray", text="Validity: [Blank]")
-        else:
-            if SelectKeyAlg.get() == 1:
-                iv = get_random_bytes(AES.block_size)
-                if len(value) == 16: # AES-128
-                    try:
-                        AES.new(bytes(value, 'utf-8'), AES.MODE_OFB, iv)
-                    except:
-                        StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-128 Key")
-                    else:
-                        StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-128 Key")
-                elif len(value) == 24: # AES-192
-                    try:
-                        AES.new(bytes(value, 'utf-8'), AES.MODE_OFB, iv)
-                    except:
-                        StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-192 Key")
-                    else:
-                        StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-192 Key")
-                elif len(value) >= 32: # AES-256
-                    if len(value) == 33:
-                        try:
-                            value.encode("latin-1")
-                        except:
-                            StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
-                        else:
-                            try:
-                                AES.new(bytes(value, 'utf-8')[:32], AES.MODE_OFB, iv)
-                            except:
-                                StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
-                            else:
-                                StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
-                    else:
-                        try:
-                            AES.new(bytes(value, 'utf-8'), AES.MODE_OFB, iv)
-                        except:
-                            StatusLabelAES.configure(foreground="red", text="Validity: Invalid AES-256 Key")
-                        else:
-                            StatusLabelAES.configure(foreground="green", text="Validity: Valid AES-256 Key")
-                else:
-                    StatusLabelAES.configure(foreground="red", text="Validity: Invalid")
-            else:
-                iv = Random.new().read(DES3.block_size)
-                if len(value) == 16: # 3DES-128
-                    try:
-                        DES3.new(bytes(value, 'utf-8'), DES3.MODE_OFB, iv)
-                    except:
-                        StatusLabelAES.configure(foreground="red", text="Validity: Invalid 3DES-128 Key")
-                    else:
-                        StatusLabelAES.configure(foreground="green", text="Validity: Valid 3DES-128 Key")
-                elif len(value) == 24: # 3DES-192
-                    try:
-                        DES3.new(bytes(value, 'utf-8'), DES3.MODE_OFB, iv)
-                    except:
-                        StatusLabelAES.configure(foreground="red", text="Validity: Invalid 3DES-192 Key")
-                    else:
-                        StatusLabelAES.configure(foreground="green", text="Validity: Valid 3DES-192 Key")
-                else:
-                    StatusLabelAES.configure(foreground="red", text="Validity: Invalid")
-    KeyValue = StringVar()
-    KeyValue.trace('w', limitKeyEntry)
-    Encryption = ttk.Notebook(EncryptFrame, width=355, height=280, takefocus=0)
-    KeySelectFrame = Frame(Encryption, takefocus=0)
-    Asymmetric = Frame(Encryption, takefocus=0)
-    Encryption.add(KeySelectFrame, text="Symmetric Key Encryption")
-    Encryption.add(Asymmetric, text="Asymmetric Key Encryption")
-    EncryptFrameLabel = LabelFrame(EncryptFrame, text="Output", height=506, width=403, takefocus=0)
-    MainScreen.add(EncryptFrame, text="Encryption")
-    MainScreen.add(DecryptFrame, text="Decryption")
-    MainScreen.add(LogFrame, text="Logs")
-    MainScreen.add(AboutFrame, text="Help & About")
-    MainScreen.pack(fill=BOTH, expand=1, pady=4, padx=4, side=TOP)
-    EncryptFrameLabel.place(x=377, y=4)
-    KeyHideCharVar = IntVar()
-    KeyHideCharVar.set(0)
-    AlgSel = IntVar()
-    AlgSel.set(1)
-    TripleVar = IntVar()
-    TripleVar.set(192)
-    SelectKeyAlg = IntVar()
-    SelectKeyAlg.set(1)
-
-    def ChangeAESselection():
-        pass
-
-    def ChangeAlgSelection():
-        if AlgSel.get() == 1:
-            AES128Check.configure(state=NORMAL)
-            AES192Check.configure(state=NORMAL)
-            AES256Check.configure(state=NORMAL)
-            Triple128Check.configure(state=DISABLED)
-            Triple192Check.configure(state=DISABLED)
-        else:
-            AES128Check.configure(state=DISABLED)
-            AES192Check.configure(state=DISABLED)
-            AES256Check.configure(state=DISABLED)
-            Triple128Check.configure(state=NORMAL)
-            Triple192Check.configure(state=NORMAL)
-    def GetKeyFromFile():
-        path = filedialog.askopenfilename(title="Select key file", filetypes=[("Encrypt'n'Decrypt key file","*.key"),("Text document","*.txt"),("All files","*.*")])
-        if path == "":
-            return
-        if not path[-4:] == ".txt":
-            key = GetKey(path)
-            if not key:
-                messagebox.showwarning("ERR_INVALID_KEY_FILE","The specified key file does not have either encrypted or raw 128-bits, 192-bits or 256-bits key. Please select another key file.")
-                return
-        else:
-            with open(path, encoding="utf-8", mode="r") as file:
-                key = file.read()
-        SelectKeyEntry.delete(0, END)
-        SelectKeyEntry.insert(0, key)
-    RandomKeyCheck = Radiobutton(KeySelectFrame, text="Generate a random key", value=1, variable=KeySelectVar, command=ChangeKeySelection, takefocus=0)
-    AESCheck = Radiobutton(KeySelectFrame, text="AES (Advanced Encryption Standard)", value=1, variable=AlgSel, command=ChangeAlgSelection, takefocus=0)
-    AES128Check = Radiobutton(KeySelectFrame, text="AES-128 Key", value=128, variable=RandomKeyVar, command=ChangeAESselection, takefocus=0)
-    AES192Check = Radiobutton(KeySelectFrame, text="AES-192 Key", value=192, variable=RandomKeyVar, command=ChangeAESselection, takefocus=0)
-    AES256Check = Radiobutton(KeySelectFrame, text="AES-256 Key", value=256, variable=RandomKeyVar, command=ChangeAESselection, takefocus=0)
-    TripleDESCheck = Radiobutton(KeySelectFrame, text="3DES (Triple Data Encryption Standard)", value=2, variable=AlgSel, command=ChangeAlgSelection, takefocus=0)
-    Triple128Check = Radiobutton(KeySelectFrame, text="3DES-128 Key", state=DISABLED, variable=TripleVar, value=128, takefocus=0)
-    Triple192Check = Radiobutton(KeySelectFrame, text="3DES-192 Key", state=DISABLED, variable=TripleVar, value=192, takefocus=0)
-    SelectKeyCheck = Radiobutton(KeySelectFrame, text="Use this key:", value=2, variable=KeySelectVar, command=ChangeKeySelection, takefocus=0)
-    SelectKeyEntry = Entry(KeySelectFrame, width=46, font=("Consolas",9), state=DISABLED, textvariable=KeyValue, takefocus=0)
-    KeyEntryHideChar = Checkbutton(KeySelectFrame, text="Hide characters", onvalue=1, offvalue=0, variable=KeyHideCharVar, state=DISABLED, takefocus=0)
-    KeyFileBrowseButton = Button(KeySelectFrame, text="Browse key file...", width=21, state=DISABLED, command=GetKeyFromFile, takefocus=0)
-    KeyEntryPasteButton = Button(KeySelectFrame, text="Paste", width=13, state=DISABLED, takefocus=0)
-    KeyEntryClearButton = Button(KeySelectFrame, text="Clear", width=13, state=DISABLED, command=lambda:SelectKeyEntry.delete(0, END), takefocus=0)
-    SelAlgAESradio = Radiobutton(KeySelectFrame, text="AES (Advanced Encryption Standard)", value=1, variable=SelectKeyAlg, command=limitKeyEntry, state=DISABLED, takefocus=0)
-    SelAlg3DESradio = Radiobutton(KeySelectFrame, text="3DES (Triple Data Encryption Standard)", value=2, variable=SelectKeyAlg, command=limitKeyEntry, state=DISABLED, takefocus=0)
-    KeyEntryClearButton.place(x=114, y=207)
-    KeyEntryPasteButton.place(x=17, y=207)
-    KeyFileBrowseButton.place(x=211, y=207)
-    KeyEntryHideChar.place(x=244, y=158)
-    #OtherOptionsFrame.place(x=10, y=350)
-    SelectKeyCheck.place(x=5, y=158)
-    RandomKeyCheck.place(x=5, y=5)
-    AESCheck.place(x=16, y=25)
-    AES128Check.place(x=27, y=44)
-    AES192Check.place(x=27, y=63)
-    AES256Check.place(x=27, y=82)
-    TripleDESCheck.place(x=16, y=101)
-    Triple128Check.place(x=27, y=120)
-    Triple192Check.place(x=27, y=139)
-    #SelectFileCheck.place(x=5, y=163)
-    SelectKeyEntry.place(x=18, y=181)
-    SelAlgAESradio.place(x=16, y=235)
-    SelAlg3DESradio.place(x=16, y=254)
-    Encryption.place(x=10, y=155)
-    def validate(action, index, value_if_allowed, prior_value, text, validation_type, trigger_type, widget_name):
-        if value_if_allowed:
-            try:
-                int(value_if_allowed)
-                return True
-            except ValueError:
-                if text == "":
-                    return True
-                else:
-                    return False
-        else:
-            return True
-    vcmd = (root.register(validate),'%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
-    # Decrypt frame
-    DecryptSourceVar = IntVar()
-    DecryptSourceVar.set(1)
-    DecryptAlg = IntVar()
-    DecryptAlg.set(1)
-    def ChangeWhatToDecrypt():
-        if DecryptSourceVar.get() == 1:
-            TextToDecryptPaste.config(state=NORMAL)
-            TextToDecryptClear.config(state=NORMAL)
-            TextToDecryptEntry.config(state=NORMAL, bg="white", fg="black")
-            FileToDecryptBrowse.config(state=DISABLED)
-            FileToDecryptClear.config(state=DISABLED)
-            FileToDecryptEntry.config(state=DISABLED)
-        else:
-            TextToDecryptPaste.config(state=DISABLED)
-            TextToDecryptClear.config(state=DISABLED)
-            TextToDecryptEntry.config(state=DISABLED, bg="#F0F0F0", fg="#6D6D6D")
-            FileToDecryptBrowse.config(state=NORMAL)
-            FileToDecryptClear.config(state=NORMAL)
-            FileToDecryptEntry.config(state=NORMAL)
-    def PasteEncryptedFunc():
-        if not str(pyperclip.paste()).replace(" ","") == "":
-            TextToDecryptEntry.delete("1.0", END)
-            TextToDecryptEntry.insert("1.0", str(pyperclip.paste()))
-            return
-        return
-    def BrowseEncryptedFunc():
-        file = filedialog.askopenfilename(title='Select an encrypted file to decrypt', filetypes=[('All files', '*.*')])
-        if not str(file).replace(" ","") == "":
-            FileToDecryptEntry.delete(0, END)
-            FileToDecryptEntry.insert(0, file)
-            return
-        return
-    def PasteKeyFunc():
-        if not str(pyperclip.paste()).replace(" ","") == "":
-            SymKeyEntry.delete(0, END)
-            SymKeyEntry.insert(0, str(pyperclip.paste()))
-            return
-        return
-    TextToDecryptRadio = Radiobutton(DecryptFrame, text = "Encrypted text:", value=1, variable=DecryptSourceVar, command=ChangeWhatToDecrypt, takefocus=0)
-    TextToDecryptPaste = Button(DecryptFrame, width=15, text="Paste", command=PasteEncryptedFunc, takefocus=0)
-    TextToDecryptClear = Button(DecryptFrame, width=15, text="Clear", command=lambda: TextToDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
-    FileToDecryptBrowse = Button(DecryptFrame, width=15, text="Browse...", state=DISABLED, command=BrowseEncryptedFunc, takefocus=0)
-    FileToDecryptClear = Button(DecryptFrame, width=15, text="Clear", state=DISABLED, command=lambda: FileToDecryptEntry.delete(0, END), takefocus=0)
-    FileToDecryptRadio = Radiobutton(DecryptFrame, text = "Encrypted file:", value=2, variable=DecryptSourceVar, command=ChangeWhatToDecrypt, takefocus=0)
-    TextToDecryptEntry = Text(DecryptFrame, width=105, height=6, font=("Consolas", 9), takefocus=0)
-    FileToDecryptEntry = Entry(DecryptFrame, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
-    TextToDecryptScroll = Scrollbar(DecryptFrame, command=TextToDecryptEntry.yview, takefocus=0)
-    TextToDecryptEntry.configure(yscrollcommand=TextToDecryptScroll.set)
-    KeyEntryToDecrypt = ttk.Notebook(DecryptFrame, height=160, width=765, takefocus=0)
-    SymKeyDecrypt = Frame(KeyEntryToDecrypt, takefocus=0)
-    AsymKeyDecrypt = Frame(KeyEntryToDecrypt, takefocus=0)
-    KeyEntryToDecrypt.add(SymKeyDecrypt, text="Symmetric Key Decryption")
-    KeyEntryToDecrypt.add(AsymKeyDecrypt, text="Asymmetric Key Decryption")
-    SelectAlgorithmDecryptFrame = LabelFrame(SymKeyDecrypt, text="Select algorithm", height=63, width=749, takefocus=0)
-    SelectAESradio = Radiobutton(SelectAlgorithmDecryptFrame, text="AES (Advanced Encryption Standard)", value=1, variable=DecryptAlg, takefocus=0)
-    SelectDESradio = Radiobutton(SelectAlgorithmDecryptFrame, text="3DES (Triple Data Encryption Standard)", value=2, variable=DecryptAlg, takefocus=0)
-    EnterKeyFrame = LabelFrame(SymKeyDecrypt, text="Enter encryption key", height=84, width=749, takefocus=0)
-    SymKeyEntry = Entry(EnterKeyFrame, width=103, font=("Consolas", 9), takefocus=0)
-    SymKeyBrowseButton = Button(EnterKeyFrame, width=21, text="Browse key file...", takefocus=0)
-    SymKeyPasteButton = Button(EnterKeyFrame, width=15, text="Paste", takefocus=0, command=PasteKeyFunc)
-    SymKeyClearButton = Button(EnterKeyFrame, width=15, text="Clear", takefocus=0, state=DISABLED)
-    DecryptButton = Button(DecryptFrame, width=18, text="Decrypt", takefocus=0)
-    OutputFrame = LabelFrame(DecryptFrame, text="Decrypted text", height=84, width=766, takefocus=0)
-    OutputEntry = Text(OutputFrame, width=103, height=1, font=("Consolas", 9), state=DISABLED, takefocus=0)
-    
-    TextToDecryptRadio.place(x=8, y=2)
-    FileToDecryptRadio.place(x=8, y=145)
-    TextToDecryptEntry.place(x=24, y=24)
-    TextToDecryptPaste.place(x=23, y=120)
-    TextToDecryptClear.place(x=130, y=120)
-    FileToDecryptBrowse.place(x=23, y=195)
-    FileToDecryptClear.place(x=130, y=195)
-    FileToDecryptEntry.place(x=24, y=166)
-    TextToDecryptScroll.place(x=762, y=23, height=88)
-    KeyEntryToDecrypt.place(x=10, y=228)
-    SelectAlgorithmDecryptFrame.place(x=8, y=2)
-    SelectAESradio.place(x=5, y=0)
-    SelectDESradio.place(x=5, y=19)
-    EnterKeyFrame.place(x=8, y=68)
-    SymKeyEntry.place(x=9, y=3)
-    SymKeyPasteButton.place(x=8, y=30)
-    SymKeyBrowseButton.place(x=601, y=30)
-    SymKeyClearButton.place(x=115, y=30)
-    DecryptButton.place(x=9, y=421)
-    OutputFrame.place(x=10, y=442)
-    OutputEntry.place(x=9, y=3)
-
-    # Menu-bar
-    enterMenu.add_command(label = "Encryption", command=EncryptPage, accelerator="F1", underline=0)
-    enterMenu.add_command(label = "Decryption", command=DecryptPage, accelerator="F2", underline=0)
-    enterMenu.add_command(label = "Logs", accelerator="F3", underline=0)
-    enterMenu.add_command(label = "Help & About", accelerator="F4", underline=0)
-    enterMenu.add_separator()
-    enterMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=CheckUpdates, underline=10)
-    enterMenu.add_separator()
-    enterMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda:root.destroy())
-    InfoVar = IntVar()
-    WarningVar = IntVar()
-    ErrorVar = IntVar()
-    InfoVar.set(1)
-    WarningVar.set(1)
-    ErrorVar.set(1)
-    ToolTipVar = IntVar()
-    ToolTipVar.set(1)
-    # View menu
-    viewMenu.add_checkbutton(label = "Show tooltips on hover", accelerator="Ctrl+Alt+T", onvalue=1, offvalue=0, variable=ToolTipVar, underline=5)
-    viewMenu.add_separator()
-    viewMenu.add_checkbutton(label = "Show info message dialogs", accelerator="Ctrl+Alt+I", onvalue=1, offvalue=0, variable=InfoVar, underline=5)
-    viewMenu.add_checkbutton(label = "Show warning message dialogs", accelerator="Ctrl+Alt+W", onvalue=1, offvalue=0, variable=WarningVar, underline=5)
-    viewMenu.add_checkbutton(label = "Show error message dialogs", accelerator="Ctrl+Alt+E", onvalue=1, offvalue=0, variable=ErrorVar, underline=5)
-    viewMenu.add_separator()
-    # Title bar sub-menu
-    titleMenu.add_checkbutton(label = "Show program name in titlebar")
-    titleMenu.add_checkbutton(label = "Show program version in titlebar")
-    titleMenu.add_checkbutton(label = "Show program build number in titlebar")
-    titleMenu.add_checkbutton(label = "Show time in titlebar")
-    titleMenu.add_checkbutton(label = "Show date in titlebar")
-    titleMenu.add_separator()
-    speedMenu = Menu(titleMenu, tearoff=0)
-    UpdateValue = IntVar()
-    UpdateValue.set(200)
-    speedMenu.add_radiobutton(label = "Fast", value=50, variable=UpdateValue)
-    speedMenu.add_radiobutton(label = "Moderate", value=200, variable=UpdateValue)
-    speedMenu.add_radiobutton(label = "Slow", value=800, variable=UpdateValue)
-    speedMenu.add_radiobutton(label = "Paused", value=0, variable=UpdateValue)
-    speedMenu.add_separator()
-    speedMenu.add_command(label = "Update now")
-    titleMenu.add_cascade(menu=speedMenu, label = "Titlebar update rate")
-    viewMenu.add_cascade(menu=titleMenu, label = "Window titlebar configuration")
-    viewMenu.add_separator()
-    # Transparency sub-menu
-    transMenu.add_radiobutton(label = "%20", value=20, variable=Alpha, command=lambda:changeAlpha(20), accelerator="Ctrl+Alt+2")
-    transMenu.add_radiobutton(label = "%40", value=40, variable=Alpha, command=lambda:changeAlpha(40), accelerator="Ctrl+Alt+4")
-    transMenu.add_radiobutton(label = "%60", value=60, variable=Alpha, command=lambda:changeAlpha(60), accelerator="Ctrl+Alt+6")
-    transMenu.add_radiobutton(label = "%80", value=80, variable=Alpha, command=lambda:changeAlpha(80), accelerator="Ctrl+Alt+8")
-    transMenu.add_radiobutton(label = "%90", value=90, variable=Alpha, command=lambda:changeAlpha(90), accelerator="Ctrl+Alt+9")
-    transMenu.add_radiobutton(label = "Opaque", value=100, variable=Alpha, command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+1")
-    transMenu.add_separator()
-    transMenu.add_command(label = "Reset opacity", command=lambda:changeAlpha(100), accelerator="Ctrl+Alt+O", underline=6)
-    # End transparency sub-menu
-    viewMenu.add_cascade(menu=transMenu, label = "Window opacity configuration")
-    viewMenu.add_separator()
-    # Language sub-menu
-    langMenu.add_radiobutton(label = "English [Coming Soon]")
-    langMenu.add_radiobutton(label = "Türkçe [Yakında Geliyor]", state=DISABLED)
-    langMenu.add_radiobutton(label = "Deutsche [Kommt Bald]", state=DISABLED)
-    langMenu.add_radiobutton(label = "中国人 [即将推出]", state=DISABLED)
-    langMenu.add_separator()
-    langMenu.add_command(label = "Reset language to default", accelerator="Ctrl+Alt+L")
-    # End language sub-menu
-    viewMenu.add_cascade(menu=langMenu, label ="Language")
-    # End view menu
-    menu.add_cascade(label = "Main", menu=enterMenu)
-    menu.add_cascade(label = "Preferences", menu=viewMenu)
-    menu.add_command(label = "Help", command=HelpPage)
-    WhatToEncrypt = IntVar()
-    WhatToEncrypt.set(1)
-    def ChangeWhatTo():
-        if WhatToEncrypt.get() == 1:
-            plainTextEntry.configure(state=NORMAL)
-            FilePathEntry.configure(state=DISABLED)
-            BrowseFileButton.configure(state=DISABLED)
-            ClearFileButton.configure(state=DISABLED)
-            showCharCheck.configure(state=NORMAL)
-            PasteTextButton.configure(state=NORMAL)
-            if plainTextEntryVar.get() != "":
-                ClearTextButton.configure(state=NORMAL)
-            else:
-                ClearTextButton.configure(state=DISABLED)
-        else:
-            plainTextEntry.configure(state=DISABLED)
-            FilePathEntry.configure(state=NORMAL)
-            BrowseFileButton.configure(state=NORMAL)
-            if filePathEntryVar.get() != "":
-                ClearFileButton.configure(state=NORMAL)
-            else:
-                ClearFileButton.configure(state=DISABLED)
-            showCharCheck.configure(state=DISABLED)
-            PasteTextButton.configure(state=DISABLED)
-            ClearTextButton.configure(state=DISABLED)
-    def BrowseFileToEncrypt():
-        global FilePathEntry
-        files = [("All files","*.*")]
-        filePath = filedialog.askopenfilename(title = "Open file to encrypt", filetypes=files)
-        FilePathEntry.delete(0, END)
-        FilePathEntry.insert(0, filePath)
-    def PasteTextCommand():
-        plainTextEntry.delete(0, END)
-        if not str(pyperclip.paste()).replace(" ","") == "":
-            plainTextEntry.insert(0, str(pyperclip.paste()))
-            return
-        return
-
-    def plainTextEntryCallback(*args, **kwargs):
-        if plainTextEntryVar.get() != "":
-            ClearTextButton.configure(state=NORMAL)
-        else:
-            ClearTextButton.configure(state=DISABLED)
-    def filePathEntryCallback(*args, **kwargs):
-        if filePathEntryVar.get() != "":
-            ClearFileButton.configure(state=NORMAL)
-        else:
-            ClearFileButton.configure(state=DISABLED)
-
-    plainTextEntryVar = StringVar()
-    plainTextEntryVar.trace("w", plainTextEntryCallback)
-    filePathEntryVar = StringVar()
-    filePathEntryVar.trace("w", filePathEntryCallback)
-
-    TextToEncryptLabel = Radiobutton(EncryptFrame, text = "Plain text:", value=1, variable=WhatToEncrypt, command=ChangeWhatTo, takefocus=0)
-    PasteTextButton = Button(EncryptFrame, text = "Paste", width=14, state=NORMAL, command=PasteTextCommand, takefocus=0)
-    ClearTextButton = Button(EncryptFrame, text = "Clear", width=14, command=lambda:plainTextEntry.delete(0, END), takefocus=0, state=DISABLED)
-    FileToEncryptLabel = Radiobutton(EncryptFrame, text = "File:", value=2, variable=WhatToEncrypt, command=ChangeWhatTo, takefocus=0)
-    showCharCheck = Checkbutton(EncryptFrame, text = "Hide characters", variable = showCharState, onvalue = 1, offvalue = 0, command = toggleHideChar, takefocus=0)
-    BrowseFileButton = Button(EncryptFrame, text = "Browse...", width=14, state=DISABLED, command=BrowseFileToEncrypt, takefocus=0)
-    ClearFileButton = Button(EncryptFrame, text = "Clear", width=14, state=DISABLED, takefocus=0)
-
-    plainTextEntry = Entry(EncryptFrame, width = 48, font=("Consolas", 9), takefocus=0, textvariable=plainTextEntryVar)
-    FilePathEntry = Entry(EncryptFrame, width = 48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=filePathEntryVar)
-    TextToEncryptLabel.place(x=8, y=2)
-    FileToEncryptLabel.place(x=8, y=76)
-
-    ClearFileButton.config(command=lambda: FilePathEntry.delete(0, END))
-    FilePathEntry.place(x=24, y=96)
-    BrowseFileButton.place(x=23, y=123)
-    ClearFileButton.place(x=124, y=123)
-    PasteTextButton.place(x=23, y=49)
-    ClearTextButton.place(x=124, y=49)
-    # Log page widgets
-    LogClearButton = Button(LogFrame, text = "Clear", width=15, takefocus=0, state=DISABLED)
-    LogSaveButton = Button(LogFrame, text = "Save as...", width=15, takefocus=0)
-    LogSavePreset = Button(LogFrame, text = "Save to 'Encrypt-n-Decrypt.log'", width=28, takefocus=0)
-    LogClearButton.place(x=9, y=330)
-    LogSavePreset.place(x=601, y=330)
-    LogSaveButton.place(x=494, y=330)
-    # Main widgets
-    encryButton = Button(EncryptFrame, text = "Encrypt", width=15, command=Encrypt, takefocus=0)
-    checkButton = Button(EncryptFrame, text = "Check encryption", width=20, command=CheckEncrypt, takefocus=0)
-    encryptedTextWidget = Text(EncryptFrameLabel, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="white", relief=SUNKEN, takefocus=0)
-    RSApublicKeyWidget = Text(EncryptFrameLabel, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
-    RSAprivateKeyWidget = Text(EncryptFrameLabel, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=SUNKEN, takefocus=0)
-    AESkeyEntry = Text(EncryptFrameLabel, width=54, height=1, state=DISABLED, font=("Consolas",9), relief=SUNKEN, takefocus=0)
-    AESkeyLabel = Label(EncryptFrameLabel, text="AES/3DES Key:", takefocus=0)
-    RSApublicLabel = Label(EncryptFrameLabel, text="RSA Public Key:", takefocus=0)
-    RSAprivateLabel = Label(EncryptFrameLabel, text="RSA Private Key:", takefocus=0)
-    StatusLabelAES = Label(KeySelectFrame, text="Validity: [Blank]", foreground="gray", takefocus=0)
-    copyButton = Button(EncryptFrameLabel, text = "Copy", width=10, command=Copy, state=DISABLED, takefocus=0)
-    clearButton = Button(EncryptFrameLabel, text = "Clear", width=10, command=Clear, state=DISABLED, takefocus=0)
-    SaveENCbutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SaveENC, state=DISABLED, takefocus=0)
-    CopyAESbutton = Button(EncryptFrameLabel, width = 10, text="Copy", command=CopyAES, state=DISABLED, takefocus=0)
-    ClearAESbutton = Button(EncryptFrameLabel, width = 10, text="Clear", command=ClearAES, state=DISABLED, takefocus=0)
-    SaveAESbutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SaveAES, state=DISABLED, takefocus=0)
-    CopyPubKeybutton = Button(EncryptFrameLabel, width = 10, text="Copy", command=CopyPublic, state=DISABLED, takefocus=0)
-    ClearPubKeybutton = Button(EncryptFrameLabel, width = 10, text="Clear", command=ClearPublic, state=DISABLED, takefocus=0)
-    SavePubKeybutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SavePub, state=DISABLED, takefocus=0)
-    CopyPrivKeybutton = Button(EncryptFrameLabel, width = 10, text="Copy", command=CopyPriv, state=DISABLED, takefocus=0)
-    ClearPrivKeybutton = Button(EncryptFrameLabel, width = 10, text="Clear", command=ClearPriv, state=DISABLED, takefocus=0)
-    SavePrivKeybutton = Button(EncryptFrameLabel, width=15, text="Save as...", command=SavePriv, state=DISABLED, takefocus=0)
-    scrollbar = Scrollbar(LogFrame)
-    scrollbar2 = Scrollbar(EncryptFrameLabel)
-    scrollbar3 = Scrollbar(EncryptFrameLabel)
-    scrollbar4 = Scrollbar(EncryptFrameLabel)
-    logTextWidget.config(yscrollcommand=scrollbar.set)
-    RSApublicKeyWidget.config(yscrollcommand=scrollbar4.set)
-    RSAprivateKeyWidget.config(yscrollcommand=scrollbar3.set)
-    encryptedTextWidget.config(yscrollcommand=scrollbar2.set)
-    scrollbar.config(command=logTextWidget.yview)
-    scrollbar2.config(command=encryptedTextWidget.yview)
-    scrollbar3.config(command=RSAprivateKeyWidget.yview)
-    scrollbar4.config(command=RSApublicKeyWidget.yview)
-    SaveENCbutton.place(x=162, y=100)
-    CopyAESbutton.place(x=8, y=170)
-    ClearAESbutton.place(x=85, y=170)
-    SaveAESbutton.place(x=162, y=170)
-    CopyPubKeybutton.place(x=8, y=309)
-    ClearPubKeybutton.place(x=85, y=309)
-    SavePubKeybutton.place(x=162, y=309)
-    CopyPrivKeybutton.place(x=8, y=449)
-    ClearPrivKeybutton.place(x=85, y=449)
-    SavePrivKeybutton.place(x=162, y=449)
-    about = Text(AboutFrame, height = 28, width = 127, font = ("Segoe UI", 9), wrap=WORD)
-    AboutText = "This program can encrypt and decrypt plain texts and files with both symmetric key encryption and asymmetric key encryption algorithms. AES-128 key is a 16 characters long and base64.urlsafe encoded key, AES-192 key is a 24 characters long and base64.urlsafe encoded key and AES-256 key is a 32 characters long and base64.urlsafe encoded key. RSA keys are base64.urlsafe encoded keys that in any length longer than 128 characters. Program can generate a fresh random AES or RSA key or can use a pre-generated key. In RSA encryption, Public Key is used to encrypt the data and Private Key is required to decrypt the cipher (Encrypted data). Public key can be extracted from Private key. 1024-bit RSA encryption can take 1 second to 10 seconds and 8196-bit RSA encryption can take 1 minute to 12 minutes depending on your computer. AES encryptions are way faster than RSA encryption. Fernet encryption (Legacy Fernet Key) also includes ability to change encryption time. That means you can encrypt your data with a fake date. But AES and RSA doesn't support this. Also you can select Fast mode to encrypt the data faster but bypass encyrption check.\n\nIf you are having problems with program, below information might be helpful to resolve problems:\n\nERR_ENCRYPTER_NOT_WORKING_PROPERLY: This error indicates that encrypter is not working properly even 'abc' text encryption failed. Try encrypting again after restarting the program. If problem persists, please report this problem to me.\n\nERR_INVALID_ENCRYPTION_KEY: This error occures when you selected to enter an encryption key and entered a non-encryption key. Please be sure you entered a AES-128, AES-192, AES-256, Fernet or RSA key that is bigger than 1024-bit; if the key you entered is one of them, be sure it's base64.urlsafe encoded.\n\nERR_UNENCRYPTABLE_TEXT: This error indicates that text you entered to encrypt is not encryptable or includes a illegal character for selected encoding system. Please try another text to encyrpt.\n\nERR_UNABLE_TO_CLEAR: This error pops-up when an unknown error occures while trying to clear the cipher or key from output. Only solution is probably restarting the program. If problem persists, please report this problem to me.\n\nERR_UNABLE_TO_DECRYPT: This errorVersion: {} Build 14\nAuthor: Yılmaz Alpaslan\ngithub.com\Yilmaz4\Encrypt-n-Decrypt".format(version)
-    about.insert(INSERT, AboutText)
-    about.configure(state=DISABLED)
-    scrollbar.place(x=762, y=10, height=312)
-    plainTextEntry.place(x=24, y=22)
-    encryptedTextWidget.place(x=9, y=5)
-    RSApublicKeyWidget.place(x=9, y=215)
-    RSAprivateKeyWidget.place(x=9, y=355)
-    StatusLabelAES.place(x=92, y=159)
-    AESkeyEntry.place(x=9, y=145)
-    AESkeyLabel.place(x=8, y=125)
-    RSApublicLabel.place(x=8, y=194)
-    RSAprivateLabel.place(x=8, y=334)
-    checkButton.place(x=116, y=500)
-    encryButton.place(x=9, y=500)
-    showCharCheck.place(x=261, y=50)
-    copyButton.place(x=8, y=100)
-    clearButton.place(x=85, y=100)
-    about.place(x=10, y=10)
-    logTextWidget.place(x=10, y=10)
-    logTextWidget.config(state=NORMAL)
-    logTextWidget.config(state=DISABLED)
-    scrollbar2.place(x=376, y=5, height=88)
-    scrollbar3.place(x=376, y=355, height=88)
-    scrollbar4.place(x=376, y=215, height=88)
-    # Pop-up tooltips
-    createToolTip(StatusLabelAES, "This label indicates the validity of the key you entered below.")
-    createToolTip(checkButton, "Press this button to check if selected encryption options and key are working.")
-    createToolTip(encryButton, "Press this button to encrypt entered text with selected options and selected key.")
-    createToolTip(copyButton, "Press this button to copy the output (encrypted text) into clipboard.")
-    createToolTip(clearButton, "Press this button to clear the output.")
-    createToolTip(TextToEncryptLabel, "Write the text you want to encrypt below.")
-    createToolTip(SelectKeyCheck, "If you want to use your key that was already generated, select this radiobutton and enter your key below.")
-    createToolTip(AES128Check, "AES-128 key is a 16 characters long base64 encoded AES key. Currently secure against normal computers but unsecure against powerful quantum computers.\nAs an AES-128 key will also be unsecure even against normal computers in near future, it is not recommended for important encryptions. An AES-128 key has 2¹²⁸ of possible combinations.")
-    createToolTip(AES192Check, "AES-192 key is a 24 characters long base64 encoded AES key. Ideal for most of encryptions and currently secure against super computers and quantum computers.\nBut while quantum computers are being more powerful, AES-192 keys will be unsecure against quantum computers in the future. An AES-192 key has 2¹⁹² of possible combinations.")
-    createToolTip(AES256Check, "AES-256 key is a 32 characters long base64 encoded AES key. Impossible to crack with normal computers and highly secure against quantum computers.\nIt will take about billions of years to brute-force an AES-256 key with a normal computer as an AES-256 key has 2²⁵⁶ of possible combinations.\nIn theory, AES-256 key is 2¹²⁸ times stronger than AES-128 key.")
-    # Key bindings (shortcuts)
-    root.bind('<F1>', EncryptPage)
-    root.bind('<F2>', DecryptPage)
-    root.bind('<F3>', LogsPage)
-    root.bind('<F4>', HelpPage)
-    root.bind('<Return>', Encrypt)
-    def Loop(): # Loop function that will loop forever every 200 miliseconds by default.
-        root.title("Eɲcrƴpʈ'n'Decrƴpʈ {}".format(version)+" - {}".format(time.strftime("%H"+":"+"%M"+":"+"%S"+" - "+"%d"+"/"+"%m"+"/"+"%Y")))
-        if not UpdateValue.get() == 0:
-            root.after(UpdateValue.get(), Loop)
-    speedMenu.entryconfig(0, command=lambda:Loop())
-    speedMenu.entryconfig(1, command=lambda:Loop())
-    speedMenu.entryconfig(2, command=lambda:Loop())
-    speedMenu.entryconfig(3, command=lambda:Loop())
-    speedMenu.entryconfig(5, command=lambda:Loop())
-    Loop()
+if __name__ == "__main__":
+    root = Interface()
     root.mainloop()
-    exit()
-except Exception as e:
-    exc_type, exc_obj, exc_tb = exc_info()
-    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-    messagebox.showerror("UNEXPECTED_ERROR_OCCURED","{}".format(format_exc()))
+else:
+    print("This is the source code of a Windows app, therefore it's not intended to be imported in another code for any usage.")
