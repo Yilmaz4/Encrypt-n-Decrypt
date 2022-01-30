@@ -43,6 +43,7 @@ from zipfile import ZipFile
 from datetime import datetime
 from random import randint, choice
 from hurry.filesize import size, alternative
+from time import sleep
 
 from Crypto.Cipher import AES, PKCS1_OAEP, DES3
 from Crypto.Util import Counter
@@ -50,7 +51,7 @@ from Crypto import Random
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
-import base64, os, logging, pyperclip
+import base64, os, logging, pyperclip, urllib.request
 
 class Crypto:
     def __init__(self, master: Tk):
@@ -258,18 +259,8 @@ class Text(Text):
         super().__init__(parent, *args, **kwargs)
         if self._textvariable is not None:
             self.insert("1.0", self._textvariable.get())
-        self.tk.eval('''
-            proc widget_proxy {widget widget_command args} {
-
-                set result [uplevel [linsert $args 0 $widget_command]]
-
-                if {([lindex $args 0] in {insert replace delete})} {
-                    event generate $widget <<Change>> -when tail
-                }
-
-                return $result
-            }
-            ''')
+        with open("textvariable.tcl", mode="r", encoding="utf-8") as tclfile:
+            self.tk.eval(tclfile.read())
         self.tk.eval('''
             rename {widget} _{widget}
             interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
@@ -309,6 +300,7 @@ class Interface(Tk):
     def __init__(self):
         global version
         super().__init__()
+        self.withdraw()
 
         self.height = 600
         self.width = 800
@@ -355,6 +347,8 @@ class Interface(Tk):
         self.initialize_menu()
         self.initialize_widgets()
         self.initialize_bindings()
+
+        self.deiconify()
 
     @property
     def logging_level(self) -> int:
@@ -433,10 +427,13 @@ class Interface(Tk):
         def fileEntryCallback(*args, **kwargs):
             self.fileClearButton.configure(state=DISABLED if self.fileEntryVar.get() == "" else NORMAL)
             self.encryptButton.configure(state=DISABLED if self.fileEntryVar.get() == "" else NORMAL)
-            if os.path.isfile(self.fileEntry.get()):
-                self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
+            if self.fileEntry.get() != "":
+                if os.path.isfile(self.fileEntry.get()):
+                    self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
+                else:
+                    self.fileValidityLabel.configure(text="Validity: Not a file", foreground="red")
             else:
-                self.fileValidityLabel.configure(text="Validity: Not a file", foreground="red")
+                self.fileValidityLabel.configure(text="Validity: [Blank]", foreground="gray")
 
         self.textEntryCheck = Radiobutton(self.encryptionFrame, text="Plain text:", value=0, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
         self.textEntry = Entry(self.encryptionFrame, width=48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.textEntryVar)
@@ -511,7 +508,7 @@ class Interface(Tk):
                 except AttributeError:
                     self.keyValidityStatusLabel.configure(foreground="gray")
 
-        def getKey(path: str) -> Optional[Union[str, bytes]]:
+        def getKey(path: str) -> Optional[str]:
             with open(path, encoding = 'utf-8', mode="r") as file:
                 global index
                 index = file.read()
@@ -1031,7 +1028,7 @@ class Interface(Tk):
 
     def initialize_bindings(self):
         def encrypt(*args, **kwargs):
-            self.crypto.encrypt
+            self.crypto.encrypt()
         def give_focus(*args, **kwargs):
             self.after(50, self.textEntry.focus_set())
 
