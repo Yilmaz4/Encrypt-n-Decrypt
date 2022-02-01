@@ -24,6 +24,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 version = "0.2.1"
 
 from tkinter import *
+from tkinter import _flatten, _join, _stringify, _splitdict
 TkLabel = Label
 from tkinter import messagebox, filedialog
 from tkinter.scrolledtext import ScrolledText
@@ -51,7 +52,7 @@ from Crypto import Random
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
-import base64, os, logging, pyperclip, urllib.request
+import base64, os, logging, pyperclip, urllib.request, binascii
 
 class Crypto:
     def __init__(self, master: Tk):
@@ -80,8 +81,14 @@ class Crypto:
         else:
             self.updateStatus("Reading the file...")
             path = self.master.fileEntry.get()
-            with open(path, mode="r", encoding="latin-1") as file:
-                data = file.read()
+            try:
+                with open(path, mode="rb") as file:
+                    data = file.read()
+            except PermissionError:
+                messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
+                self.master.logger.error("Read permission for the file specified has been denied, encryption was interrupted.")
+                self.updateStatus("Ready")
+                return
         if not bool(self.master.keySourceSelection.get()):
             self.updateStatus("Generating the key...")
             if not bool(self.master.generateAlgorithmSelection.get()):
@@ -105,23 +112,49 @@ class Crypto:
             if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
                 messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
                 self.master.logger.error("Key with invalid length specified.")
+                self.updateStatus("Ready")
                 return
             else:
                 messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
                 self.master.logger.error("Invalid key specified.")
+                self.updateStatus("Ready")
                 return
 
         self.updateStatus("Encrypting...")
-        self.master.lastResult = iv + cipher.encrypt(bytes(data, "utf-8"))
+        try:
+            self.master.lastResult = iv + cipher.encrypt(data.encode("utf-8") if type(data) is str else data)
+        except MemoryError:
+            messagebox.showerror("Not enough memory", "Your computer has run out of memory while encrypting the file. Try closing other applications or restart your computer.")
+            self.master.logger.error("Device has run out of memory while encrypting, encryption was interrupted.")
+            self.updateStatus("Ready")
+            return
+        del data
         self.updateStatus("Encoding the result...")
-        self.master.lastResult = base64.urlsafe_b64encode(self.master.lastResult).decode("utf-8")
+        try:
+            self.master.lastResult = base64.urlsafe_b64encode(self.master.lastResult).decode("utf-8")
+        except MemoryError:
+            messagebox.showerror("Not enough memory", "Your computer has run out of memory while encoding the result. Try closing other applications or restart your computer.")
+            self.master.logger.error("Device has run out of memory while encoding, encryption was interrupted.")
+            self.updateStatus("Ready")
+            return
         self.master.lastKey = key
 
-        if bool(self.master.dataSourceVar.get()):
-            if bool(self.master.writeFileContentVar.get()):
-                self.updateStatus("Writing to the file...")
-                with open(path, mode="w", encoding="latin-1") as file:
-                    file.write(self.master.lastResult)
+        if bool(self.master.dataSourceVar.get()) and bool(self.master.writeFileContentVar.get()):
+            self.updateStatus("Writing to the file...")
+            try:
+                with open(path, mode="wb") as file:
+                    file.write(bytes(self.master.lastResult, "utf-8"))
+            except PermissionError:
+                messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure write access for the file is permitted.")
+                self.master.logger.error("Write permission for the file specified has been denied, encrypted was interrupted.")
+                self.updateStatus("Ready")
+                return
+            except OSError as details:
+                if "No space" in str(details):
+                    messagebox.showerror("No space left", "There is no space left on your device. Free up some space and try again.")
+                    self.master.logger.error("No space left on device, encryption was interrupted.")
+                    self.updateStatus("Ready")
+                    return
 
         self.updateStatus("Displaying the result...")
         self.master.outputText.configure(state=NORMAL)
@@ -144,8 +177,35 @@ class Crypto:
             self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
 
     def decrypt(self):
-        self.updateStatus("Decoding encrypted data...")
-        data = base64.urlsafe_b64decode(self.master.textDecryptVar.get().encode("utf-8"))
+        if not bool(self.master.decryptSourceVar.get()):
+            self.updateStatus("Decoding encrypted data...")
+            data = base64.urlsafe_b64decode(self.master.textDecryptVar.get().encode("utf-8"))
+        else:
+            self.updateStatus("Reading the file...")
+            try:
+                with open(self.master.fileDecryptEntry.get(), mode="r+b") as file:
+                    data = file.read()
+            except PermissionError:
+                messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
+                self.master.logger.error("Read permission for the file specified has been denied, decryption was interrupted.")
+                self.updateStatus("Ready")
+                return
+            self.updateStatus("Decoding the file data...")
+            try:
+                decodedData = base64.urlsafe_b64decode(data)
+            except:
+                messagebox.showerror("Unencrypted file", f"This file seems to be not encrypted using AES nor DES symmetric key encryption algorithm.")
+                self.master.logger.error("Unencrypted file specified.")
+                self.updateStatus("Ready")
+                return
+            else:
+                if data == base64.urlsafe_b64encode(decodedData):
+                    data = decodedData
+                else:
+                    messagebox.showerror("Unencrypted file", f"This file seems to be not encrypted using AES nor DES symmetric key encryption algorithm.")
+                    self.master.logger.error("Unencrypted file specified.")
+                    self.updateStatus("Ready")
+                    return
         iv = data[:16 if not bool(self.master.decryptAlgorithmVar.get()) else 8]
         key = self.master.decryptKeyVar.get()[:-1 if self.master.decryptKeyVar.get().endswith("\n") else None].encode("utf-8")
 
@@ -159,21 +219,46 @@ class Crypto:
             if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
                 messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
                 self.master.logger.error("Key with invalid length specified for decryption.")
+                self.updateStatus("Ready")
                 return
             else:
                 messagebox.showerror("Invalid key", "The key you've entered is invalid.")
                 self.master.logger.error("Invalid key specified for decryption.")
+                self.updateStatus("Ready")
                 return
         self.updateStatus("Decrypting...")
         try:
-            result = cipher.decrypt(data.replace(iv, b"")).decode("utf-8")
+            result = cipher.decrypt(data.replace(iv, b""))
         except UnicodeDecodeError:
             messagebox.showerror("Invalid key", "The encryption key you've entered seems to be not the right key. Make sure you've entered the correct key.")
             self.master.logger.error("Wrong key entered for decryption.")
+            self.updateStatus("Ready")
             return
 
+        self.updateStatus("Writing to the file...")
+        if bool(self.master.decryptSourceVar.get()):
+            try:
+                with open(self.master.fileDecryptEntry.get(), mode="wb") as file:
+                    file.write(result)
+            except PermissionError:
+                messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure write access for the file is permitted.")
+                self.master.logger.error("Write permission for the file specified has been denied, decryption was interrupted.")
+                self.updateStatus("Ready")
+                return
+
         self.updateStatus("Displaying the result...")
-        self.master.decryptOutputText.replace(result)
+        try:
+            result.decode("utf-8")
+        except UnicodeDecodeError:
+            self.master.decryptOutputText.configure(foreground="gray")
+            self.master.decryptOutputText.replace("Decrypted data is not being displayed because it's in an unknown encoding.")
+        else:
+            if not len(result.decode("utf-8")) > 15000:
+                self.master.decryptOutputText.configure(foreground="black")
+                self.master.decryptOutputText.replace()
+            else:
+                self.master.decryptOutputText.configure(foreground="gray")
+                self.master.decryptOutputText.replace("Decrypted data is not being displayed because it's longer than 15.000 characters.")
         self.updateStatus("Ready")
 
 class loggingHandler(logging.Handler):
@@ -295,6 +380,52 @@ class Entry(Entry):
         self.delete(0, END)
         self.insert(0, string)
         self.configure(state=old_val)
+
+"""class Notebook(Notebook):
+    def __init__(self, master=None, **kw):
+        self.tab_order = {}
+        self.current_tab = 0
+        super().__init__(master, **kw)
+
+        self.bind("<<NotebookTabChanged>>", self.on_tab_change)
+    
+    @staticmethod
+    def _format_optvalue(value, script=False):
+        if script:
+            # if caller passes a Tcl script to tk.call, all the values need to
+            # be grouped into words (arguments to a command in Tcl dialect)
+            value = _stringify(value)
+        elif isinstance(value, (list, tuple)):
+            value = _join(value)
+        return value
+
+    @classmethod
+    def _format_optdict(cls, optdict, script=False, ignore=None):
+        opts = []
+        for opt, value in optdict.items():
+            if not ignore or opt not in ignore:
+                opts.append("-%s" % opt)
+                if value is not None:
+                    opts.append(cls._format_optvalue(value, script))
+        return _flatten(opts)
+
+    def on_tab_change(self, event = None):
+        self.tab_order[self.current_tab].place_forget()
+        self.tab_order[self.index(self.select())].place(x=self.winfo_rootx() + 1, y=self.winfo_rooty() + 23)
+
+    def add(self, child, **kw):
+        if child.master == self:
+            new_child = Frame(self.master)
+            for widget in child.winfo_children():
+                new_widget_type = eval(str(widget)[str(widget).find("tkinter") + len("tkinter") + 1:].split(" ")[0])
+                new_widget = new_widget_type(new_child, )
+        if self.tab_order == {}:
+            self.tab_order[0] = child
+            child.place(x=self.winfo_rootx() + 1, y=self.winfo_rooty() + 23)
+        else:
+            self.tab_order[int(max(self.tab_order.keys(), key=int)) + 1] = child
+
+        self.tk.call(self._w, "add", Frame(self), *(self._format_optdict(kw)))"""
 
 class Interface(Tk):
     def __init__(self):
@@ -429,7 +560,12 @@ class Interface(Tk):
             self.encryptButton.configure(state=DISABLED if self.fileEntryVar.get() == "" else NORMAL)
             if self.fileEntry.get() != "":
                 if os.path.isfile(self.fileEntry.get()):
-                    self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
+                    if os.access(self.fileEntry.get(), os.R_OK) and os.access(self.fileEntry.get(), os.W_OK):
+                        self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
+                    elif os.access(self.fileEntry.get(), os.R_OK) and not os.access(self.fileEntry.get(), os.W_OK):
+                        self.fileValidityLabel.configure(text="Validity: Encryptable but not writable", foreground="orange")
+                    else:
+                        self.fileValidityLabel.configure(text="Validity: Read access was denied", foreground="red")
                 else:
                     self.fileValidityLabel.configure(text="Validity: Not a file", foreground="red")
             else:
@@ -783,29 +919,62 @@ class Interface(Tk):
         # └──────────────────┘
         def changeDecryptSource():
             if not bool(self.decryptSourceVar.get()):
-                self.textDecryptEntry.configure(state=NORMAL, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                self.textDecryptEntry.configure(state=NORMAL, bg="white", foreground="black", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                 self.textDecryptPasteButton.configure(state=NORMAL)
                 self.textDecryptClearButton.configure(state=NORMAL)
                 self.fileDecryptEntry.configure(state=DISABLED)
                 self.fileDecryptBrowseButton.configure(state=DISABLED)
                 self.fileDecryptClearButton.configure(state=DISABLED)
+                if not ''.join(str(self.textDecryptEntry.get("1.0", END)).split()) == "":
+                    try:
+                        if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.textDecryptEntry.get("1.0", END).encode("utf-8"))) == self.textDecryptEntry.get("1.0", END).rstrip().encode("utf-8"):
+                            self.textDecryptValidityLabel.configure(text="Validity: Valid base64 encoded data", foreground="green")
+                            self.decryptButton.configure(state=NORMAL)
+                        else:
+                            self.textDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
+                            self.decryptButton.configure(state=DISABLED)
+                    except:
+                        self.textDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
+                        self.decryptButton.configure(state=DISABLED)
+                else:
+                    self.textDecryptValidityLabel.configure(text="Validity: [Blank]", foreground="gray")
+                    self.decryptButton.configure(state=DISABLED)
             else:
-                self.textDecryptEntry.configure(state=DISABLED, bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+                self.textDecryptEntry.configure(state=DISABLED, bg="#F0F0F0", foreground="gray", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
                 self.textDecryptPasteButton.configure(state=DISABLED)
                 self.textDecryptClearButton.configure(state=DISABLED)
                 self.fileDecryptEntry.configure(state=NORMAL)
                 self.fileDecryptBrowseButton.configure(state=NORMAL)
                 self.fileDecryptClearButton.configure(state=NORMAL)
+                if os.path.isfile(self.fileDecryptEntry.get()):
+                    self.decryptButton.configure(state=NORMAL)
+                else:
+                    self.decryptButton.configure(state=DISABLED)
 
         def textDecryptCallback(*args, **kwargs):
-            try:
-                base64.urlsafe_b64decode(self.textDecryptEntry.get("1.0", END).encode("utf-8"))
-            except:
-                self.textDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
-                self.decryptButton.configure(state=DISABLED)
+            if not ''.join(str(self.textDecryptEntry.get("1.0", END)).split()) == "":
+                try:
+                    if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.textDecryptEntry.get("1.0", END).encode("utf-8"))) == self.textDecryptEntry.get("1.0", END).rstrip().encode("utf-8"):
+                        self.textDecryptValidityLabel.configure(text="Validity: Valid base64 encoded data", foreground="green")
+                        self.decryptButton.configure(state=NORMAL)
+                    else:
+                        self.textDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
+                        self.decryptButton.configure(state=DISABLED)
+                except binascii.Error:
+                    self.textDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
+                    self.decryptButton.configure(state=DISABLED)
             else:
-                self.textDecryptValidityLabel.configure(text="Validity: Valid base64 encoded data", foreground="green")
-                self.decryptButton.configure(state=NORMAL)
+                self.textDecryptValidityLabel.configure(text="Validity: [Blank]", foreground="gray")
+                self.decryptButton.configure(state=DISABLED)
+
+        def fileDecryptCallback(*args, **kwargs):
+            if not ''.join(str(self.fileDecryptEntry.get()).split()) == "":
+                if os.path.isfile(self.fileDecryptEntry.get()):
+                    self.decryptButton.configure(state=NORMAL)
+                else:
+                    self.decryptButton.configure(state=DISABLED)
+            else:
+                self.decryptButton.configure(state=DISABLED)
 
         def decryptLimitKeyEntry(*args, **kwargs):
             global value
@@ -837,6 +1006,12 @@ class Interface(Tk):
                 else:
                     self.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
                     self.encryptButton.configure(state=NORMAL)
+        
+        def decryptBrowseFile():
+            files = [("All files","*.*")]
+            filePath = filedialog.askopenfilename(title = "Open a file to decrypt", filetypes=files)
+            self.fileDecryptEntry.delete(0, END)
+            self.fileDecryptEntry.insert(0, filePath)
 
         self.textDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted text:", value=0, variable=self.decryptSourceVar, command=changeDecryptSource, takefocus=0)
         self.textDecryptValidityLabel = Label(self.decryptionFrame, text="Validity: [Blank]", foreground="gray")
@@ -844,13 +1019,15 @@ class Interface(Tk):
         self.textDecryptPasteButton = Button(self.decryptionFrame, width=15, text="Paste", command=lambda: self.textDecryptEntry.replace(self.clipboard_get()), takefocus=0)
         self.textDecryptClearButton = Button(self.decryptionFrame, width=15, text="Clear", command=lambda: self.textDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
 
-        self.textDecryptVar.trace("w", textDecryptCallback)
-        
         self.fileDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted file:", value=1, variable=self.decryptSourceVar, command=changeDecryptSource, takefocus=0)
+        self.fileDecryptValidityLabel = Label(self.decryptionFrame, text="Validity: [Blank]", foreground="gray")
         self.fileDecryptEntry = Entry(self.decryptionFrame, width=107, font=("Consolas", 9), textvariable=self.fileDecryptVar, state=DISABLED, takefocus=0)
-        self.fileDecryptBrowseButton = Button(self.decryptionFrame, width=15, text="Browse...", state=DISABLED, command=lambda: self.fileDecryptEntry.replace(self.clipboard_get()), takefocus=0)
+        self.fileDecryptBrowseButton = Button(self.decryptionFrame, width=15, text="Browse...", state=DISABLED, command=decryptBrowseFile, takefocus=0)
         self.fileDecryptClearButton = Button(self.decryptionFrame, width=15, text="Clear", state=DISABLED, command=lambda: self.fileDecryptEntry.delete(0, END), takefocus=0)
-        
+
+        self.textDecryptVar.trace("w", textDecryptCallback)
+        self.fileDecryptVar.trace("w", fileDecryptCallback)
+
         self.decryptNotebook = Notebook(self.decryptionFrame, height=160, width=765, takefocus=0)
         self.symmetricDecryption = Frame(self.decryptNotebook, takefocus=0)
         self.asymmetricEncryption = Frame(self.decryptNotebook, takefocus=0)
@@ -875,6 +1052,7 @@ class Interface(Tk):
         self.textDecryptPasteButton.place(x=23, y=107)
         self.textDecryptClearButton.place(x=130, y=107)
         self.fileDecryptRadio.place(x=8, y=132)
+        self.fileDecryptValidityLabel.place(x=104, y=133)
         self.fileDecryptEntry.place(x=24, y=153)
         self.fileDecryptBrowseButton.place(x=23, y=182)
         self.fileDecryptClearButton.place(x=130, y=182)
@@ -909,12 +1087,11 @@ class Interface(Tk):
         # └────────────┘
         request = get("https://raw.githubusercontent.com/Yilmaz4/Encrypt-n-Decrypt/main/README.md").text
         HTML = markdown(request)
-        self.readmePage = HtmlFrame(self.helpFrame, messages_enabled=False, vertical_scrollbar=True)
+        self.readmePage = HtmlFrame(self, messages_enabled=False, vertical_scrollbar=True)
         self.readmePage.load_html(HTML)
         self.readmePage.set_zoom(0.8)
         self.readmePage.grid_propagate(0)
         self.readmePage.enable_images(0)
-        self.readmePage.pack(fill=BOTH, expand=True)
 
     def initialize_vars(self):
         self.showTextChar = IntVar(value=0)
@@ -973,7 +1150,7 @@ class Interface(Tk):
         self.fileMenu.add_separator()
         self.fileMenu.add_command(label = "Check for updates", accelerator="Ctrl+Alt+U", command=lambda: self.Updates(self), underline=10)
         self.fileMenu.add_separator()
-        self.fileMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda:root.destroy())
+        self.fileMenu.add_command(label = "Exit", accelerator="Alt+F4", command=lambda: self.destroy())
         # View menu
         self.viewMenu.add_checkbutton(label = "Show tooltips on hover", accelerator="Ctrl+Alt+T", onvalue=1, offvalue=0, variable=self.showTooltip, underline=5)
         self.viewMenu.add_separator()
@@ -1031,9 +1208,15 @@ class Interface(Tk):
             self.crypto.encrypt()
         def give_focus(*args, **kwargs):
             self.after(50, self.textEntry.focus_set())
+        def changeTab(*args, **kwargs):
+            if self.mainNotebook.index(self.mainNotebook.select()) == 3:
+                self.readmePage.place(x=5, y=27, height=548, width=790)
+            else:
+                self.readmePage.place_forget()
 
         self.bind("<Return>", encrypt)
         self.bind("<Tab>", give_focus)
+        self.mainNotebook.bind("<<NotebookTabChanged>>", changeTab)
 
     def clipboard_get(self) -> Optional[str]:
         clipboard = pyperclip.paste()
