@@ -201,6 +201,7 @@ class Crypto:
             else:
                 if data == base64.urlsafe_b64encode(decodedData):
                     data = decodedData
+                    del decodedData
                 else:
                     messagebox.showerror("Unencrypted file", f"This file seems to be not encrypted using AES nor DES symmetric key encryption algorithm.")
                     self.master.logger.error("Unencrypted file specified.")
@@ -248,14 +249,14 @@ class Crypto:
 
         self.updateStatus("Displaying the result...")
         try:
-            result.decode("utf-8")
+            result = result.decode("utf-8")
         except UnicodeDecodeError:
             self.master.decryptOutputText.configure(foreground="gray")
             self.master.decryptOutputText.replace("Decrypted data is not being displayed because it's in an unknown encoding.")
         else:
-            if not len(result.decode("utf-8")) > 15000:
+            if not len(result) > 15000:
                 self.master.decryptOutputText.configure(foreground="black")
-                self.master.decryptOutputText.replace()
+                self.master.decryptOutputText.replace(result)
             else:
                 self.master.decryptOutputText.configure(foreground="gray")
                 self.master.decryptOutputText.replace("Decrypted data is not being displayed because it's longer than 15.000 characters.")
@@ -448,11 +449,11 @@ class Interface(Tk):
         except TclError:
             pass
         
-        self.mainNotebook = Notebook(self, width=380, height=340, takefocus=0)
-        self.encryptionFrame = Frame(self.mainNotebook, takefocus=0)
-        self.decryptionFrame = Frame(self.mainNotebook, takefocus=0)
-        self.loggingFrame = Frame(self.mainNotebook, takefocus=0)
-        self.helpFrame = Frame(self.mainNotebook, takefocus=0)
+        self.mainNotebook = Notebook(self, width=380, height=340)
+        self.encryptionFrame = Frame(self.mainNotebook)
+        self.decryptionFrame = Frame(self.mainNotebook)
+        self.loggingFrame = Frame(self.mainNotebook)
+        self.helpFrame = Frame(self.mainNotebook)
 
         self.mainNotebook.add(self.encryptionFrame, text="Encryption")
         self.mainNotebook.add(self.decryptionFrame, text="Decryption")
@@ -957,6 +958,7 @@ class Interface(Tk):
                     if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.textDecryptEntry.get("1.0", END).encode("utf-8"))) == self.textDecryptEntry.get("1.0", END).rstrip().encode("utf-8"):
                         self.textDecryptValidityLabel.configure(text="Validity: Valid base64 encoded data", foreground="green")
                         self.decryptButton.configure(state=NORMAL)
+                        decryptLimitKeyEntry()
                     else:
                         self.textDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
                         self.decryptButton.configure(state=DISABLED)
@@ -970,25 +972,25 @@ class Interface(Tk):
         def fileDecryptCallback(*args, **kwargs):
             if not ''.join(str(self.fileDecryptEntry.get()).split()) == "":
                 if os.path.isfile(self.fileDecryptEntry.get()):
+                    self.fileDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
                     self.decryptButton.configure(state=NORMAL)
+                    decryptLimitKeyEntry()
                 else:
+                    self.fileDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
                     self.decryptButton.configure(state=DISABLED)
             else:
+                self.fileDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
                 self.decryptButton.configure(state=DISABLED)
 
         def decryptLimitKeyEntry(*args, **kwargs):
             global value
-            if len(self.keyEntryVar.get()) > 32:
-                self.keyEntryVar.set(self.keyEntryVar.get()[:32])
-            value = self.keyEntryVar.get()
+            if len(self.decryptKeyVar.get()) > 32:
+                self.decryptKeyVar.set(self.decryptKeyVar.get()[:32])
+            value = self.decryptKeyVar.get()
             if len(value) == 0:
-                self.keyValidityStatusLabel.configure(foreground="gray", text="Validity: [Blank]")
                 self.decryptButton.configure(state=DISABLED)
             else:
-                if not bool(self.keySourceSelection.get()):
-                    cond = bool(self.generateAlgorithmSelection.get())
-                else:
-                    cond = bool(self.entryAlgorithmSelection.get())
+                cond = bool(self.decryptAlgorithmVar.get())
                 iv = get_random_bytes(AES.block_size if not cond else DES3.block_size)
                 try:
                     if not cond:
@@ -996,16 +998,9 @@ class Interface(Tk):
                     else:
                         DES3.new(bytes(value, 'utf-8'), mode=DES3.MODE_OFB, iv=iv)
                 except:
-                    if not len(value) in [16, 24, 32]:
-                        self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid Key")
-                    else:
-                        self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
-                    if "3DES-256" in self.keyValidityStatusLabel["text"]:
-                        self.keyValidityStatusLabel.configure(text="Validity: Invalid Key")
-                    self.encryptButton.configure(state=DISABLED)
+                    self.decryptButton.configure(state=DISABLED)
                 else:
-                    self.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
-                    self.encryptButton.configure(state=NORMAL)
+                    self.decryptButton.configure(state=NORMAL)
         
         def decryptBrowseFile():
             files = [("All files","*.*")]
@@ -1037,14 +1032,20 @@ class Interface(Tk):
         self.decryptAESCheck = Radiobutton(self.decryptAlgorithmFrame, text="AES (Advanced Encryption Standard)", value=0, variable=self.decryptAlgorithmVar, takefocus=0)
         self.decryptDESCheck = Radiobutton(self.decryptAlgorithmFrame, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.decryptAlgorithmVar, takefocus=0)
         self.decryptKeyFrame = LabelFrame(self.symmetricDecryption, text="Enter encryption key", height=84, width=749, takefocus=0)
+        self.decryptKeyValidity = Label(self.symmetricDecryption, text="Validity: [Blank]", foreground="gray")
         self.decryptKeyEntry = Entry(self.decryptKeyFrame, width=103, font=("Consolas", 9), textvariable=self.decryptKeyVar, takefocus=0)
         self.decryptKeyBrowseButton = Button(self.decryptKeyFrame, width=21, text="Browse key file...", takefocus=0)
         self.decryptKeyPasteButton = Button(self.decryptKeyFrame, width=15, text="Paste", takefocus=0, command=lambda: self.decryptKeyEntry.replace(self.clipboard_get()))
         self.decryptKeyClearButton = Button(self.decryptKeyFrame, width=15, text="Clear", takefocus=0, command=lambda: self.decryptKeyEntry.delete(0, END), state=DISABLED)
 
+        self.decryptKeyVar.trace("w", decryptLimitKeyEntry)
+
         self.decryptButton = Button(self.decryptionFrame, width=22, text="Decrypt", command=self.crypto.decrypt, takefocus=0, state=DISABLED)
         self.decryptOutputFrame = LabelFrame(self.decryptionFrame, text="Decrypted text", height=84, width=766, takefocus=0)
-        self.decryptOutputText = Text(self.decryptOutputFrame, width=105, height=1, font=("Consolas", 9), state=DISABLED, bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+        self.decryptOutputText = Text(self.decryptOutputFrame, width=105, height=1, font=("Consolas", 9), state=DISABLED, bg="#F0F0F0", relief=FLAT, highlightbackground="#cccccc", highlightthickness=1, takefocus=0)
+        self.decryptCopyButton = Button(self.decryptOutputFrame, text="Copy", width=17, takefocus=0)
+        self.decryptClearButton = Button(self.decryptOutputFrame, text="Clear", width=17, takefocus=0)
+        self.decryptSaveButton = Button(self.decryptOutputFrame, text="Save as...", width=20, takefocus=0)
 
         self.textDecryptRadio.place(x=8, y=2)
         self.textDecryptValidityLabel.place(x=108, y=3)
@@ -1062,13 +1063,15 @@ class Interface(Tk):
         self.decryptDESCheck.place(x=5, y=19)
         self.decryptKeyFrame.place(x=8, y=68)
         self.decryptKeyEntry.place(x=9, y=3)
-
         self.decryptKeyBrowseButton.place(x=601, y=30)
         self.decryptKeyPasteButton.place(x=8, y=30)
         self.decryptKeyClearButton.place(x=115, y=30)
         self.decryptButton.place(x=9, y=406)
         self.decryptOutputFrame.place(x=10, y=435)
         self.decryptOutputText.place(x=10, y=3)
+        self.decryptCopyButton.place(x=9, y=23)
+        self.decryptClearButton.place(x=80, y=23)
+        self.decryptSaveButton.place(x=240, y=23)
 
         # ┌───────────────┐
         # │ Logging Frame │
