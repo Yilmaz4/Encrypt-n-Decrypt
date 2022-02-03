@@ -697,7 +697,7 @@ class Interface(Tk):
             if len(self.keyEntryVar.get()) > 32:
                 self.keyEntryVar.set(self.keyEntryVar.get()[:32])
             value = self.keyEntryVar.get()
-            if len(value) == 0:
+            if len(value) == 0 or ''.join(str(self.keyEntryVar.get()).split()) == "":
                 self.keyValidityStatusLabel.configure(foreground="gray", text="Validity: [Blank]")
                 self.encryptButton.configure(state=DISABLED)
             else:
@@ -979,7 +979,7 @@ class Interface(Tk):
                     self.fileDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
                     self.decryptButton.configure(state=DISABLED)
             else:
-                self.fileDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
+                self.fileDecryptValidityLabel.configure(text="Validity: [Blank]", foreground="gray")
                 self.decryptButton.configure(state=DISABLED)
 
         def decryptLimitKeyEntry(*args, **kwargs):
@@ -987,6 +987,10 @@ class Interface(Tk):
             if len(self.decryptKeyVar.get()) > 32:
                 self.decryptKeyVar.set(self.decryptKeyVar.get()[:32])
             value = self.decryptKeyVar.get()
+            if ''.join(str(self.decryptKeyVar.get()).split()) == "":
+                self.decryptKeyClearButton.configure(state=DISABLED)
+            else:
+                self.decryptKeyClearButton.configure(state=NORMAL)
             if len(value) == 0:
                 self.decryptButton.configure(state=DISABLED)
             else:
