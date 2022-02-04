@@ -89,92 +89,123 @@ class Crypto:
                 self.master.logger.error("Read permission for the file specified has been denied, encryption was interrupted.")
                 self.updateStatus("Ready")
                 return
-        if not bool(self.master.keySourceSelection.get()):
-            self.updateStatus("Generating the key...")
-            if not bool(self.master.generateAlgorithmSelection.get()):
-                key = self.generateKey(int(self.master.generateRandomAESVar.get() / 8))
+        if not bool(self.master.algorithmVar.get()):
+            if not bool(self.master.keySourceSelection.get()):
+                self.updateStatus("Generating the key...")
+                if not bool(self.master.generateAlgorithmSelection.get()):
+                    key = self.generateKey(int(self.master.generateRandomAESVar.get() / 8))
+                else:
+                    key = self.generateKey(int(self.master.generateRandomDESVar.get() / 8))
             else:
-                key = self.generateKey(int(self.master.generateRandomDESVar.get() / 8))
-        else:
-            key = self.master.keyEntryVar.get()
-        if type(key) is str:
-            key = bytes(key, "utf-8")
+                key = self.master.keyEntryVar.get()
+            if type(key) is str:
+                key = bytes(key, "utf-8")
 
-        self.updateStatus("Creating the cipher...")
-        try:
-            if (not bool(self.master.generateAlgorithmSelection.get()) and not bool(self.master.keySourceSelection.get())) or (not bool(self.master.entryAlgorithmSelection.get()) and bool(self.master.keySourceSelection.get())):
-                iv = get_random_bytes(AES.block_size)
-                cipher = AES.new(key, AES.MODE_CFB, iv=iv)
-            else:
-                iv = get_random_bytes(DES3.block_size)
-                cipher = DES3.new(key, mode=DES3.MODE_OFB, iv=iv)
-        except ValueError as details:
-            if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
-                messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
-                self.master.logger.error("Key with invalid length specified.")
-                self.updateStatus("Ready")
-                return
-            else:
-                messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
-                self.master.logger.error("Invalid key specified.")
-                self.updateStatus("Ready")
-                return
-
-        self.updateStatus("Encrypting...")
-        try:
-            self.master.lastResult = iv + cipher.encrypt(data.encode("utf-8") if type(data) is str else data)
-        except MemoryError:
-            messagebox.showerror("Not enough memory", "Your computer has run out of memory while encrypting the file. Try closing other applications or restart your computer.")
-            self.master.logger.error("Device has run out of memory while encrypting, encryption was interrupted.")
-            self.updateStatus("Ready")
-            return
-        del data
-        self.updateStatus("Encoding the result...")
-        try:
-            self.master.lastResult = base64.urlsafe_b64encode(self.master.lastResult).decode("utf-8")
-        except MemoryError:
-            messagebox.showerror("Not enough memory", "Your computer has run out of memory while encoding the result. Try closing other applications or restart your computer.")
-            self.master.logger.error("Device has run out of memory while encoding, encryption was interrupted.")
-            self.updateStatus("Ready")
-            return
-        self.master.lastKey = key
-
-        if bool(self.master.dataSourceVar.get()) and bool(self.master.writeFileContentVar.get()):
-            self.updateStatus("Writing to the file...")
+            self.updateStatus("Creating the cipher...")
             try:
-                with open(path, mode="wb") as file:
-                    file.write(bytes(self.master.lastResult, "utf-8"))
-            except PermissionError:
-                messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure write access for the file is permitted.")
-                self.master.logger.error("Write permission for the file specified has been denied, encrypted was interrupted.")
-                self.updateStatus("Ready")
-                return
-            except OSError as details:
-                if "No space" in str(details):
-                    messagebox.showerror("No space left", "There is no space left on your device. Free up some space and try again.")
-                    self.master.logger.error("No space left on device, encryption was interrupted.")
+                if (not bool(self.master.generateAlgorithmSelection.get()) and not bool(self.master.keySourceSelection.get())) or (not bool(self.master.entryAlgorithmSelection.get()) and bool(self.master.keySourceSelection.get())):
+                    iv = get_random_bytes(AES.block_size)
+                    cipher = AES.new(key, AES.MODE_CFB, iv=iv)
+                else:
+                    iv = get_random_bytes(DES3.block_size)
+                    cipher = DES3.new(key, mode=DES3.MODE_OFB, iv=iv)
+            except ValueError as details:
+                if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
+                    messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
+                    self.master.logger.error("Key with invalid length specified.")
+                    self.updateStatus("Ready")
+                    return
+                else:
+                    messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
+                    self.master.logger.error("Invalid key specified.")
                     self.updateStatus("Ready")
                     return
 
-        self.updateStatus("Displaying the result...")
-        self.master.outputText.configure(state=NORMAL)
-        if not len(self.master.lastResult) > 15000:
-            self.master.outputText.configure(foreground="black", wrap=None)
-            self.master.outputText.replace(self.master.lastResult)
-        else:
-            self.master.outputText.configure(foreground="gray", wrap=WORD)
-            self.master.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
-        self.master.outputText.configure(state=DISABLED)
+            self.updateStatus("Encrypting...")
+            try:
+                self.master.lastResult = iv + cipher.encrypt(data.encode("utf-8") if type(data) is str else data)
+            except MemoryError:
+                messagebox.showerror("Not enough memory", "Your computer has run out of memory while encrypting the file. Try closing other applications or restart your computer.")
+                self.master.logger.error("Device has run out of memory while encrypting, encryption was interrupted.")
+                self.updateStatus("Ready")
+                return
+            del data
+            self.updateStatus("Encoding the result...")
+            try:
+                self.master.lastResult = base64.urlsafe_b64encode(self.master.lastResult).decode("utf-8")
+            except MemoryError:
+                messagebox.showerror("Not enough memory", "Your computer has run out of memory while encoding the result. Try closing other applications or restart your computer.")
+                self.master.logger.error("Device has run out of memory while encoding, encryption was interrupted.")
+                self.updateStatus("Ready")
+                return
+            self.master.lastKey = key
 
-        self.master.AESKeyText.configure(state=NORMAL)
-        self.master.AESKeyText.replace(key.decode("utf-8"))
-        self.master.AESKeyText.configure(state=DISABLED)
+            if bool(self.master.dataSourceVar.get()) and bool(self.master.writeFileContentVar.get()):
+                self.updateStatus("Writing to the file...")
+                try:
+                    with open(path, mode="wb") as file:
+                        file.write(bytes(self.master.lastResult, "utf-8"))
+                except PermissionError:
+                    messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure write access for the file is permitted.")
+                    self.master.logger.error("Write permission for the file specified has been denied, encrypted was interrupted.")
+                    self.updateStatus("Ready")
+                    return
+                except OSError as details:
+                    if "No space" in str(details):
+                        messagebox.showerror("No space left", "There is no space left on your device. Free up some space and try again.")
+                        self.master.logger.error("No space left on device, encryption was interrupted.")
+                        self.updateStatus("Ready")
+                        return
 
-        self.updateStatus("Ready")
-        if not bool(self.master.keySourceSelection.get()):
-            self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.generateAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
+            self.updateStatus("Displaying the result...")
+            self.master.outputText.configure(state=NORMAL)
+            if not len(self.master.lastResult) > 15000:
+                self.master.outputText.configure(foreground="black", wrap=None)
+                self.master.outputText.replace(self.master.lastResult)
+            else:
+                self.master.outputText.configure(foreground="gray", wrap=WORD)
+                self.master.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
+            self.master.outputText.configure(state=DISABLED)
+
+            self.master.AESKeyText.configure(state=NORMAL)
+            self.master.AESKeyText.replace(key.decode("utf-8"))
+            self.master.AESKeyText.configure(state=DISABLED)
+
+            self.updateStatus("Ready")
+            if not bool(self.master.keySourceSelection.get()):
+                self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.generateAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
+            else:
+                self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
         else:
-            self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
+            try:
+                ciphertext=PKCS1_OAEP.new(public).encrypt(bytes(plaintext,"utf-8"))
+            except ValueError:
+                messagebox.showwarning("ERR_PLAIN_TEXT_IS_TOO_LONG","The text you entered to encrypt is too long with {} encoding for RSA-{} asymmetric encryption. Please select a longer RSA key to encrypt this data like RSA-{} or RSA-{}".format("utf-8", RSAkeyVar.get(), RSAkeyVar.get()*2, RSAkeyVar.get()*4))
+            cipher = base64.urlsafe_b64encode(ciphertext).decode()
+            if cipher == "":
+                cipher = "[Blank]"
+            output = PKCS1_OAEP.new(RSA.import_key(private)).decrypt(ciphertext).decode("utf-8")
+            if output == plainTextEntry.get():
+                encryptedTextWidget.configure(state=NORMAL, fg="black")
+                encryptedTextWidget.delete('1.0', END)
+                encryptedTextWidget.insert(INSERT, cipher)
+                encryptedTextWidget.configure(state=DISABLED)
+                RSApublicKeyWidget.configure(state=NORMAL)
+                RSApublicKeyWidget.delete('1.0', END)
+                RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode())
+                RSApublicKeyWidget.configure(state=DISABLED)
+                RSAprivateKeyWidget.configure(state=NORMAL)
+                RSAprivateKeyWidget.delete('1.0', END)
+                RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode())
+                RSAprivateKeyWidget.configure(state=DISABLED)
+                AESkeyEntry.configure(state=NORMAL)
+                AESkeyEntry.delete('1.0', END)
+                AESkeyEntry.configure(state=DISABLED)
+                logTextWidget.config(state=NORMAL)
+                logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCCESS: Entered text successfully encrypted using RSA-{} symmetric key encryption.".format(RSAkeyVar.get()))+"\n")
+                logTextWidget.config(state=DISABLED)
+            else:
+                pass # Add error code to here
 
     def decrypt(self):
         if not bool(self.master.decryptSourceVar.get()):
