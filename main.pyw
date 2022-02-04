@@ -89,7 +89,7 @@ class Crypto:
                 self.master.logger.error("Read permission for the file specified has been denied, encryption was interrupted.")
                 self.updateStatus("Ready")
                 return
-        if not bool(self.master.algorithmVar.get()):
+        if not bool(self.master.algorithmSelect.index(self.master.algorithmSelect.select())):
             if not bool(self.master.keySourceSelection.get()):
                 self.updateStatus("Generating the key...")
                 if not bool(self.master.generateAlgorithmSelection.get()):
@@ -177,10 +177,16 @@ class Crypto:
             else:
                 self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
         else:
+            self.updateStatus("Generating the key...")
+            random_generator = Random.new().read
+            key = RSA.generate(1024, random_generator)
+
+            public = key.publickey()
             try:
-                ciphertext=PKCS1_OAEP.new(public).encrypt(bytes(plaintext,"utf-8"))
+                cipher = PKCS1_OAEP.new(public)
+                cipher.encrypt(bytes(data, "utf-8"))
             except ValueError:
-                messagebox.showwarning("ERR_PLAIN_TEXT_IS_TOO_LONG","The text you entered to encrypt is too long with {} encoding for RSA-{} asymmetric encryption. Please select a longer RSA key to encrypt this data like RSA-{} or RSA-{}".format("utf-8", RSAkeyVar.get(), RSAkeyVar.get()*2, RSAkeyVar.get()*4))
+                ...
             cipher = base64.urlsafe_b64encode(ciphertext).decode()
             if cipher == "":
                 cipher = "[Blank]"
