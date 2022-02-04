@@ -52,7 +52,7 @@ from Crypto import Random
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
-import base64, os, logging, pyperclip, urllib.request, binascii
+import base64, os, logging, pyperclip, binascii
 
 class Crypto:
     def __init__(self, master: Tk):
@@ -434,7 +434,7 @@ class Interface(Tk):
         super().__init__()
         self.withdraw()
 
-        self.height = 600
+        self.height = 580
         self.width = 800
         self.version = version
         del version
@@ -475,10 +475,10 @@ class Interface(Tk):
 
         self.crypto = Crypto(self)
 
-        self.initialize_vars()
-        self.initialize_menu()
-        self.initialize_widgets()
-        self.initialize_bindings()
+        self.__initialize_vars()
+        self.__initialize_menu()
+        self.__initialize_widgets()
+        self.__initialize_bindings()
 
         self.deiconify()
 
@@ -495,7 +495,7 @@ class Interface(Tk):
             self.logger.setLevel(level=logging.CRITICAL + 1)
             self.logger.disabled = True
 
-    def initialize_widgets(self):
+    def __initialize_widgets(self):
         # ┌──────────────────┐
         # │ Encryption Frame │
         # └──────────────────┘
@@ -728,7 +728,7 @@ class Interface(Tk):
         self.asymmetricEncryption = Frame(self.algorithmSelect, takefocus=0)
 
         self.algorithmSelect.add(self.symmetricEncryption, text="Symmetric Key Encryption")
-        self.algorithmSelect.add(self.symmetricEncryption, text="Asymmetric Key Encryption")
+        self.algorithmSelect.add(self.asymmetricEncryption, text="Asymmetric Key Encryption")
 
         self.generateRandomKeyCheck = Radiobutton(self.symmetricEncryption, text="Generate a random key", value=0, variable=self.keySourceSelection, command=changeSourceSelection, takefocus=0)
 
@@ -972,14 +972,11 @@ class Interface(Tk):
         def fileDecryptCallback(*args, **kwargs):
             if not ''.join(str(self.fileDecryptEntry.get()).split()) == "":
                 if os.path.isfile(self.fileDecryptEntry.get()):
-                    self.fileDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
                     self.decryptButton.configure(state=NORMAL)
                     decryptLimitKeyEntry()
                 else:
-                    self.fileDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
                     self.decryptButton.configure(state=DISABLED)
             else:
-                self.fileDecryptValidityLabel.configure(text="Validity: [Blank]", foreground="gray")
                 self.decryptButton.configure(state=DISABLED)
 
         def decryptLimitKeyEntry(*args, **kwargs):
@@ -1004,13 +1001,26 @@ class Interface(Tk):
                 except:
                     self.decryptButton.configure(state=DISABLED)
                 else:
-                    self.decryptButton.configure(state=NORMAL)
+                    if not ''.join(str(self.fileDecryptEntry.get()).split()) == "" and os.path.isfile(self.fileDecryptEntry.get()):
+                        self.decryptButton.configure(state=NORMAL)
+                    else:
+                        self.decryptButton.configure(state=DISABLED)
         
         def decryptBrowseFile():
             files = [("All files","*.*")]
             filePath = filedialog.askopenfilename(title = "Open a file to decrypt", filetypes=files)
             self.fileDecryptEntry.delete(0, END)
             self.fileDecryptEntry.insert(0, filePath)
+
+        def decryptOutputCallback(*args, **kwargs):
+            if not ''.join(str(self.decryptOutputVar.get()).split()) == "":
+                self.decryptClearButton.configure(state=NORMAL)
+                self.decryptCopyButton.configure(state=NORMAL)
+                self.decryptSaveButton.configure(state=NORMAL)
+            else:
+                self.decryptClearButton.configure(state=DISABLED)
+                self.decryptCopyButton.configure(state=DISABLED)
+                self.decryptSaveButton.configure(state=DISABLED)
 
         self.textDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted text:", value=0, variable=self.decryptSourceVar, command=changeDecryptSource, takefocus=0)
         self.textDecryptValidityLabel = Label(self.decryptionFrame, text="Validity: [Blank]", foreground="gray")
@@ -1019,7 +1029,6 @@ class Interface(Tk):
         self.textDecryptClearButton = Button(self.decryptionFrame, width=15, text="Clear", command=lambda: self.textDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
 
         self.fileDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted file:", value=1, variable=self.decryptSourceVar, command=changeDecryptSource, takefocus=0)
-        self.fileDecryptValidityLabel = Label(self.decryptionFrame, text="Validity: [Blank]", foreground="gray")
         self.fileDecryptEntry = Entry(self.decryptionFrame, width=107, font=("Consolas", 9), textvariable=self.fileDecryptVar, state=DISABLED, takefocus=0)
         self.fileDecryptBrowseButton = Button(self.decryptionFrame, width=15, text="Browse...", state=DISABLED, command=decryptBrowseFile, takefocus=0)
         self.fileDecryptClearButton = Button(self.decryptionFrame, width=15, text="Clear", state=DISABLED, command=lambda: self.fileDecryptEntry.delete(0, END), takefocus=0)
@@ -1046,10 +1055,12 @@ class Interface(Tk):
 
         self.decryptButton = Button(self.decryptionFrame, width=22, text="Decrypt", command=self.crypto.decrypt, takefocus=0, state=DISABLED)
         self.decryptOutputFrame = LabelFrame(self.decryptionFrame, text="Decrypted text", height=84, width=766, takefocus=0)
-        self.decryptOutputText = Text(self.decryptOutputFrame, width=105, height=1, font=("Consolas", 9), state=DISABLED, bg="#F0F0F0", relief=FLAT, highlightbackground="#cccccc", highlightthickness=1, takefocus=0)
-        self.decryptCopyButton = Button(self.decryptOutputFrame, text="Copy", width=17, takefocus=0)
-        self.decryptClearButton = Button(self.decryptOutputFrame, text="Clear", width=17, takefocus=0)
-        self.decryptSaveButton = Button(self.decryptOutputFrame, text="Save as...", width=20, takefocus=0)
+        self.decryptOutputText = Text(self.decryptOutputFrame, width=105, height=1, font=("Consolas", 9), state=DISABLED, bg="#F0F0F0", relief=FLAT, highlightbackground="#cccccc", highlightthickness=1, takefocus=0, textvariable=self.decryptOutputVar)
+        self.decryptCopyButton = Button(self.decryptOutputFrame, text="Copy", width=17, takefocus=0, state=DISABLED)
+        self.decryptClearButton = Button(self.decryptOutputFrame, text="Clear", width=17, takefocus=0, state=DISABLED)
+        self.decryptSaveButton = Button(self.decryptOutputFrame, text="Save as...", width=20, takefocus=0, state=DISABLED)
+
+        self.decryptOutputVar.trace("w", decryptOutputCallback)
 
         self.textDecryptRadio.place(x=8, y=2)
         self.textDecryptValidityLabel.place(x=108, y=3)
@@ -1057,7 +1068,6 @@ class Interface(Tk):
         self.textDecryptPasteButton.place(x=23, y=107)
         self.textDecryptClearButton.place(x=130, y=107)
         self.fileDecryptRadio.place(x=8, y=132)
-        self.fileDecryptValidityLabel.place(x=104, y=133)
         self.fileDecryptEntry.place(x=24, y=153)
         self.fileDecryptBrowseButton.place(x=23, y=182)
         self.fileDecryptClearButton.place(x=130, y=182)
@@ -1073,9 +1083,9 @@ class Interface(Tk):
         self.decryptButton.place(x=9, y=406)
         self.decryptOutputFrame.place(x=10, y=435)
         self.decryptOutputText.place(x=10, y=3)
-        self.decryptCopyButton.place(x=9, y=23)
-        self.decryptClearButton.place(x=80, y=23)
-        self.decryptSaveButton.place(x=240, y=23)
+        self.decryptCopyButton.place(x=9, y=30)
+        self.decryptClearButton.place(x=128, y=30)
+        self.decryptSaveButton.place(x=622, y=30)
 
         # ┌───────────────┐
         # │ Logging Frame │
@@ -1092,15 +1102,8 @@ class Interface(Tk):
         # ┌────────────┐
         # │ Help Frame │
         # └────────────┘
-        request = get("https://raw.githubusercontent.com/Yilmaz4/Encrypt-n-Decrypt/main/README.md").text
-        HTML = markdown(request)
-        self.readmePage = HtmlFrame(self, messages_enabled=False, vertical_scrollbar=True)
-        self.readmePage.load_html(HTML)
-        self.readmePage.set_zoom(0.8)
-        self.readmePage.grid_propagate(0)
-        self.readmePage.enable_images(0)
 
-    def initialize_vars(self):
+    def __initialize_vars(self):
         self.showTextChar = IntVar(value=0)
         self.showTooltip = IntVar(value=1)
         self.showInfoBox = IntVar(value=1)
@@ -1131,8 +1134,9 @@ class Interface(Tk):
         self.textDecryptVar = StringVar()
         self.fileDecryptVar = StringVar()
         self.decryptKeyVar = StringVar()
+        self.decryptOutputVar = StringVar()
 
-    def initialize_menu(self):
+    def __initialize_menu(self):
         self.menuBar = Menu(self)
         self.config(menu = self.menuBar)
 
@@ -1210,16 +1214,27 @@ class Interface(Tk):
         self.menuBar.add_cascade(label = "Preferences", menu=self.viewMenu)
         self.menuBar.add_command(label = "Help", command=self.helpMenu)
 
-    def initialize_bindings(self):
+    def __initialize_bindings(self):
         def encrypt(*args, **kwargs):
             self.crypto.encrypt()
         def give_focus(*args, **kwargs):
             self.after(50, self.textEntry.focus_set())
         def changeTab(*args, **kwargs):
             if self.mainNotebook.index(self.mainNotebook.select()) == 3:
+                if not hasattr(self, f"_{self.__class__.__name__}__tabChangeCount"):
+                    request = get("https://raw.githubusercontent.com/Yilmaz4/Encrypt-n-Decrypt/main/README.md").text
+                    self.HTML = markdown(request)
+                self.readmePage = HtmlFrame(self, messages_enabled=False, vertical_scrollbar=True)
+                self.readmePage.load_html(self.HTML)
+                self.readmePage.set_zoom(0.8)
+                self.readmePage.grid_propagate(0)
+                self.readmePage.enable_images(0)
+                self.__tabChangeCount = True
                 self.readmePage.place(x=5, y=27, height=548, width=790)
             else:
-                self.readmePage.place_forget()
+                if hasattr(self, "readmePage"):
+                    self.readmePage.place_forget()
+                    self.readmePage.destroy()
 
         self.bind("<Return>", encrypt)
         self.bind("<Tab>", give_focus)
