@@ -178,40 +178,21 @@ class Crypto:
                 self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
         else:
             self.updateStatus("Generating the key...")
-            random_generator = Random.new().read
-            key = RSA.generate(1024, random_generator)
+            key = RSA.generate(1024)
 
-            public = key.publickey()
-            try:
-                cipher = PKCS1_OAEP.new(public)
-                cipher.encrypt(bytes(data, "utf-8"))
-            except ValueError:
-                ...
-            cipher = base64.urlsafe_b64encode(ciphertext).decode()
-            if cipher == "":
-                cipher = "[Blank]"
-            output = PKCS1_OAEP.new(RSA.import_key(private)).decrypt(ciphertext).decode("utf-8")
-            if output == plainTextEntry.get():
-                encryptedTextWidget.configure(state=NORMAL, fg="black")
-                encryptedTextWidget.delete('1.0', END)
-                encryptedTextWidget.insert(INSERT, cipher)
-                encryptedTextWidget.configure(state=DISABLED)
-                RSApublicKeyWidget.configure(state=NORMAL)
-                RSApublicKeyWidget.delete('1.0', END)
-                RSApublicKeyWidget.insert(INSERT, base64.urlsafe_b64encode(public.exportKey()).decode())
-                RSApublicKeyWidget.configure(state=DISABLED)
-                RSAprivateKeyWidget.configure(state=NORMAL)
-                RSAprivateKeyWidget.delete('1.0', END)
-                RSAprivateKeyWidget.insert(INSERT, base64.urlsafe_b64encode(private).decode())
-                RSAprivateKeyWidget.configure(state=DISABLED)
-                AESkeyEntry.configure(state=NORMAL)
-                AESkeyEntry.delete('1.0', END)
-                AESkeyEntry.configure(state=DISABLED)
-                logTextWidget.config(state=NORMAL)
-                logTextWidget.insert(INSERT, strftime("[%I:%M:%S %p] SUCCESS: Entered text successfully encrypted using RSA-{} symmetric key encryption.".format(RSAkeyVar.get()))+"\n")
-                logTextWidget.config(state=DISABLED)
-            else:
-                pass # Add error code to here
+            self.updateStatus("Exporting the public key...")
+            publicKey = key.publickey()
+            self.updateStatus("Exporting the private key..")
+            privateKey = key.exportKey()
+
+            msg = bytes('Herkese merhaba arkadaşlar.', "utf-8")
+            encryptor = PKCS1_OAEP.new(publicKey)
+            encrypted = encryptor.encrypt(msg)
+            print("Encrypted:", base64.urlsafe_b64encode(encrypted).decode())
+
+            decryptor = PKCS1_OAEP.new(RSA.import_key(privateKey))
+            decrypted = decryptor.decrypt(encrypted)
+            print('Decrypted:', decrypted.decode())
 
     def decrypt(self):
         if not bool(self.master.decryptSourceVar.get()):
