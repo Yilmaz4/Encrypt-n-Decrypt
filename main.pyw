@@ -438,7 +438,7 @@ class Interface(Tk):
                         super().__init__(master=master, height=200, width=400, text="Base64 encoding/decoding")
 
                         self.base64InputLabel = Label(self, text="Input")
-                        self.base64InputText = ScrolledText(self, height=4, width=45, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
+                        self.base64InputText = ScrolledText(self, height=4, width=45, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
 
                         class encodeOrDecodeFrame(LabelFrame):
                             def __init__(self, master: LabelFrame = None):
@@ -451,8 +451,8 @@ class Interface(Tk):
                                 self.decodeRadiobutton.place(x=10, y=21)
 
                         
-                        self.base64InputLabel = Label(self, text="Output")
-                        self.base64InputText = ScrolledText(self, height=4, width=45, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
+                        self.base64OutputLabel = Label(self, text="Output")
+                        self.base64OutputText = ScrolledText(self, height=4, width=45, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                         
                         self.base64InputLabel.place(x=8, y=0)
                         self.base64InputText.place(x=10, y=22)
@@ -847,7 +847,7 @@ class Interface(Tk):
                 self.copyOutputButton.configure(state=DISABLED)
                 self.saveOutputButton.configure(state=DISABLED)
             else:
-                self.outputText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
+                self.outputText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                 self.clearOutputButton.configure(state=NORMAL)
                 self.copyOutputButton.configure(state=NORMAL)
                 self.saveOutputButton.configure(state=NORMAL)
@@ -859,7 +859,7 @@ class Interface(Tk):
                 self.copyAESKeyButton.configure(state=DISABLED)
                 self.saveAESKeyButton.configure(state=DISABLED)
             else:
-                self.AESKeyText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
+                self.AESKeyText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                 self.clearAESKeyButton.configure(state=NORMAL)
                 self.copyAESKeyButton.configure(state=NORMAL)
                 self.saveAESKeyButton.configure(state=NORMAL)
@@ -928,7 +928,7 @@ class Interface(Tk):
         # └──────────────────┘
         def changeDecryptSource():
             if not bool(self.decryptSourceVar.get()):
-                self.textDecryptEntry.configure(state=NORMAL, bg="white", foreground="black", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
+                self.textDecryptEntry.configure(state=NORMAL, bg="white", foreground="black", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                 self.textDecryptPasteButton.configure(state=NORMAL)
                 self.textDecryptClearButton.configure(state=NORMAL)
                 self.fileDecryptEntry.configure(state=DISABLED)
@@ -1032,7 +1032,7 @@ class Interface(Tk):
 
         self.textDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted text:", value=0, variable=self.decryptSourceVar, command=changeDecryptSource, takefocus=0)
         self.textDecryptValidityLabel = Label(self.decryptionFrame, text="Validity: [Blank]", foreground="gray")
-        self.textDecryptEntry = ScrolledText(self.decryptionFrame, width=105, height=5, font=("Consolas", 9), textvariable=self.textDecryptVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
+        self.textDecryptEntry = ScrolledText(self.decryptionFrame, width=105, height=5, font=("Consolas", 9), textvariable=self.textDecryptVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
         self.textDecryptPasteButton = Button(self.decryptionFrame, width=15, text="Paste", command=lambda: self.textDecryptEntry.replace(self.clipboard_get()), takefocus=0)
         self.textDecryptClearButton = Button(self.decryptionFrame, width=15, text="Clear", command=lambda: self.textDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
 
