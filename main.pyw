@@ -15,7 +15,7 @@ or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
 INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+PARTICULAR PURPOSE AND NOINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
@@ -26,6 +26,7 @@ version = "0.2.1"
 from tkinter import *
 from tkinter import _flatten, _join, _stringify, _splitdict
 TkLabel = Label
+TkFrame = Frame
 from tkinter import messagebox, filedialog
 from tkinter.scrolledtext import ScrolledText
 from tkinter.commondialog import Dialog
@@ -89,6 +90,8 @@ class Crypto:
                 self.master.logger.error("Read permission for the file specified has been denied, encryption was interrupted.")
                 self.updateStatus("Ready")
                 return
+
+        # AES / 3DES Algorithm
         if not bool(self.master.algorithmSelect.index(self.master.algorithmSelect.select())):
             if not bool(self.master.keySourceSelection.get()):
                 self.updateStatus("Generating the key...")
@@ -176,6 +179,8 @@ class Crypto:
                 self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.generateAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
             else:
                 self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
+
+        # RSA Algorithm
         else:
             self.updateStatus("Generating the key...")
             key = RSA.generate(1024)
@@ -400,52 +405,6 @@ class Entry(Entry):
         self.insert(0, string)
         self.configure(state=old_val)
 
-"""class Notebook(Notebook):
-    def __init__(self, master=None, **kw):
-        self.tab_order = {}
-        self.current_tab = 0
-        super().__init__(master, **kw)
-
-        self.bind("<<NotebookTabChanged>>", self.on_tab_change)
-    
-    @staticmethod
-    def _format_optvalue(value, script=False):
-        if script:
-            # if caller passes a Tcl script to tk.call, all the values need to
-            # be grouped into words (arguments to a command in Tcl dialect)
-            value = _stringify(value)
-        elif isinstance(value, (list, tuple)):
-            value = _join(value)
-        return value
-
-    @classmethod
-    def _format_optdict(cls, optdict, script=False, ignore=None):
-        opts = []
-        for opt, value in optdict.items():
-            if not ignore or opt not in ignore:
-                opts.append("-%s" % opt)
-                if value is not None:
-                    opts.append(cls._format_optvalue(value, script))
-        return _flatten(opts)
-
-    def on_tab_change(self, event = None):
-        self.tab_order[self.current_tab].place_forget()
-        self.tab_order[self.index(self.select())].place(x=self.winfo_rootx() + 1, y=self.winfo_rooty() + 23)
-
-    def add(self, child, **kw):
-        if child.master == self:
-            new_child = Frame(self.master)
-            for widget in child.winfo_children():
-                new_widget_type = eval(str(widget)[str(widget).find("tkinter") + len("tkinter") + 1:].split(" ")[0])
-                new_widget = new_widget_type(new_child, )
-        if self.tab_order == {}:
-            self.tab_order[0] = child
-            child.place(x=self.winfo_rootx() + 1, y=self.winfo_rooty() + 23)
-        else:
-            self.tab_order[int(max(self.tab_order.keys(), key=int)) + 1] = child
-
-        self.tk.call(self._w, "add", Frame(self), *(self._format_optdict(kw)))"""
-
 class Interface(Tk):
     def __init__(self):
         global version
@@ -470,11 +429,42 @@ class Interface(Tk):
         self.mainNotebook = Notebook(self, width=380, height=340)
         self.encryptionFrame = Frame(self.mainNotebook)
         self.decryptionFrame = Frame(self.mainNotebook)
+        class miscFrame(Frame):
+            def __init__(self, master: Notebook = None, **kwargs):
+                super().__init__(master=master, **kwargs)
+
+                class base64Frame(LabelFrame):
+                    def __init__(self, master: Frame = None):
+                        super().__init__(master=master, height=200, width=400, text="Base64 encoding/decoding")
+
+                        self.base64InputLabel = Label(self, text="Input")
+                        self.base64InputText = ScrolledText(self, height=4, width=50, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+
+                        class encodeOrDecodeFrame(LabelFrame):
+                            def __init__(self, master: LabelFrame = None):
+                                super().__init__(master=master, height=65, width=200, text="Encode/decode")
+
+                                self.encodeRadiobutton = Radiobutton(self, text="Encode")
+                                self.decodeRadiobutton = Radiobutton(self, text="Decode")
+
+                                self.encodeRadiobutton.place(x=10, y=0)
+                                self.decodeRadiobutton.place(x=10, y=21)
+
+                        
+                        self.base64InputLabel = Label(self, text="Output")
+                        self.base64InputText = ScrolledText(self, height=4, width=50, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                        
+                        self.base64InputLabel.place(x=8, y=0)
+                        self.base64InputText.place(x=10, y=22)
+                        encodeOrDecodeFrame(self).place(x=10, y=95)
+
+                base64Frame(self).place(x=10, y=5)
         self.loggingFrame = Frame(self.mainNotebook)
         self.helpFrame = Frame(self.mainNotebook)
 
         self.mainNotebook.add(self.encryptionFrame, text="Encryption")
         self.mainNotebook.add(self.decryptionFrame, text="Decryption")
+        self.mainNotebook.add(miscFrame(self.mainNotebook), text="Miscellaneous")
         self.mainNotebook.add(self.loggingFrame, text="Logs")
         self.mainNotebook.add(self.helpFrame, text="Help & About")
 
@@ -1113,9 +1103,9 @@ class Interface(Tk):
         self.loggingSaveButton = Button(self.loggingFrame, text="Save to 'Encrypt-n-Decrypt.log'", width=28, takefocus=0)
 
         self.loggingWidget.place(x=10, y=10)
-        self.loggingClearButton.place(x=9, y=330)
-        self.loggingSaveAsButton.place(x=494, y=330)
-        self.loggingSaveButton.place(x=601, y=330)
+        self.loggingClearButton.place(x=9, y=430)
+        self.loggingSaveAsButton.place(x=494, y=430)
+        self.loggingSaveButton.place(x=601, y=430)
 
         # ┌────────────┐
         # │ Help Frame │
@@ -1240,19 +1230,31 @@ class Interface(Tk):
         def changeTab(*args, **kwargs):
             if self.mainNotebook.index(self.mainNotebook.select()) == 3:
                 if not hasattr(self, f"_{self.__class__.__name__}__tabChangeCount"):
-                    request = get("https://raw.githubusercontent.com/Yilmaz4/Encrypt-n-Decrypt/main/README.md").text
+                    self.statusBar.configure(text="Status: Downloading HTML...")
+                    self.update()
+                    try:
+                        request = get("https://raw.githubusercontent.com/Yilmaz4/Encrypt-n-Decrypt/main/README.md").text
+                    except Exception as details:
+                        messagebox.showerror("No Internet Connection", "Your internet connection appears to be offline. We were unable to download required content to show this page.")
+                        self.logger.error(f"Connection to 'raw.githubusercontent.com' has failed, downloading HTML was interrupted. Error details: {str(details)}")
+                        self.mainNotebook.select(self.mainNotebook.last_tab)
                     self.HTML = markdown(request)
+                    self.statusBar.configure(text="Status: Ready")
+                    self.update()
                 self.readmePage = HtmlFrame(self, messages_enabled=False, vertical_scrollbar=True)
                 self.readmePage.load_html(self.HTML)
                 self.readmePage.set_zoom(0.8)
                 self.readmePage.grid_propagate(0)
                 self.readmePage.enable_images(0)
                 self.__tabChangeCount = True
-                self.readmePage.place(x=5, y=27, height=548, width=790)
+                self.readmePage.place(x=5, y=27, height=528, width=790)
             else:
                 if hasattr(self, "readmePage"):
-                    self.readmePage.place_forget()
-                    self.readmePage.destroy()
+                    try:
+                        self.readmePage.place_forget()
+                        self.readmePage.destroy()
+                    except TclError:
+                        pass
 
         self.bind("<Return>", encrypt)
         self.bind("<Tab>", give_focus)
