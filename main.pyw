@@ -442,7 +442,7 @@ class Interface(Tk):
 
                         class encodeOrDecodeFrame(LabelFrame):
                             def __init__(self, master: LabelFrame = None):
-                                super().__init__(master=master, height=65, width=200, text="Encode/decode")
+                                super().__init__(master=master, height=65, width=376, text="Encode/decode")
 
                                 self.encodeRadiobutton = Radiobutton(self, text="Encode")
                                 self.decodeRadiobutton = Radiobutton(self, text="Decode")
@@ -452,7 +452,7 @@ class Interface(Tk):
 
                         
                         self.base64OutputLabel = Label(self, text="Output")
-                        self.base64OutputText = ScrolledText(self, height=4, width=45, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                        self.base64OutputText = ScrolledText(self, height=4, width=44, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                         
                         self.base64InputLabel.place(x=8, y=0)
                         self.base64InputText.place(x=10, y=22)
@@ -1481,5 +1481,3 @@ class Interface(Tk):
 if __name__ == "__main__":
     root = Interface()
     root.mainloop()
-else:
-    print("This is the source code of a Windows app, therefore it's not intended to be imported in another code for any usage.")
