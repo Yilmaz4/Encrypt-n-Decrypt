@@ -438,7 +438,7 @@ class Interface(Tk):
                         super().__init__(master=master, height=200, width=400, text="Base64 encoding/decoding")
 
                         self.base64InputLabel = Label(self, text="Input")
-                        self.base64InputText = ScrolledText(self, height=4, width=50, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                        self.base64InputText = ScrolledText(self, height=4, width=45, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
 
                         class encodeOrDecodeFrame(LabelFrame):
                             def __init__(self, master: LabelFrame = None):
@@ -452,7 +452,7 @@ class Interface(Tk):
 
                         
                         self.base64InputLabel = Label(self, text="Output")
-                        self.base64InputText = ScrolledText(self, height=4, width=50, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                        self.base64InputText = ScrolledText(self, height=4, width=45, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
                         
                         self.base64InputLabel.place(x=8, y=0)
                         self.base64InputText.place(x=10, y=22)
@@ -842,24 +842,24 @@ class Interface(Tk):
 
         def outputTextCallback(*args, **kwargs):
             if self.outputVar.get() == "":
-                self.outputText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+                self.outputText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
                 self.clearOutputButton.configure(state=DISABLED)
                 self.copyOutputButton.configure(state=DISABLED)
                 self.saveOutputButton.configure(state=DISABLED)
             else:
-                self.outputText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                self.outputText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
                 self.clearOutputButton.configure(state=NORMAL)
                 self.copyOutputButton.configure(state=NORMAL)
                 self.saveOutputButton.configure(state=NORMAL)
 
         def AESKeyTextCallback(*args, **kwargs):
             if self.AESKeyVar.get() == "":
-                self.AESKeyText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+                self.AESKeyText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
                 self.clearAESKeyButton.configure(state=DISABLED)
                 self.copyAESKeyButton.configure(state=DISABLED)
                 self.saveAESKeyButton.configure(state=DISABLED)
             else:
-                self.AESKeyText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                self.AESKeyText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
                 self.clearAESKeyButton.configure(state=NORMAL)
                 self.copyAESKeyButton.configure(state=NORMAL)
                 self.saveAESKeyButton.configure(state=NORMAL)
@@ -869,10 +869,10 @@ class Interface(Tk):
 
         self.outputFrame = LabelFrame(self.encryptionFrame, text="Output", height=502, width=403, takefocus=0)
 
-        self.outputText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.outputVar)
-        self.AESKeyText = Text(self.outputFrame, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.AESKeyVar)
-        self.RSAPublicText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
-        self.RSAPrivateText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+        self.outputText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.outputVar, highlightcolor="#cccccc")
+        self.AESKeyText = Text(self.outputFrame, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.AESKeyVar, highlightcolor="#cccccc")
+        self.RSAPublicText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
+        self.RSAPrivateText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
         self.AESKeyLabel = Label(self.outputFrame, text="AES/3DES Key:", takefocus=0)
         self.RSAPublicLabel = Label(self.outputFrame, text="RSA Public Key:", takefocus=0)
         self.RSAPrivateLabel = Label(self.outputFrame, text="RSA Private Key:", takefocus=0)
@@ -928,7 +928,7 @@ class Interface(Tk):
         # └──────────────────┘
         def changeDecryptSource():
             if not bool(self.decryptSourceVar.get()):
-                self.textDecryptEntry.configure(state=NORMAL, bg="white", foreground="black", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                self.textDecryptEntry.configure(state=NORMAL, bg="white", foreground="black", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
                 self.textDecryptPasteButton.configure(state=NORMAL)
                 self.textDecryptClearButton.configure(state=NORMAL)
                 self.fileDecryptEntry.configure(state=DISABLED)
@@ -949,7 +949,7 @@ class Interface(Tk):
                     self.textDecryptValidityLabel.configure(text="Validity: [Blank]", foreground="gray")
                     self.decryptButton.configure(state=DISABLED)
             else:
-                self.textDecryptEntry.configure(state=DISABLED, bg="#F0F0F0", foreground="gray", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1)
+                self.textDecryptEntry.configure(state=DISABLED, bg="#F0F0F0", foreground="gray", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
                 self.textDecryptPasteButton.configure(state=DISABLED)
                 self.textDecryptClearButton.configure(state=DISABLED)
                 self.fileDecryptEntry.configure(state=NORMAL)
@@ -1032,7 +1032,7 @@ class Interface(Tk):
 
         self.textDecryptRadio = Radiobutton(self.decryptionFrame, text = "Encrypted text:", value=0, variable=self.decryptSourceVar, command=changeDecryptSource, takefocus=0)
         self.textDecryptValidityLabel = Label(self.decryptionFrame, text="Validity: [Blank]", foreground="gray")
-        self.textDecryptEntry = ScrolledText(self.decryptionFrame, width=105, height=5, font=("Consolas", 9), textvariable=self.textDecryptVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+        self.textDecryptEntry = ScrolledText(self.decryptionFrame, width=105, height=5, font=("Consolas", 9), textvariable=self.textDecryptVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#cccccc")
         self.textDecryptPasteButton = Button(self.decryptionFrame, width=15, text="Paste", command=lambda: self.textDecryptEntry.replace(self.clipboard_get()), takefocus=0)
         self.textDecryptClearButton = Button(self.decryptionFrame, width=15, text="Clear", command=lambda: self.textDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
 
@@ -1063,7 +1063,7 @@ class Interface(Tk):
 
         self.decryptButton = Button(self.decryptionFrame, width=22, text="Decrypt", command=self.crypto.decrypt, takefocus=0, state=DISABLED)
         self.decryptOutputFrame = LabelFrame(self.decryptionFrame, text="Decrypted text", height=84, width=766, takefocus=0)
-        self.decryptOutputText = Text(self.decryptOutputFrame, width=105, height=1, font=("Consolas", 9), state=DISABLED, bg="#F0F0F0", relief=FLAT, highlightbackground="#cccccc", highlightthickness=1, takefocus=0, textvariable=self.decryptOutputVar)
+        self.decryptOutputText = Text(self.decryptOutputFrame, width=105, height=1, font=("Consolas", 9), state=DISABLED, bg="#F0F0F0", relief=FLAT, highlightbackground="#cccccc", highlightthickness=1, takefocus=0, textvariable=self.decryptOutputVar, highlightcolor="#cccccc")
         self.decryptCopyButton = Button(self.decryptOutputFrame, text="Copy", width=17, takefocus=0, state=DISABLED)
         self.decryptClearButton = Button(self.decryptOutputFrame, text="Clear", width=17, takefocus=0, state=DISABLED)
         self.decryptSaveButton = Button(self.decryptOutputFrame, text="Save as...", width=20, takefocus=0, state=DISABLED)
