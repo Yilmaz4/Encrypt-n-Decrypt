@@ -326,31 +326,31 @@ class ToolTip:
         self.text = text
         if self.tipwindow or not self.text:
             return
-
-        x, y, _, cy = self.widget.bbox("insert")
-        x = x + self.winfo_pointerx() + 2
-        y = y + cy + self.winfo_pointery() + 15
-        self.tipwindow = tw = Toplevel(self.widget)
-
+        pos_x, pos_y, _, cy = self.widget.bbox("insert")
+        xoffset = 21
+        if not self.locationinvert:
+            pos_x = pos_x + self.widget.winfo_rootx() + xoffset
+        else:
+            pos_x = pos_x + self.widget.winfo_rootx() - xoffset*3
+        if not self.heightinvert:
+            pos_y = pos_y + cy + self.widget.winfo_rooty() + 40
+        else:
+            pos_y = pos_y + cy + self.widget.winfo_rooty() - 20
+        self.tipwindow = tw = Toplevel(self.widget, bg="#2e2b2b")
         tw.wm_overrideredirect(1)
-        tw.wm_geometry("+%d+%d" % (x, y))
-        tw.attributes("-alpha", 0)
-        label = Label(tw, text=self.text, justify=LEFT, relief=SOLID, borderwidth=1, foreground="#6f6f6f", background="white", takefocus=0)
+        tw.wm_geometry("+%d+%d" % (pos_x, pos_y))
+        label = Label(tw, text="  "+self.text+"  ", justify=self.justify, background=self.background,
+                         foreground=self.foreground, relief=self.relief, borderwidth=self.borderwidth, font=self.font)
         label.pack(ipadx=1)
         tw.attributes("-alpha", 0)
-        try:
-            tw.tk.call("::tk::unsupported::MacWindowStyle", "style", tw._w, "help", "noActivates")
-        except TclError:
-            pass
-
         def fade_in():
             alpha = tw.attributes("-alpha")
-            if alpha != self.attributes("-alpha"):
+            if alpha != 1:
                 alpha += .1
                 tw.attributes("-alpha", alpha)
                 tw.after(self.transition, fade_in)
             else:
-                tw.attributes("-alpha", self.attributes("-alpha"))
+                tw.attributes("-alpha", 1)
         fade_in()
 
     def hidetip(self):
@@ -369,7 +369,7 @@ class ToolTip:
                 tw.destroy()
             else:
                 fade_away()
-        except:
+        except Exception as e:
             if tw:
                 tw.destoy()
 
