@@ -305,7 +305,7 @@ class loggingHandler(logging.Handler):
         return str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S') + " [" + record.levelname + "] " + record.getMessage())
 
 class ToolTip:
-    def __init__(self, widget, justify, background, foreground, relief, borderwidth, font, locationinvert, heightinvert):
+    def __init__(self, widget: Widget):
         self.widget = widget
         self.tipwindow = None
         self.id = None
@@ -313,36 +313,26 @@ class ToolTip:
 
         self.transition = 10
 
-        self.justify = justify
-        self.background = background
-        self.foreground = foreground
-        self.relief = relief
-        self.borderwidth = borderwidth
-        self.font = font
-        self.locationinvert = locationinvert
-        self.heightinvert = heightinvert
-
-    def showtip(self, text):
+    def showtip(self, text, *args, **kwargs):
         self.text = text
         if self.tipwindow or not self.text:
             return
-        pos_x, pos_y, _, cy = self.widget.bbox("insert")
-        xoffset = 21
-        if not self.locationinvert:
-            pos_x = pos_x + self.widget.winfo_rootx() + xoffset
-        else:
-            pos_x = pos_x + self.widget.winfo_rootx() - xoffset*3
-        if not self.heightinvert:
-            pos_y = pos_y + cy + self.widget.winfo_rooty() + 40
-        else:
-            pos_y = pos_y + cy + self.widget.winfo_rooty() - 20
-        self.tipwindow = tw = Toplevel(self.widget, bg="#2e2b2b")
+
+        x, y, _, cy = self.widget.bbox("insert")
+        x = x + self.widget.winfo_pointerx() + 2
+        y = y + cy + self.widget.winfo_pointery() + 15
+        self.tipwindow = tw = Toplevel(self.widget)
+
         tw.wm_overrideredirect(1)
-        tw.wm_geometry("+%d+%d" % (pos_x, pos_y))
-        label = Label(tw, text="  "+self.text+"  ", justify=self.justify, background=self.background,
-                         foreground=self.foreground, relief=self.relief, borderwidth=self.borderwidth, font=self.font)
+        tw.wm_geometry("+%d+%d" % (x, y))
+        tw.attributes("-alpha", 0)
+        label = Label(tw, text=self.text, justify=LEFT, relief=SOLID, borderwidth=1, foreground="#6f6f6f", background="white", takefocus=0)
         label.pack(ipadx=1)
         tw.attributes("-alpha", 0)
+        try:
+            tw.tk.call("::tk::unsupported::MacWindowStyle", "style", tw._w, "help", "noActivates")
+        except TclError:
+            pass
         def fade_in():
             alpha = tw.attributes("-alpha")
             if alpha != 1:
@@ -353,9 +343,8 @@ class ToolTip:
                 tw.attributes("-alpha", 1)
         fade_in()
 
-    def hidetip(self):
+    def hidetip(self, *args, **kwargs):
         tw = self.tipwindow
-        self.tipwindow = None
         try:
             def fade_away():
                 alpha = tw.attributes("-alpha")
@@ -371,23 +360,13 @@ class ToolTip:
                 fade_away()
         except Exception as e:
             if tw:
-                tw.destoy()
-
-def createToolTip(self, widget: Any, text: str):
-    toolTip = self.ToolTip(widget)
-
-    def enter(event = None):
-        if not self.showTooltip.get() == 0:
-            self.task = self.after(1000, toolTip.showtip, text, widget, event)
-    def leave(event = None):
-        toolTip.hidetip(widget)
-
-    widget.bind('<Enter>', enter)
-    widget.bind('<Leave>', leave)
-    widget.bind('<Button-1>', leave)
+                tw.destroy()
+            else:
+                if self.tipwindow:
+                    self.tipwindow.destroy()
 
 class ScrolledText(Text):
-    def __init__(self, master=None, *args, **kwargs):
+    def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
         try:
             self._textvariable = kwargs.pop("textvariable")
         except KeyError:
@@ -396,7 +375,7 @@ class ScrolledText(Text):
         self.vbar = Scrollbar(self.frame)
         self.vbar.pack(side=RIGHT, fill=Y)
         kwargs.update({'yscrollcommand': self.vbar.set})
-        super().__init__(self.frame, **kwargs)
+        super().__init__(self.frame, *args, **kwargs)
         self.pack(side=LEFT, fill=BOTH, expand=True)
         self.vbar['command'] = self.yview
         text_meths = vars(Text).keys()
@@ -420,6 +399,17 @@ class ScrolledText(Text):
         if self._textvariable is not None:
             self._textvariable.trace("wu", self._on_var_change)
 
+        if not not tooltip:
+            def enter(event = None):
+                self.toolTip = ToolTip(self)
+                self.after(1000, self.toolTip.showtip, tooltip, self, event)
+            def leave(event = None):
+                self.toolTip.hidetip(self)
+
+            self.bind('<Enter>', enter)
+            self.bind('<Leave>', leave)
+            self.bind('<Button-1>', leave)
+
     def replace(self, chars: str):
         old_val = self["state"]
         self.configure(state=NORMAL)
@@ -442,12 +432,14 @@ class ScrolledText(Text):
         return str(self.frame)
 
 class Text(Text):
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
         try:
             self._textvariable = kwargs.pop("textvariable")
         except KeyError:
             self._textvariable = None
-        super().__init__(parent, *args, **kwargs)
+
+        super().__init__(master, *args, **kwargs)
+
         if self._textvariable is not None:
             self.insert("1.0", self._textvariable.get())
         with open("textvariable.tcl", mode="r", encoding="utf-8") as tclfile:
@@ -460,6 +452,17 @@ class Text(Text):
 
         if self._textvariable is not None:
             self._textvariable.trace("wu", self._on_var_change)
+        
+        if not not tooltip:
+            def enter(event = None):
+                self.toolTip = ToolTip(self)
+                self.after(1000, self.toolTip.showtip, tooltip, self, event)
+            def leave(event = None):
+                self.toolTip.hidetip(self)
+
+            self.bind('<Enter>', enter)
+            self.bind('<Leave>', leave)
+            self.bind('<Button-1>', leave)
 
     def replace(self, chars: str):
         old_val = self["state"]
@@ -480,6 +483,20 @@ class Text(Text):
             self._textvariable.set(self.get("1.0", "end-1c"))
 
 class Entry(Entry):
+    def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+
+        if not not tooltip:
+            def enter(event = None):
+                self.toolTip = ToolTip(self)
+                self.after(1000, self.toolTip.showtip, tooltip, self, event)
+            def leave(event = None):
+                self.toolTip.hidetip(self)
+
+            self.bind('<Enter>', enter)
+            self.bind('<Leave>', leave)
+            self.bind('<Button-1>', leave)
+
     def replace(self, string: str):
         old_val = self["state"]
         self.configure(state=NORMAL)
@@ -487,7 +504,37 @@ class Entry(Entry):
         self.insert(0, string)
         self.configure(state=old_val)
 
-class Interface(Tk):
+class Button(Button):
+    def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+
+        if not not tooltip:
+            def enter(event = None):
+                self.toolTip = ToolTip(self)
+                self.after(1000, self.toolTip.showtip, tooltip, self, event)
+            def leave(event = None):
+                self.toolTip.hidetip(self)
+
+            self.bind('<Enter>', enter)
+            self.bind('<Leave>', leave)
+            self.bind('<Button-1>', leave)
+
+class Label(Label):
+    def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+
+        if not not tooltip:
+            def enter(event = None):
+                self.toolTip = ToolTip(self)
+                self.after(1000, self.toolTip.showtip, tooltip, self, event)
+            def leave(event = None):
+                self.toolTip.hidetip(self)
+
+            self.bind('<Enter>', enter)
+            self.bind('<Leave>', leave)
+            self.bind('<Button-1>', leave)
+
+class EncryptnDecrypt(Tk):
     def __init__(self):
         global version
         super().__init__()
@@ -717,27 +764,44 @@ class Interface(Tk):
                         encodeOrDecodeFrame(self).place(x=10, y=95)
 
                 base64Frame(self).place(x=10, y=5)
-        self.loggingFrame = Frame(self.mainNotebook)
+        class loggingFrame(Frame):
+            def __init__(self, master: Notebook = None, **kwargs):
+                super().__init__(master=master, **kwargs)
+
+                self.loggingWidget = ScrolledText(self, height=22, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
+
+                loghandler = loggingHandler(widget = self.loggingWidget)
+                logging.basicConfig(
+                    format = '%(asctime)s [%(levelname)s] %(message)s',
+                    level = logging.DEBUG,
+                    datefmt = r'%Y-%m-%d %H:%M:%S',
+                    handlers = [loghandler]
+                )
+                self.master.master.logger = logging.getLogger()
+                self.master.master.logger.propagate = False
+
+                self.loggingClearButton = Button(self, text="Clear", width=15, takefocus=0, state=DISABLED)
+                self.loggingSaveAsButton = Button(self, text="Save as...", width=15, takefocus=0)
+                self.loggingSaveButton = Button(self, text="Save to 'Encrypt-n-Decrypt.log'", width=28, takefocus=0)
+
+                self.loggingWidget.place(x=10, y=10)
+                self.loggingClearButton.place(x=9, y=430)
+                self.loggingSaveAsButton.place(x=494, y=430)
+                self.loggingSaveButton.place(x=601, y=430)
+
         self.helpFrame = Frame(self.mainNotebook)
 
+        self.decryptionFrame = decryptionFrame(self.mainNotebook)
+        self.miscFrame = miscFrame(self.mainNotebook)
+        self.loggingFrame = loggingFrame(self.mainNotebook)
+
         self.mainNotebook.add(self.encryptionFrame, text="Encryption")
-        self.mainNotebook.add(decryptionFrame(self.mainNotebook), text="Decryption")
-        self.mainNotebook.add(miscFrame(self.mainNotebook), text="Miscellaneous")
+        self.mainNotebook.add(self.decryptionFrame, text="Decryption")
+        self.mainNotebook.add(self.miscFrame, text="Miscellaneous")
         self.mainNotebook.add(self.loggingFrame, text="Logs")
         self.mainNotebook.add(self.helpFrame, text="Help & About")
 
         self.mainNotebook.pack(fill=BOTH, expand=1, pady=4, padx=4, side=TOP)
-        self.loggingWidget = ScrolledText(self.loggingFrame, height=22, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
-
-        loghandler = loggingHandler(widget = self.loggingWidget)
-        logging.basicConfig(
-            format = '%(asctime)s [%(levelname)s] %(message)s',
-            level = logging.DEBUG,
-            datefmt = r'%Y-%m-%d %H:%M:%S',
-            handlers = [loghandler]
-        )
-        self.logger = logging.getLogger()
-        self.logger.propagate = False
 
         self.__initialize_menu()
         self.__initialize_widgets()
@@ -844,7 +908,7 @@ class Interface(Tk):
         self.fileEntryCheck = Radiobutton(self.encryptionFrame, text="File:", value=1, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
         self.fileValidityLabel = Label(self.encryptionFrame, text="Validity: [Blank]", foreground="gray")
         self.fileEntry = Entry(self.encryptionFrame, width=48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=self.fileEntryVar)
-        self.fileBrowseButton = Button(self.encryptionFrame, text="Browse...", width=14, state=DISABLED, command=fileEntryBrowse, takefocus=0)
+        self.fileBrowseButton = Button(self.encryptionFrame, text="Browse...", tooltip="hi", width=14, state=DISABLED, command=fileEntryBrowse, takefocus=0)
         self.fileClearButton = Button(self.encryptionFrame, text="Clear", width=14, state=DISABLED, command=lambda: self.fileEntry.delete(0, END), takefocus=0)
 
         self.textEntryVar.trace("w", textEntryCallback)
@@ -1178,27 +1242,6 @@ class Interface(Tk):
 
         self.outputFrame.place(x=377, y=4)
 
-        # ┌──────────────────┐
-        # │ Decryption Frame │
-        # └──────────────────┘
-        
-
-        # ┌───────────────┐
-        # │ Logging Frame │
-        # └───────────────┘
-        self.loggingClearButton = Button(self.loggingFrame, text="Clear", width=15, takefocus=0, state=DISABLED)
-        self.loggingSaveAsButton = Button(self.loggingFrame, text="Save as...", width=15, takefocus=0)
-        self.loggingSaveButton = Button(self.loggingFrame, text="Save to 'Encrypt-n-Decrypt.log'", width=28, takefocus=0)
-
-        self.loggingWidget.place(x=10, y=10)
-        self.loggingClearButton.place(x=9, y=430)
-        self.loggingSaveAsButton.place(x=494, y=430)
-        self.loggingSaveButton.place(x=601, y=430)
-
-        # ┌────────────┐
-        # │ Help Frame │
-        # └────────────┘
-
     def __initialize_vars(self):
         self.showTextChar = IntVar(value=0)
         self.showTooltip = IntVar(value=1)
@@ -1316,7 +1359,7 @@ class Interface(Tk):
         def give_focus(*args, **kwargs):
             self.after(50, self.textEntry.focus_set())
         def changeTab(*args, **kwargs):
-            if self.mainNotebook.index(self.mainNotebook.select()) == 3:
+            if self.mainNotebook.index(self.mainNotebook.select()) == 4:
                 if not hasattr(self, f"_{self.__class__.__name__}__tabChangeCount"):
                     self.statusBar.configure(text="Status: Downloading HTML...")
                     self.update()
