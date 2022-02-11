@@ -10,7 +10,7 @@
 
 Hello everyone, this is my second Python project and first project that I've published to GitHub which can encrypt plain text & files using AES and RSA algorithm.
 
-### About **Fernet** library and its encryption standart:
+### About **Fernet** library and its encryption standard:
 >Fernet guarantees that a message encrypted using it cannot be manipulated or read without the key. [Fernet](https://github.com/fernet/spec/) is an implementation of symmetric (also known as “secret key”) authenticated cryptography. Fernet also has support for implementing key rotation via `MultiFernet`.
 
 `cryptography.fernet` encryption is a symmetric key encryption standard which uses 44-characters long encryption key. Encryption key must be a `base64.urlsafe_b64encode` encoded key (The urlsafe stands for *not containing url encoded restricted chacarters* or *only contains url encoding safe charaters*). In fact, this `cryptography.fernet` key is 32 characters long base64 encoded `AES-256` key. The reason behind this 44-charaters long key's length is base64's encoding algorithm. 
