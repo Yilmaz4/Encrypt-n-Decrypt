@@ -81,7 +81,7 @@ class Crypto:
             data = self.master.textEntryVar.get()
         else:
             self.updateStatus("Reading the file...")
-            path = self.master.fileEntry.get()
+            path = self.master.encryptionFrame.fileEntry.get()
             try:
                 with open(path, mode="rb") as file:
                     data = file.read()
@@ -92,7 +92,7 @@ class Crypto:
                 return
 
         # AES / 3DES Algorithm
-        if not bool(self.master.algorithmSelect.index(self.master.algorithmSelect.select())):
+        if not bool(self.master.encryptionFrame.algorithmSelect.index(self.master.encryptionFrame.algorithmSelect.select())):
             if not bool(self.master.keySourceSelection.get()):
                 self.updateStatus("Generating the key...")
                 if not bool(self.master.generateAlgorithmSelection.get()):
@@ -135,7 +135,11 @@ class Crypto:
             del data
             self.updateStatus("Encoding the result...")
             try:
-                self.master.lastResult = base64.urlsafe_b64encode(self.master.lastResult).decode("utf-8")
+                try:
+                    self.master.lastResult = base64.urlsafe_b64encode(self.master.lastResult).decode("utf-8")
+                except TypeError:
+                    self.updateStatus("Ready")
+                    return
             except MemoryError:
                 messagebox.showerror("Not enough memory", "Your computer has run out of memory while encoding the result. Try closing other applications or restart your computer.")
                 self.master.logger.error("Device has run out of memory while encoding, encryption was interrupted.")
@@ -161,18 +165,18 @@ class Crypto:
                         return
 
             self.updateStatus("Displaying the result...")
-            self.master.outputText.configure(state=NORMAL)
+            self.master.encryptionFrame.outputText.configure(state=NORMAL)
             if not len(self.master.lastResult) > 15000:
-                self.master.outputText.configure(foreground="black", wrap=None)
-                self.master.outputText.replace(self.master.lastResult)
+                self.master.encryptionFrame.outputText.configure(foreground="black", wrap=None)
+                self.master.encryptionFrame.outputText.replace(self.master.lastResult)
             else:
-                self.master.outputText.configure(foreground="gray", wrap=WORD)
-                self.master.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
-            self.master.outputText.configure(state=DISABLED)
+                self.master.encryptionFrame.outputText.configure(foreground="gray", wrap=WORD)
+                self.master.encryptionFrame.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
+            self.master.encryptionFrame.outputText.configure(state=DISABLED)
 
-            self.master.AESKeyText.configure(state=NORMAL)
-            self.master.AESKeyText.replace(key.decode("utf-8"))
-            self.master.AESKeyText.configure(state=DISABLED)
+            self.master.encryptionFrame.AESKeyText.configure(state=NORMAL)
+            self.master.encryptionFrame.AESKeyText.replace(key.decode("utf-8"))
+            self.master.encryptionFrame.AESKeyText.configure(state=DISABLED)
 
             self.updateStatus("Ready")
             if not bool(self.master.keySourceSelection.get()):
@@ -537,7 +541,9 @@ class Label(Label):
 class EncryptnDecrypt(Tk):
     def __init__(self):
         global version
+
         super().__init__()
+
         self.withdraw()
 
         self.height = 580
@@ -560,7 +566,424 @@ class EncryptnDecrypt(Tk):
         self.crypto = Crypto(self)
 
         self.mainNotebook = Notebook(self, width=380, height=340)
-        self.encryptionFrame = Frame(self.mainNotebook)
+
+        class encryptionFrame(Frame):
+            def __init__(self, master: Notebook = None, **kwargs):
+                super().__init__(master=master, **kwargs)
+
+                self.textEntryCheck = Radiobutton(self, text="Plain text:", value=0, variable=self.master.master.dataSourceVar, command=self.changeDataSource, takefocus=0)
+                self.textEntry = Entry(self, width=48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.master.master.textEntryVar)
+                self.textPasteButton = Button(self, text="Paste", width=14, state=NORMAL, command=lambda: self.textEntry.replace(str(self.master.master.clipboard_get())), takefocus=0)
+                self.textClearButton = Button(self, text="Clear", width=14, command=lambda: self.textEntry.delete(0, END), takefocus=0, state=DISABLED)
+                self.textEntryHideCharCheck = Checkbutton(self, text="Hide characters", variable=self.master.master.textEntryHideCharVar, onvalue=1, offvalue=0, command=self.toggleHideChar, takefocus=0)
+
+                self.fileEntryCheck = Radiobutton(self, text="File:", value=1, variable=self.master.master.dataSourceVar, command=self.changeDataSource, takefocus=0)
+                self.fileValidityLabel = Label(self, text="Validity: [Blank]", foreground="gray")
+                self.fileEntry = Entry(self, width=48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=self.master.master.fileEntryVar)
+                self.fileBrowseButton = Button(self, text="Browse...", width=14, state=DISABLED, command=self.fileEntryBrowse, takefocus=0)
+                self.fileClearButton = Button(self, text="Clear", width=14, state=DISABLED, command=lambda: self.fileEntry.delete(0, END), takefocus=0)
+
+                self.master.master.textEntryVar.trace("w", self.textEntryCallback)
+                self.master.master.fileEntryVar.trace("w", self.fileEntryCallback)
+
+                self.textEntryCheck.place(x=8, y=2)
+                self.textEntry.place(x=24, y=22)
+                self.textPasteButton.place(x=23, y=49)
+                self.textClearButton.place(x=124, y=49)
+                self.textEntryHideCharCheck.place(x=261, y=50)
+
+                self.fileEntryCheck.place(x=8, y=76)
+                self.fileValidityLabel.place(x=51, y=77)
+                self.fileEntry.place(x=24, y=96)
+                self.fileBrowseButton.place(x=23, y=123)
+                self.fileClearButton.place(x=124, y=123)
+
+                self.algorithmSelect = Notebook(self, width=355, height=290, takefocus=0)
+
+                class symmetricEncryption(Frame):
+                    def __init__(self, master: Notebook, **kwargs):
+                        super().__init__(master, **kwargs)
+
+                        self.generateRandomKeyCheck = Radiobutton(self, text="Generate a random key", value=0, variable=self.master.master.master.master.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
+
+                        self.AESAlgorithmCheck = Radiobutton(self, text="AES (Advanced Encryption Standard)", value=0, variable=self.master.master.master.master.generateAlgorithmSelection, command=self.master.master.changeAlgorithmSelection, takefocus=0)
+                        self.AES128Check = Radiobutton(self, text="AES-128 Key", value=128, variable=self.master.master.master.master.generateRandomAESVar, takefocus=0)
+                        self.AES192Check = Radiobutton(self, text="AES-192 Key", value=192, variable=self.master.master.master.master.generateRandomAESVar, takefocus=0)
+                        self.AES256Check = Radiobutton(self, text="AES-256 Key", value=256, variable=self.master.master.master.master.generateRandomAESVar, takefocus=0)
+
+                        self.DESAlgorithmCheck = Radiobutton(self, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.master.master.master.master.generateAlgorithmSelection, command=self.master.master.changeAlgorithmSelection, takefocus=0)
+                        self.DES128Check = Radiobutton(self, text="3DES-128 Key", value=128, state=DISABLED, variable=self.master.master.master.master.generateRandomDESVar, takefocus=0)
+                        self.DES192Check = Radiobutton(self, text="3DES-192 Key", value=192, state=DISABLED, variable=self.master.master.master.master.generateRandomDESVar, takefocus=0)
+
+                        self.selectKeyCheck = Radiobutton(self, text="Use this key:", value=1, variable=self.master.master.master.master.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
+                        self.keyEntry = Entry(self, width=46, font=("Consolas",9), state=DISABLED, textvariable=self.master.master.master.master.keyEntryVar, takefocus=0)
+                        self.keyValidityStatusLabel = Label(self, text="Validity: [Blank]", foreground="gray", takefocus=0)
+                        self.keyEntryHideCharCheck = Checkbutton(self, text="Hide characters", onvalue=1, offvalue=0, variable=self.master.master.master.master.keyEntryHideCharVar, state=DISABLED, takefocus=0)
+                        self.keyBrowseButton = Button(self, text="Browse key file...", width=21, state=DISABLED, command=self.master.master.getKeyFromFile, takefocus=0)
+                        self.keyPasteButton = Button(self, text="Paste", width=13, state=DISABLED, command=lambda: (self.keyEntry.delete(0, END), self.keyEntry.insert(0, self.clipboard_get())), takefocus=0)
+                        self.keyClearButton = Button(self, text="Clear", width=13, state=DISABLED, command=lambda: self.keyEntry.delete(0, END), takefocus=0)
+                        self.keyEnteredAlgAES = Radiobutton(self, text="AES (Advanced Encryption Standard)", value=0, variable=self.master.master.master.master.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
+                        self.keyEnteredAlgDES = Radiobutton(self, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.master.master.master.master.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
+
+                        self.master.master.master.master.keyEntryVar.trace("w", self.master.master.limitKeyEntry)
+
+                        self.generateRandomKeyCheck.place(x=5, y=5)
+                        self.AESAlgorithmCheck.place(x=16, y=25)
+                        self.AES128Check.place(x=27, y=44)
+                        self.AES192Check.place(x=27, y=63)
+                        self.AES256Check.place(x=27, y=82)
+                        self.DESAlgorithmCheck.place(x=16, y=101)
+                        self.DES128Check.place(x=27, y=120)
+                        self.DES192Check.place(x=27, y=139)
+                        self.keyEntry.place(x=18, y=181)
+                        self.keyValidityStatusLabel.place(x=92, y=159)
+                        self.keyClearButton.place(x=114, y=207)
+                        self.keyPasteButton.place(x=17, y=207)
+                        self.keyBrowseButton.place(x=211, y=207)
+                        self.keyEntryHideCharCheck.place(x=244, y=158)
+                        self.selectKeyCheck.place(x=5, y=158)
+                        self.keyEnteredAlgAES.place(x=16, y=235)
+                        self.keyEnteredAlgDES.place(x=16, y=254)
+
+                class asymmetricEncryption(Frame):
+                    def __init__(self, master: Notebook, **kwargs):
+                        super().__init__(master, **kwargs)
+                        ...
+
+                self.symmetricEncryption = symmetricEncryption(self.algorithmSelect)
+                self.asymmetricEncryption = asymmetricEncryption(self.algorithmSelect)
+
+                self.algorithmSelect.add(self.symmetricEncryption, text="Symmetric Key Encryption")
+                self.algorithmSelect.add(self.asymmetricEncryption, text="Asymmetric Key Encryption")
+
+                self.encryptButton = Button(self, text="Encrypt", width=22, command=self.master.master.crypto.encrypt, takefocus=0)
+                self.writeFileContentCheck = Checkbutton(self, text="Write encrypted data to the file", variable=self.master.master.writeFileContentVar, state=DISABLED, takefocus=0)
+
+                self.algorithmSelect.place(x=10, y=155)
+                self.encryptButton.place(x=9, y=480)
+                self.writeFileContentCheck.place(x=160, y=482)
+
+                self.outputFrame = LabelFrame(self, text="Output", height=502, width=403, takefocus=0)
+                self.outputText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.master.master.outputVar, highlightcolor="#cccccc")
+                self.AESKeyText = Text(self.outputFrame, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.master.master.AESKeyVar, highlightcolor="#cccccc")
+                self.RSAPublicText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
+                self.RSAPrivateText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
+                self.AESKeyLabel = Label(self.outputFrame, text="AES/3DES Key:", takefocus=0)
+                self.RSAPublicLabel = Label(self.outputFrame, text="RSA Public Key:", takefocus=0)
+                self.RSAPrivateLabel = Label(self.outputFrame, text="RSA Private Key:", takefocus=0)
+
+                self.master.master.outputVar.trace("w", self.outputTextCallback)
+                self.master.master.AESKeyVar.trace("w", self.AESKeyTextCallback)
+
+                self.copyOutputButton = Button(self.outputFrame, text = "Copy", width=10, command=lambda: self.master.master.clipboard_set(self.lastResult), state=DISABLED, takefocus=0)
+                self.clearOutputButton = Button(self.outputFrame, text = "Clear", width=10, command=lambda: (self.outputText.configure(state=NORMAL), self.outputText.delete("1.0", END), self.outputText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+                self.saveOutputButton = Button(self.outputFrame, width=15, text="Save as...", command=self.saveOutput, state=DISABLED, takefocus=0)
+                self.copyAESKeyButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.master.master.clipboard_set(self.AESKeyText.get("1.0", END)), state=DISABLED, takefocus=0)
+                self.clearAESKeyButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.AESKeyText.configure(state=NORMAL), self.AESKeyText.delete("1.0", END), self.AESKeyText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+                self.saveAESKeyButton = Button(self.outputFrame, width=15, text="Save as...", command=self.saveAESKey, state=DISABLED, takefocus=0)
+                self.copyRSAPublicButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.master.master.clipboard_set(self.RSAPublicText.get("1.0", END)), state=DISABLED, takefocus=0)
+                self.clearRSAPublicButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.RSAPublicText.configure(state=NORMAL), self.RSAPublicText.delete("1.0", END), self.RSAPublicText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+                self.saveRSAPublicButton = Button(self.outputFrame, width=15, text="Save as...", command=self.saveRSAPublic, state=DISABLED, takefocus=0)
+                self.copyRSAPrivateButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.master.master.clipboard_set(self.RSAPrivateText.get("1.0", END)), state=DISABLED, takefocus=0)
+                self.clearRSAPrivateButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.RSAPrivateText.configure(state=NORMAL), self.RSAPrivateText.delete("1.0", END), self.RSAPrivateText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
+                self.saveRSAPrivateButton = Button(self.outputFrame, width=15, text="Save as...", command=self.saveRSAPrivate, state=DISABLED, takefocus=0)
+
+                self.outputText.place(x=9, y=5)
+                self.AESKeyText.place(x=9, y=145)
+                self.RSAPublicText.place(x=9, y=215)
+                self.RSAPrivateText.place(x=9, y=355)
+                self.AESKeyLabel.place(x=8, y=125)
+                self.RSAPublicLabel.place(x=8, y=194)
+                self.RSAPrivateLabel.place(x=8, y=334)
+                self.copyOutputButton.place(x=8, y=100)
+                self.clearOutputButton.place(x=85, y=100)
+                self.saveOutputButton.place(x=162, y=100)
+                self.copyAESKeyButton.place(x=8, y=170)
+                self.clearAESKeyButton.place(x=85, y=170)
+                self.saveAESKeyButton.place(x=162, y=170)
+                self.copyRSAPublicButton.place(x=8, y=309)
+                self.clearRSAPublicButton.place(x=85, y=309)
+                self.saveRSAPublicButton.place(x=162, y=309)
+                self.copyRSAPrivateButton.place(x=8, y=449)
+                self.clearRSAPrivateButton.place(x=85, y=449)
+                self.saveRSAPrivateButton.place(x=162, y=449)
+                self.outputFrame.place(x=377, y=4)
+
+            def changeEnterKeySectionState(self, state = DISABLED):
+                self.symmetricEncryption.keyEntry.configure(state=state)
+                self.symmetricEncryption.keyEntryHideCharCheck.configure(state=state)
+                self.symmetricEncryption.keyClearButton.configure(state=state)
+                self.symmetricEncryption.keyPasteButton.configure(state=state)
+                self.symmetricEncryption.keyBrowseButton.configure(state=state)
+                self.symmetricEncryption.keyEnteredAlgDES.configure(state=state)
+                self.symmetricEncryption.keyEnteredAlgAES.configure(state=state)
+
+            def changeGenerateKeySectionState(self, state = NORMAL):
+                self.symmetricEncryption.AESAlgorithmCheck.configure(state=state)
+                self.symmetricEncryption.DESAlgorithmCheck.configure(state=state)
+
+            def changeAESState(self, state = NORMAL):
+                self.symmetricEncryption.AES128Check.configure(state=state)
+                self.symmetricEncryption.AES192Check.configure(state=state)
+                self.symmetricEncryption.AES256Check.configure(state=state)
+            
+            def changeDESState(self, state = DISABLED):
+                self.symmetricEncryption.DES128Check.configure(state=state)
+                self.symmetricEncryption.DES192Check.configure(state=state)
+
+            def changeAlgorithmSelection(self):
+                self.changeAESState(state = DISABLED if bool(self.master.master.generateAlgorithmSelection.get()) else NORMAL)
+                self.changeDESState(state = NORMAL if bool(self.master.master.generateAlgorithmSelection.get()) else DISABLED)
+
+            def changeSourceSelection(self):
+                self.changeGenerateKeySectionState(state = DISABLED if bool(self.master.master.keySourceSelection.get()) else NORMAL)
+                self.changeAESState(state = DISABLED if bool(self.master.master.keySourceSelection.get()) else DISABLED if bool(self.master.master.generateAlgorithmSelection.get()) else NORMAL)
+                self.changeDESState(state = DISABLED if bool(self.master.master.keySourceSelection.get()) else NORMAL if bool(self.master.master.generateAlgorithmSelection.get()) else DISABLED)
+                self.changeEnterKeySectionState(state = NORMAL if bool(self.master.master.keySourceSelection.get()) else DISABLED)
+
+                if bool(self.master.master.keySourceSelection.get()) and not len(self.symmetricEncryption.keyEntry.get()) in [16, 24, 32]:
+                    self.encryptButton.configure(state=DISABLED)
+
+                if not bool(self.master.master.keySourceSelection.get()):
+                    if not self.symmetricEncryption.keyValidityStatusLabel["foreground"] != "gray" and not "[Blank]" in self.symmetricEncryption.keyValidityStatusLabel["text"]:
+                        self.master.master.keyValidityStatusColor = self.symmetricEncryption.keyValidityStatusLabel["foreground"]
+                    self.symmetricEncryption.keyValidityStatusLabel.configure(foreground="gray")
+                else:
+                    try:
+                        self.symmetricEncryption.keyValidityStatusLabel.configure(foreground=self.master.master.keyValidityStatusColor)
+                    except AttributeError:
+                        self.symmetricEncryption.keyValidityStatusLabel.configure(foreground="gray")
+
+            def getKey(self, path: str) -> Optional[str]:
+                with open(path, encoding = 'utf-8', mode="r") as file:
+                    global index
+                    index = file.read()
+                index = str(index)
+                where = -1
+                for i in range(0, len(index)):
+                    where += 1
+                    key_to_try = index[where:where+32]
+                    try:
+                        iv = base64.urlsafe_b64decode(index.replace(key_to_try, ""))[:16]
+                        aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CFB, iv=iv)
+                    except:
+                        continue
+                    else:
+                        try:
+                            output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")).replace(iv, b""))
+                            output_key = output_key.decode("utf-8")
+                        except:
+                            continue
+                        else:
+                            try:
+                                if len(output_key) == 16 or len(output_key) == 24 or len(output_key) == 32:
+                                    return output_key
+                            except:
+                                continue
+                with open(path, encoding = 'utf-8', mode="r") as file:
+                    if len(file.read()) == 16 or len(file.read()) == 24 or len(file.read()) == 32:
+                        return str(file.read())
+                    else:
+                        return None
+
+            def getKeyFromFile(self):
+                path = filedialog.askopenfilename(title="Select key file", filetypes=[("Encrypt'n'Decrypt key file", "*.key"), ("Text document", "*.txt"), ("All files", "*.*")])
+                if path == "":
+                    return
+                if os.path.splitext(path)[1] != ".txt":
+                    key = self.getKey(path)
+                    if not key:
+                        messagebox.showwarning("ERR_INVALID_KEY_FILE","The specified file does not contain any valid key for encryption.")
+                        return
+                else:
+                    with open(path, encoding="utf-8", mode="r") as file:
+                        key = file.read()
+                self.keyEntry.replace(key)
+
+            def limitKeyEntry(self, *args, **kwargs):
+                global value
+                if len(self.master.master.keyEntryVar.get()) > 32:
+                    self.master.master.keyEntryVar.set(self.master.master.keyEntryVar.get()[:32])
+                value = self.master.master.keyEntryVar.get()
+                if len(value) == 0 or ''.join(str(self.master.master.keyEntryVar.get()).split()) == "":
+                    self.symmetricEncryption.keyValidityStatusLabel.configure(foreground="gray", text="Validity: [Blank]")
+                    self.encryptButton.configure(state=DISABLED)
+                else:
+                    if not bool(self.master.master.keySourceSelection.get()):
+                        cond = bool(self.master.master.generateAlgorithmSelection.get())
+                    else:
+                        cond = bool(self.master.master.entryAlgorithmSelection.get())
+                    iv = get_random_bytes(AES.block_size if not cond else DES3.block_size)
+                    try:
+                        if not cond:
+                            AES.new(bytes(value, 'utf-8'), mode=AES.MODE_OFB, iv=iv)
+                        else:
+                            DES3.new(bytes(value, 'utf-8'), mode=DES3.MODE_OFB, iv=iv)
+                    except:
+                        if not len(value) in [16, 24, 32]:
+                            self.symmetricEncryption.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid Key")
+                        else:
+                            self.symmetricEncryption.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
+                        if "3DES-256" in self.symmetricEncryption.keyValidityStatusLabel["text"]:
+                            self.symmetricEncryption.keyValidityStatusLabel.configure(text="Validity: Invalid Key")
+                        self.encryptButton.configure(state=DISABLED)
+                    else:
+                        self.symmetricEncryption.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
+                        self.encryptButton.configure(state=NORMAL)
+
+            def changeDataSource(self):
+                if bool(self.master.master.dataSourceVar.get()):
+                    self.writeFileContentCheck.configure(state=NORMAL)
+                    self.textEntry.configure(state=DISABLED)
+                    self.textEntryHideCharCheck.configure(state=DISABLED)
+                    self.textClearButton.configure(state=DISABLED)
+                    self.textPasteButton.configure(state=DISABLED)
+
+                    self.fileEntry.configure(state=NORMAL)
+                    self.fileBrowseButton.configure(state=NORMAL)
+                    if self.master.master.fileEntryVar.get() != "":
+                        self.fileClearButton.configure(state=NORMAL)
+                        self.encryptButton.configure(state=NORMAL)
+                    else:
+                        self.fileClearButton.configure(state=DISABLED)
+                        self.encryptButton.configure(state=DISABLED)
+                else:
+                    self.writeFileContentCheck.configure(state=DISABLED)
+                    self.textEntry.configure(state=NORMAL)
+                    if self.master.master.textEntryVar.get() != "":
+                        self.textClearButton.configure(state=NORMAL)
+                    else:
+                        self.textClearButton.configure(state=DISABLED)
+                    self.textEntryHideCharCheck.configure(state=NORMAL)
+                    self.textPasteButton.configure(state=NORMAL)
+
+                    self.fileEntry.configure(state=DISABLED)
+                    self.fileBrowseButton.configure(state=DISABLED)
+                    self.fileClearButton.configure(state=DISABLED)
+                    self.encryptButton.configure(state=NORMAL)
+                    if bool(self.master.master.keySourceSelection.get()):
+                        self.limitKeyEntry()
+                if not bool(self.master.master.dataSourceVar.get()):
+                    not self.fileValidityLabel["foreground"] in ["gray", "grey"] and not "[Blank]" in self.fileValidityLabel["text"]
+                    if not self.fileValidityLabel["foreground"] in ["gray", "grey"] and not "[Blank]" in self.fileValidityLabel["text"]:
+                        self.fileValidityStatusColor = self.fileValidityLabel["foreground"]
+                    self.fileValidityLabel.configure(foreground="gray")
+                else:
+                    try:
+                        self.fileValidityLabel.configure(foreground=self.fileValidityStatusColor)
+                    except AttributeError:
+                        self.fileValidityLabel.configure(foreground="gray")
+
+            def fileEntryBrowse(self):
+                files = [("All files","*.*")]
+                filePath = filedialog.askopenfilename(title = "Open a file to encrypt", filetypes=files)
+                self.fileEntry.replace(filePath)
+
+            def toggleHideChar(self):
+                self.textEntry.configure(show="●" if bool(self.master.master.textEntryHideCharVar.get()) else "")
+
+            def textEntryCallback(self, *args, **kwargs):
+                self.textClearButton.configure(state=DISABLED if self.master.master.textEntryVar.get() == "" else NORMAL)
+            
+            def fileEntryCallback(self, *args, **kwargs):
+                self.fileClearButton.configure(state=DISABLED if self.master.master.fileEntryVar.get() == "" else NORMAL)
+                self.encryptButton.configure(state=DISABLED if self.master.master.fileEntryVar.get() == "" else NORMAL)
+                if self.fileEntry.get() != "":
+                    if os.path.isfile(self.fileEntry.get()):
+                        if os.access(self.fileEntry.get(), os.R_OK) and os.access(self.fileEntry.get(), os.W_OK):
+                            self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
+                        elif os.access(self.fileEntry.get(), os.R_OK) and not os.access(self.fileEntry.get(), os.W_OK):
+                            self.fileValidityLabel.configure(text="Validity: Encryptable but not writable", foreground="orange")
+                        else:
+                            self.fileValidityLabel.configure(text="Validity: Read access was denied", foreground="red")
+                    else:
+                        self.fileValidityLabel.configure(text="Validity: Not a file", foreground="red")
+                else:
+                    self.fileValidityLabel.configure(text="Validity: [Blank]", foreground="gray")
+
+            def saveOutput(self):
+                files = [("Text document","*.txt"),("All files","*.*")]
+                path = filedialog.asksaveasfilename(title="Save encrypted data", initialfile="Encrypted Data.txt", filetypes=files, defaultextension="*.txt")
+                if path == "":
+                    return
+                with open(path, encoding="utf-8", mode="w") as file:
+                    file.write(self.outputVar.get())
+
+            def saveKey(self, path: str, key: Union[str, bytes]):
+                key_to_use = self.crypto.generateKey(32)
+
+                data = bytes(key, "utf-8")
+                iv = get_random_bytes(AES.block_size)
+                cipher = AES.new(bytes(key_to_use, "utf-8"), AES.MODE_CFB, iv=iv)
+                rawResult = iv + cipher.encrypt(data)
+
+                result = base64.urlsafe_b64encode(rawResult).decode()
+                iv = rawResult[:16]
+                aes = AES.new(bytes(key_to_use, "utf-8"), AES.MODE_CFB, iv=iv)
+                plaintext = aes.decrypt(rawResult.replace(iv, b""))
+
+                if plaintext.decode("utf-8") == key:
+                    first_part = randint(0, len(result))
+                    encrypted_key = result[:first_part] + key_to_use + result[first_part:]
+                    try:
+                        os.remove(path)
+                    except:
+                        pass
+                    finally:
+                        with open(path, encoding = 'utf-8', mode="w") as file:
+                            file.write(str(encrypted_key))
+
+            def saveAESKey(self):
+                files = [("Encrypt'n'Decrypt key file","*.key"),("Text document","*.txt"),("All files","*.*")]
+                path = filedialog.asksaveasfilename(title="Save encryption key", initialfile="Encryption Key.key", filetypes=files, defaultextension="*.key")
+                if path == "":
+                    return
+                if os.path.splitext(path)[1] == ".key":
+                    self.saveKey(path, self.AESKeyVar.get())
+                else:
+                    with open(path, encoding="utf-8", mode="w") as file:
+                        file.write(self.AESKeyVar.get())
+
+            def saveRSAPublic(self):
+                files = [("Text document","*.txt"),("All files","*.*")]
+                path = filedialog.asksaveasfilename(title="Save public key", initialfile="Public Key.txt", filetypes=files, defaultextension="*.txt")
+                if path == "":
+                    return
+                with open(path, encoding="utf-8", mode="w") as file:
+                    file.write(self.RSAPublicVar.get())
+
+            def saveRSAPrivate(self):
+                files = [("Text document","*.txt"),("All files","*.*")]
+                path = filedialog.asksaveasfilename(title="Save private key", initialfile="Private Key.txt", filetypes=files, defaultextension="*.txt")
+                if path == "":
+                    return
+                with open(path, encoding="utf-8", mode="w") as file:
+                    file.write(self.RSAPrivateVar.get())
+
+            def outputTextCallback(self, *args, **kwargs):
+                if self.master.master.outputVar.get() == "":
+                    self.outputText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
+                    self.clearOutputButton.configure(state=DISABLED)
+                    self.copyOutputButton.configure(state=DISABLED)
+                    self.saveOutputButton.configure(state=DISABLED)
+                else:
+                    self.outputText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                    self.clearOutputButton.configure(state=NORMAL)
+                    self.copyOutputButton.configure(state=NORMAL)
+                    self.saveOutputButton.configure(state=NORMAL)
+
+            def AESKeyTextCallback(self, *args, **kwargs):
+                if self.master.master.AESKeyVar.get() == "":
+                    self.AESKeyText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
+                    self.clearAESKeyButton.configure(state=DISABLED)
+                    self.copyAESKeyButton.configure(state=DISABLED)
+                    self.saveAESKeyButton.configure(state=DISABLED)
+                else:
+                    self.AESKeyText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                    self.clearAESKeyButton.configure(state=NORMAL)
+                    self.copyAESKeyButton.configure(state=NORMAL)
+                    self.saveAESKeyButton.configure(state=NORMAL)
+
         class decryptionFrame(Frame):
             def __init__(self, master: Notebook = None, **kwargs):
                 super().__init__(master=master, **kwargs)
@@ -568,7 +991,7 @@ class EncryptnDecrypt(Tk):
                 self.textDecryptRadio = Radiobutton(self, text = "Encrypted text:", value=0, variable=self.master.master.decryptSourceVar, command=self.changeDecryptSource, takefocus=0)
                 self.textDecryptValidityLabel = Label(self, text="Validity: [Blank]", foreground="gray")
                 self.textDecryptEntry = ScrolledText(self, width=105, height=5, font=("Consolas", 9), textvariable=self.master.master.textDecryptVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
-                self.textDecryptPasteButton = Button(self, width=15, text="Paste", command=lambda: self.textDecryptEntry.replace(self.clipboard_get()), takefocus=0)
+                self.textDecryptPasteButton = Button(self, width=15, text="Paste", command=lambda: self.textDecryptEntry.replace(self.master.master.clipboard_get()), takefocus=0)
                 self.textDecryptClearButton = Button(self, width=15, text="Clear", command=lambda: self.textDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
 
                 self.fileDecryptRadio = Radiobutton(self, text = "Encrypted file:", value=1, variable=self.master.master.decryptSourceVar, command=self.changeDecryptSource, takefocus=0)
@@ -591,7 +1014,7 @@ class EncryptnDecrypt(Tk):
                 self.decryptKeyValidity = Label(self.symmetricDecryption, text="Validity: [Blank]", foreground="gray")
                 self.decryptKeyEntry = Entry(self.decryptKeyFrame, width=103, font=("Consolas", 9), textvariable=self.master.master.decryptKeyVar, takefocus=0)
                 self.decryptKeyBrowseButton = Button(self.decryptKeyFrame, width=21, text="Browse key file...", takefocus=0)
-                self.decryptKeyPasteButton = Button(self.decryptKeyFrame, width=15, text="Paste", takefocus=0, command=lambda: self.decryptKeyEntry.replace(self.clipboard_get()))
+                self.decryptKeyPasteButton = Button(self.decryptKeyFrame, width=15, text="Paste", takefocus=0, command=lambda: self.decryptKeyEntry.replace(self.master.master.clipboard_get()))
                 self.decryptKeyClearButton = Button(self.decryptKeyFrame, width=15, text="Clear", takefocus=0, command=lambda: self.decryptKeyEntry.delete(0, END), state=DISABLED)
 
                 self.master.master.decryptKeyVar.trace("w", self.decryptLimitKeyEntry)
@@ -764,6 +1187,7 @@ class EncryptnDecrypt(Tk):
                         encodeOrDecodeFrame(self).place(x=10, y=95)
 
                 base64Frame(self).place(x=10, y=5)
+
         class loggingFrame(Frame):
             def __init__(self, master: Notebook = None, **kwargs):
                 super().__init__(master=master, **kwargs)
@@ -789,11 +1213,16 @@ class EncryptnDecrypt(Tk):
                 self.loggingSaveAsButton.place(x=494, y=430)
                 self.loggingSaveButton.place(x=601, y=430)
 
-        self.helpFrame = Frame(self.mainNotebook)
+        class helpFrame(Frame):
+            def __init__(self, master: Notebook, **kwargs):
+                super().__init__(master, **kwargs)
+                ...
 
+        self.encryptionFrame = encryptionFrame(self.mainNotebook)
         self.decryptionFrame = decryptionFrame(self.mainNotebook)
         self.miscFrame = miscFrame(self.mainNotebook)
         self.loggingFrame = loggingFrame(self.mainNotebook)
+        self.helpFrame = helpFrame(self.mainNotebook)
 
         self.mainNotebook.add(self.encryptionFrame, text="Encryption")
         self.mainNotebook.add(self.decryptionFrame, text="Decryption")
@@ -803,8 +1232,10 @@ class EncryptnDecrypt(Tk):
 
         self.mainNotebook.pack(fill=BOTH, expand=1, pady=4, padx=4, side=TOP)
 
+        self.statusBar = TkLabel(self, text="Status: Ready", bd=1, relief=SUNKEN, anchor=W)
+        self.statusBar.pack(side=BOTTOM, fill=X)
+
         self.__initialize_menu()
-        self.__initialize_widgets()
         self.__initialize_bindings()
 
         self.deiconify()
@@ -814,433 +1245,13 @@ class EncryptnDecrypt(Tk):
         return self.logger.level
 
     @logging_level.setter
-    def logging_level(self, level: Optional[Literal[0, 10, 20, 30, 40, 50]] = None) -> None:
+    def logging_level(self, level: Optional[Literal[0, 10, 20, 30, 40, 50]] = None):
         if not not level:
             self.logger.setLevel(level=level)
             self.logger.disabled = False
         else:
             self.logger.setLevel(level=logging.CRITICAL + 1)
             self.logger.disabled = True
-
-    def __initialize_widgets(self):
-        # ┌──────────────────┐
-        # │ Encryption Frame │
-        # └──────────────────┘
-
-        # Plain text & file entries frame
-        def changeDataSource():
-            if bool(self.dataSourceVar.get()):
-                self.writeFileContentCheck.configure(state=NORMAL)
-                self.textEntry.configure(state=DISABLED)
-                self.textEntryHideCharCheck.configure(state=DISABLED)
-                self.textClearButton.configure(state=DISABLED)
-                self.textPasteButton.configure(state=DISABLED)
-
-                self.fileEntry.configure(state=NORMAL)
-                self.fileBrowseButton.configure(state=NORMAL)
-                if self.fileEntryVar.get() != "":
-                    self.fileClearButton.configure(state=NORMAL)
-                    self.encryptButton.configure(state=NORMAL)
-                else:
-                    self.fileClearButton.configure(state=DISABLED)
-                    self.encryptButton.configure(state=DISABLED)
-            else:
-                self.writeFileContentCheck.configure(state=DISABLED)
-                self.textEntry.configure(state=NORMAL)
-                if self.textEntryVar.get() != "":
-                    self.textClearButton.configure(state=NORMAL)
-                else:
-                    self.textClearButton.configure(state=DISABLED)
-                self.textEntryHideCharCheck.configure(state=NORMAL)
-                self.textPasteButton.configure(state=NORMAL)
-
-                self.fileEntry.configure(state=DISABLED)
-                self.fileBrowseButton.configure(state=DISABLED)
-                self.fileClearButton.configure(state=DISABLED)
-                self.encryptButton.configure(state=NORMAL)
-                if bool(self.keySourceSelection.get()):
-                    limitKeyEntry()
-            if not bool(self.dataSourceVar.get()):
-                not self.fileValidityLabel["foreground"] in ["gray", "grey"] and not "[Blank]" in self.fileValidityLabel["text"]
-                if not self.fileValidityLabel["foreground"] in ["gray", "grey"] and not "[Blank]" in self.fileValidityLabel["text"]:
-                    self.fileValidityStatusColor = self.fileValidityLabel["foreground"]
-                self.fileValidityLabel.configure(foreground="gray")
-            else:
-                try:
-                    self.fileValidityLabel.configure(foreground=self.fileValidityStatusColor)
-                except AttributeError:
-                    self.fileValidityLabel.configure(foreground="gray")
-
-        def fileEntryBrowse():
-            files = [("All files","*.*")]
-            filePath = filedialog.askopenfilename(title = "Open a file to encrypt", filetypes=files)
-            self.fileEntry.delete(0, END)
-            self.fileEntry.insert(0, filePath)
-
-        def toggleHideChar():
-            self.textEntry.configure(show="●" if bool(self.textEntryHideCharVar.get()) else "")
-
-        def textEntryCallback(*args, **kwargs):
-            self.textClearButton.configure(state=DISABLED if self.textEntryVar.get() == "" else NORMAL)
-        
-        def fileEntryCallback(*args, **kwargs):
-            self.fileClearButton.configure(state=DISABLED if self.fileEntryVar.get() == "" else NORMAL)
-            self.encryptButton.configure(state=DISABLED if self.fileEntryVar.get() == "" else NORMAL)
-            if self.fileEntry.get() != "":
-                if os.path.isfile(self.fileEntry.get()):
-                    if os.access(self.fileEntry.get(), os.R_OK) and os.access(self.fileEntry.get(), os.W_OK):
-                        self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
-                    elif os.access(self.fileEntry.get(), os.R_OK) and not os.access(self.fileEntry.get(), os.W_OK):
-                        self.fileValidityLabel.configure(text="Validity: Encryptable but not writable", foreground="orange")
-                    else:
-                        self.fileValidityLabel.configure(text="Validity: Read access was denied", foreground="red")
-                else:
-                    self.fileValidityLabel.configure(text="Validity: Not a file", foreground="red")
-            else:
-                self.fileValidityLabel.configure(text="Validity: [Blank]", foreground="gray")
-
-        self.textEntryCheck = Radiobutton(self.encryptionFrame, text="Plain text:", value=0, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
-        self.textEntry = Entry(self.encryptionFrame, width=48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.textEntryVar)
-        self.textPasteButton = Button(self.encryptionFrame, text="Paste", width=14, state=NORMAL, command=lambda: (self.textEntry.delete(0, END), self.textEntry.insert(0, str(self.clipboard_get()))), takefocus=0)
-        self.textClearButton = Button(self.encryptionFrame, text="Clear", width=14, command=lambda: self.textEntry.delete(0, END), takefocus=0, state=DISABLED)
-        self.textEntryHideCharCheck = Checkbutton(self.encryptionFrame, text="Hide characters", variable=self.textEntryHideCharVar, onvalue=1, offvalue=0, command=toggleHideChar, takefocus=0)
-
-        self.fileEntryCheck = Radiobutton(self.encryptionFrame, text="File:", value=1, variable=self.dataSourceVar, command=changeDataSource, takefocus=0)
-        self.fileValidityLabel = Label(self.encryptionFrame, text="Validity: [Blank]", foreground="gray")
-        self.fileEntry = Entry(self.encryptionFrame, width=48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=self.fileEntryVar)
-        self.fileBrowseButton = Button(self.encryptionFrame, text="Browse...", tooltip="hi", width=14, state=DISABLED, command=fileEntryBrowse, takefocus=0)
-        self.fileClearButton = Button(self.encryptionFrame, text="Clear", width=14, state=DISABLED, command=lambda: self.fileEntry.delete(0, END), takefocus=0)
-
-        self.textEntryVar.trace("w", textEntryCallback)
-        self.fileEntryVar.trace("w", fileEntryCallback)
-
-        self.textEntryCheck.place(x=8, y=2)
-        self.textEntry.place(x=24, y=22)
-        self.textPasteButton.place(x=23, y=49)
-        self.textClearButton.place(x=124, y=49)
-        self.textEntryHideCharCheck.place(x=261, y=50)
-
-        self.fileEntryCheck.place(x=8, y=76)
-        self.fileValidityLabel.place(x=51, y=77)
-        self.fileEntry.place(x=24, y=96)
-        self.fileBrowseButton.place(x=23, y=123)
-        self.fileClearButton.place(x=124, y=123)
-
-        # Algorithm selection frame
-        def changeEnterKeySectionState(state = DISABLED):
-            self.keyEntry.configure(state=state)
-            self.keyEntryHideCharCheck.configure(state=state)
-            self.keyClearButton.configure(state=state)
-            self.keyPasteButton.configure(state=state)
-            self.keyBrowseButton.configure(state=state)
-            self.keyEnteredAlgDES.configure(state=state)
-            self.keyEnteredAlgAES.configure(state=state)
-
-        def changeGenerateKeySectionState(state = NORMAL):
-            self.AESAlgorithmCheck.configure(state=state)
-            self.DESAlgorithmCheck.configure(state=state)
-
-        def changeAESState(state = NORMAL):
-            self.AES128Check.configure(state=state)
-            self.AES192Check.configure(state=state)
-            self.AES256Check.configure(state=state)
-        
-        def changeDESState(state = DISABLED):
-            self.DES128Check.configure(state=state)
-            self.DES192Check.configure(state=state)
-
-        def changeAlgorithmSelection():
-            changeAESState(state = DISABLED if bool(self.generateAlgorithmSelection.get()) else NORMAL)
-            changeDESState(state = NORMAL if bool(self.generateAlgorithmSelection.get()) else DISABLED)
-
-        def changeSourceSelection():
-            changeGenerateKeySectionState(state = DISABLED if bool(self.keySourceSelection.get()) else NORMAL)
-            changeAESState(state = DISABLED if bool(self.keySourceSelection.get()) else DISABLED if bool(self.generateAlgorithmSelection.get()) else NORMAL)
-            changeDESState(state = DISABLED if bool(self.keySourceSelection.get()) else NORMAL if bool(self.generateAlgorithmSelection.get()) else DISABLED)
-            changeEnterKeySectionState(state = NORMAL if bool(self.keySourceSelection.get()) else DISABLED)
-
-            if bool(self.keySourceSelection.get()) and not len(self.keyEntry.get()) in [16, 24, 32]:
-                self.encryptButton.configure(state=DISABLED)
-
-            if not bool(self.keySourceSelection.get()):
-                if not self.keyValidityStatusLabel["foreground"] != "gray" and not "[Blank]" in self.keyValidityStatusLabel["text"]:
-                    self.keyValidityStatusColor = self.keyValidityStatusLabel["foreground"]
-                self.keyValidityStatusLabel.configure(foreground="gray")
-            else:
-                try:
-                    self.keyValidityStatusLabel.configure(foreground=self.keyValidityStatusColor)
-                except AttributeError:
-                    self.keyValidityStatusLabel.configure(foreground="gray")
-
-        def getKey(path: str) -> Optional[str]:
-            with open(path, encoding = 'utf-8', mode="r") as file:
-                global index
-                index = file.read()
-            index = str(index)
-            where = -1
-            for i in range(0, len(index)):
-                where += 1
-                key_to_try = index[where:where+32]
-                try:
-                    iv = base64.urlsafe_b64decode(index.replace(key_to_try, ""))[:16]
-                    aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CFB, iv=iv)
-                except:
-                    continue
-                else:
-                    try:
-                        output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")).replace(iv, b""))
-                        output_key = output_key.decode("utf-8")
-                    except:
-                        continue
-                    else:
-                        try:
-                            if len(output_key) == 16 or len(output_key) == 24 or len(output_key) == 32:
-                                return output_key
-                        except:
-                            continue
-            with open(path, encoding = 'utf-8', mode="r") as file:
-                if len(file.read()) == 16 or len(file.read()) == 24 or len(file.read()) == 32:
-                    return str(file.read())
-                else:
-                    return None
-
-        def getKeyFromFile():
-            path = filedialog.askopenfilename(title="Select key file", filetypes=[("Encrypt'n'Decrypt key file","*.key"),("Text document","*.txt"),("All files","*.*")])
-            if path == "":
-                return
-            if os.path.splitext(path)[1] != ".txt":
-                key = getKey(path)
-                if not key:
-                    messagebox.showwarning("ERR_INVALID_KEY_FILE","The specified file does not contain any valid key for encryption.")
-                    return
-            else:
-                with open(path, encoding="utf-8", mode="r") as file:
-                    key = file.read()
-            self.keyEntry.delete(0, END)
-            self.keyEntry.insert(0, key)
-
-        def limitKeyEntry(*args, **kwargs):
-            global value
-            if len(self.keyEntryVar.get()) > 32:
-                self.keyEntryVar.set(self.keyEntryVar.get()[:32])
-            value = self.keyEntryVar.get()
-            if len(value) == 0 or ''.join(str(self.keyEntryVar.get()).split()) == "":
-                self.keyValidityStatusLabel.configure(foreground="gray", text="Validity: [Blank]")
-                self.encryptButton.configure(state=DISABLED)
-            else:
-                if not bool(self.keySourceSelection.get()):
-                    cond = bool(self.generateAlgorithmSelection.get())
-                else:
-                    cond = bool(self.entryAlgorithmSelection.get())
-                iv = get_random_bytes(AES.block_size if not cond else DES3.block_size)
-                try:
-                    if not cond:
-                        AES.new(bytes(value, 'utf-8'), mode=AES.MODE_OFB, iv=iv)
-                    else:
-                        DES3.new(bytes(value, 'utf-8'), mode=DES3.MODE_OFB, iv=iv)
-                except:
-                    if not len(value) in [16, 24, 32]:
-                        self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid Key")
-                    else:
-                        self.keyValidityStatusLabel.configure(foreground="red", text=f"Validity: Invalid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
-                    if "3DES-256" in self.keyValidityStatusLabel["text"]:
-                        self.keyValidityStatusLabel.configure(text="Validity: Invalid Key")
-                    self.encryptButton.configure(state=DISABLED)
-                else:
-                    self.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
-                    self.encryptButton.configure(state=NORMAL)
-
-        self.algorithmSelect = Notebook(self.encryptionFrame, width=355, height=290, takefocus=0)
-        self.symmetricEncryption = Frame(self.algorithmSelect, takefocus=0)
-        self.asymmetricEncryption = Frame(self.algorithmSelect, takefocus=0)
-
-        self.algorithmSelect.add(self.symmetricEncryption, text="Symmetric Key Encryption")
-        self.algorithmSelect.add(self.asymmetricEncryption, text="Asymmetric Key Encryption")
-
-        self.generateRandomKeyCheck = Radiobutton(self.symmetricEncryption, text="Generate a random key", value=0, variable=self.keySourceSelection, command=changeSourceSelection, takefocus=0)
-
-        self.AESAlgorithmCheck = Radiobutton(self.symmetricEncryption, text="AES (Advanced Encryption Standard)", value=0, variable=self.generateAlgorithmSelection, command=changeAlgorithmSelection, takefocus=0)
-        self.AES128Check = Radiobutton(self.symmetricEncryption, text="AES-128 Key", value=128, variable=self.generateRandomAESVar, takefocus=0)
-        self.AES192Check = Radiobutton(self.symmetricEncryption, text="AES-192 Key", value=192, variable=self.generateRandomAESVar, takefocus=0)
-        self.AES256Check = Radiobutton(self.symmetricEncryption, text="AES-256 Key", value=256, variable=self.generateRandomAESVar, takefocus=0)
-
-        self.DESAlgorithmCheck = Radiobutton(self.symmetricEncryption, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.generateAlgorithmSelection, command=changeAlgorithmSelection, takefocus=0)
-        self.DES128Check = Radiobutton(self.symmetricEncryption, text="3DES-128 Key", value=128, state=DISABLED, variable=self.generateRandomDESVar, takefocus=0)
-        self.DES192Check = Radiobutton(self.symmetricEncryption, text="3DES-192 Key", value=192, state=DISABLED, variable=self.generateRandomDESVar, takefocus=0)
-        
-        self.selectKeyCheck = Radiobutton(self.symmetricEncryption, text="Use this key:", value=1, variable=self.keySourceSelection, command=changeSourceSelection, takefocus=0)
-        
-        self.keyEntry = Entry(self.symmetricEncryption, width=46, font=("Consolas",9), state=DISABLED, textvariable=self.keyEntryVar, takefocus=0)
-        self.keyValidityStatusLabel = Label(self.symmetricEncryption, text="Validity: [Blank]", foreground="gray", takefocus=0)
-        self.keyEntryHideCharCheck = Checkbutton(self.symmetricEncryption, text="Hide characters", onvalue=1, offvalue=0, variable=self.keyEntryHideCharVar, state=DISABLED, takefocus=0)
-        self.keyBrowseButton = Button(self.symmetricEncryption, text="Browse key file...", width=21, state=DISABLED, command=getKeyFromFile, takefocus=0)
-        self.keyPasteButton = Button(self.symmetricEncryption, text="Paste", width=13, state=DISABLED, command=lambda: (self.keyEntry.delete(0, END), self.keyEntry.insert(0, self.clipboard_get())), takefocus=0)
-        self.keyClearButton = Button(self.symmetricEncryption, text="Clear", width=13, state=DISABLED, command=lambda: self.keyEntry.delete(0, END), takefocus=0)
-        self.keyEnteredAlgAES = Radiobutton(self.symmetricEncryption, text="AES (Advanced Encryption Standard)", value=0, variable=self.entryAlgorithmSelection, command=limitKeyEntry, state=DISABLED, takefocus=0)
-        self.keyEnteredAlgDES = Radiobutton(self.symmetricEncryption, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.entryAlgorithmSelection, command=limitKeyEntry, state=DISABLED, takefocus=0)
-        
-        self.keyEntryVar.trace("w", limitKeyEntry)
-        self.algorithmSelect.place(x=10, y=155)
-        self.generateRandomKeyCheck.place(x=5, y=5)
-        self.AESAlgorithmCheck.place(x=16, y=25)
-        self.AES128Check.place(x=27, y=44)
-        self.AES192Check.place(x=27, y=63)
-        self.AES256Check.place(x=27, y=82)
-        self.DESAlgorithmCheck.place(x=16, y=101)
-        self.DES128Check.place(x=27, y=120)
-        self.DES192Check.place(x=27, y=139)
-        self.keyEntry.place(x=18, y=181)
-        self.keyValidityStatusLabel.place(x=92, y=159)
-        self.keyClearButton.place(x=114, y=207)
-        self.keyPasteButton.place(x=17, y=207)
-        self.keyBrowseButton.place(x=211, y=207)
-        self.keyEntryHideCharCheck.place(x=244, y=158)
-        self.selectKeyCheck.place(x=5, y=158)
-        self.keyEnteredAlgAES.place(x=16, y=235)
-        self.keyEnteredAlgDES.place(x=16, y=254)
-
-        # Output section & encrypt 
-        def saveOutput():
-            files = [("Text document","*.txt"),("All files","*.*")]
-            path = filedialog.asksaveasfilename(title="Save encrypted data", initialfile="Encrypted Data.txt", filetypes=files, defaultextension="*.txt")
-            if path == "":
-                return
-            with open(path, encoding="utf-8", mode="w") as file:
-                file.write(self.outputVar.get())
-
-        def saveKey(path, key):
-            key_to_use = self.crypto.generateKey(32)
-
-            data = bytes(key, "utf-8")
-            iv = get_random_bytes(AES.block_size)
-            cipher = AES.new(bytes(key_to_use, "utf-8"), AES.MODE_CFB, iv=iv)
-            rawResult = iv + cipher.encrypt(data)
-
-            result = base64.urlsafe_b64encode(rawResult).decode()
-            iv = rawResult[:16]
-            aes = AES.new(bytes(key_to_use, "utf-8"), AES.MODE_CFB, iv=iv)
-            plaintext = aes.decrypt(rawResult.replace(iv, b""))
-
-            if plaintext.decode("utf-8") == key:
-                first_part = randint(0, len(result))
-                encrypted_key = result[:first_part] + key_to_use + result[first_part:]
-                try:
-                    os.remove(path)
-                except:
-                    pass
-                finally:
-                    with open(path, encoding = 'utf-8', mode="w") as file:
-                        file.write(str(encrypted_key))
-
-        def saveAESKey():
-            files = [("Encrypt'n'Decrypt key file","*.key"),("Text document","*.txt"),("All files","*.*")]
-            path = filedialog.asksaveasfilename(title="Save encryption key", initialfile="Encryption Key.key", filetypes=files, defaultextension="*.key")
-            if path == "":
-                return
-            if os.path.splitext(path)[1] == ".key":
-                saveKey(path, self.AESKeyVar.get())
-            else:
-                with open(path, encoding="utf-8", mode="w") as file:
-                    file.write(self.AESKeyVar.get())
-
-        def saveRSAPublic():
-            files = [("Text document","*.txt"),("All files","*.*")]
-            path = filedialog.asksaveasfilename(title="Save public key", initialfile="Public Key.txt", filetypes=files, defaultextension="*.txt")
-            if path == "":
-                return
-            with open(path, encoding="utf-8", mode="w") as file:
-                file.write(self.RSAPublicVar.get())
-
-        def saveRSAPrivate():
-            files = [("Text document","*.txt"),("All files","*.*")]
-            path = filedialog.asksaveasfilename(title="Save private key", initialfile="Private Key.txt", filetypes=files, defaultextension="*.txt")
-            if path == "":
-                return
-            with open(path, encoding="utf-8", mode="w") as file:
-                file.write(self.RSAPrivateVar.get())
-
-        def outputTextCallback(*args, **kwargs):
-            if self.outputVar.get() == "":
-                self.outputText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
-                self.clearOutputButton.configure(state=DISABLED)
-                self.copyOutputButton.configure(state=DISABLED)
-                self.saveOutputButton.configure(state=DISABLED)
-            else:
-                self.outputText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
-                self.clearOutputButton.configure(state=NORMAL)
-                self.copyOutputButton.configure(state=NORMAL)
-                self.saveOutputButton.configure(state=NORMAL)
-
-        def AESKeyTextCallback(*args, **kwargs):
-            if self.AESKeyVar.get() == "":
-                self.AESKeyText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
-                self.clearAESKeyButton.configure(state=DISABLED)
-                self.copyAESKeyButton.configure(state=DISABLED)
-                self.saveAESKeyButton.configure(state=DISABLED)
-            else:
-                self.AESKeyText.configure(bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
-                self.clearAESKeyButton.configure(state=NORMAL)
-                self.copyAESKeyButton.configure(state=NORMAL)
-                self.saveAESKeyButton.configure(state=NORMAL)
-
-        self.encryptButton = Button(self.encryptionFrame, text="Encrypt", width=22, command=self.crypto.encrypt, takefocus=0)
-        self.writeFileContentCheck = Checkbutton(self.encryptionFrame, text="Write encrypted data to the file", variable=self.writeFileContentVar, state=DISABLED, takefocus=0)
-
-        self.outputFrame = LabelFrame(self.encryptionFrame, text="Output", height=502, width=403, takefocus=0)
-
-        self.outputText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.outputVar, highlightcolor="#cccccc")
-        self.AESKeyText = Text(self.outputFrame, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.AESKeyVar, highlightcolor="#cccccc")
-        self.RSAPublicText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
-        self.RSAPrivateText = ScrolledText(self.outputFrame, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
-        self.AESKeyLabel = Label(self.outputFrame, text="AES/3DES Key:", takefocus=0)
-        self.RSAPublicLabel = Label(self.outputFrame, text="RSA Public Key:", takefocus=0)
-        self.RSAPrivateLabel = Label(self.outputFrame, text="RSA Private Key:", takefocus=0)
-
-        self.outputVar.trace("w", outputTextCallback)
-        self.AESKeyVar.trace("w", AESKeyTextCallback)
-
-        self.copyOutputButton = Button(self.outputFrame, text = "Copy", width=10, command=lambda: self.clipboard_set(self.lastResult), state=DISABLED, takefocus=0)
-        self.clearOutputButton = Button(self.outputFrame, text = "Clear", width=10, command=lambda: (self.outputText.configure(state=NORMAL), self.outputText.delete("1.0", END), self.outputText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
-        self.saveOutputButton = Button(self.outputFrame, width=15, text="Save as...", command=saveOutput, state=DISABLED, takefocus=0)
-        self.copyAESKeyButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.clipboard_set(self.AESKeyText.get("1.0", END)), state=DISABLED, takefocus=0)
-        self.clearAESKeyButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.AESKeyText.configure(state=NORMAL), self.AESKeyText.delete("1.0", END), self.AESKeyText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
-        self.saveAESKeyButton = Button(self.outputFrame, width=15, text="Save as...", command=saveAESKey, state=DISABLED, takefocus=0)
-        self.copyRSAPublicButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.clipboard_set(self.RSAPublicText.get("1.0", END)), state=DISABLED, takefocus=0)
-        self.clearRSAPublicButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.RSAPublicText.configure(state=NORMAL), self.RSAPublicText.delete("1.0", END), self.RSAPublicText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
-        self.saveRSAPublicButton = Button(self.outputFrame, width=15, text="Save as...", command=saveRSAPublic, state=DISABLED, takefocus=0)
-        self.copyRSAPrivateButton = Button(self.outputFrame, width = 10, text="Copy", command=lambda: self.clipboard_set(self.RSAPrivateText.get("1.0", END)), state=DISABLED, takefocus=0)
-        self.clearRSAPrivateButton = Button(self.outputFrame, width = 10, text="Clear", command=lambda: (self.RSAPrivateText.configure(state=NORMAL), self.RSAPrivateText.delete("1.0", END), self.RSAPrivateText.configure(state=DISABLED)), state=DISABLED, takefocus=0)
-        self.saveRSAPrivateButton = Button(self.outputFrame, width=15, text="Save as...", command=saveRSAPrivate, state=DISABLED, takefocus=0)
-
-        self.statusBar = TkLabel(self, text="Status: Ready", bd=1, relief=SUNKEN, anchor=W)
-
-        self.encryptButton.place(x=9, y=480)
-        self.writeFileContentCheck.place(x=160, y=482)
-        self.outputText.place(x=9, y=5)
-
-        self.AESKeyText.place(x=9, y=145)
-        self.RSAPublicText.place(x=9, y=215)
-        self.RSAPrivateText.place(x=9, y=355)
-        self.AESKeyLabel.place(x=8, y=125)
-        self.RSAPublicLabel.place(x=8, y=194)
-        self.RSAPrivateLabel.place(x=8, y=334)
-
-        self.copyOutputButton.place(x=8, y=100)
-        self.clearOutputButton.place(x=85, y=100)
-        self.saveOutputButton.place(x=162, y=100)
-        self.copyAESKeyButton.place(x=8, y=170)
-        self.clearAESKeyButton.place(x=85, y=170)
-        self.saveAESKeyButton.place(x=162, y=170)
-        self.copyRSAPublicButton.place(x=8, y=309)
-        self.clearRSAPublicButton.place(x=85, y=309)
-        self.saveRSAPublicButton.place(x=162, y=309)
-        self.copyRSAPrivateButton.place(x=8, y=449)
-        self.clearRSAPrivateButton.place(x=85, y=449)
-        self.saveRSAPrivateButton.place(x=162, y=449)
-
-        self.statusBar.pack(side=BOTTOM, fill=X)
-
-        self.outputFrame.place(x=377, y=4)
 
     def __initialize_vars(self):
         self.showTextChar = IntVar(value=0)
