@@ -223,7 +223,7 @@ class Crypto:
         else:
             self.updateStatus("Reading the file...")
             try:
-                with open(self.master.fileDecryptEntry.get(), mode="r+b") as file:
+                with open(self.master.decryptionFrame.fileDecryptEntry.get(), mode="r+b") as file:
                     data = file.read()
             except PermissionError:
                 messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
@@ -234,7 +234,7 @@ class Crypto:
             try:
                 decodedData = base64.urlsafe_b64decode(data)
             except:
-                messagebox.showerror("Unencrypted file", f"This file seems to be not encrypted using AES nor DES symmetric key encryption algorithm.")
+                messagebox.showerror("Unencrypted file", f"This file seems to be not encrypted using {'AES' if not bool(self.master.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
                 self.master.logger.error("Unencrypted file specified.")
                 self.updateStatus("Ready")
                 return
@@ -243,7 +243,7 @@ class Crypto:
                     data = decodedData
                     del decodedData
                 else:
-                    messagebox.showerror("Unencrypted file", f"This file seems to be not encrypted using AES nor DES symmetric key encryption algorithm.")
+                    messagebox.showerror("Unencrypted file", f"This file seems to be not encrypted using {'AES' if not bool(self.master.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
                     self.master.logger.error("Unencrypted file specified.")
                     self.updateStatus("Ready")
                     return
@@ -257,7 +257,12 @@ class Crypto:
             else:
                 cipher = DES3.new(key, DES3.MODE_OFB, iv=iv)
         except ValueError as details:
-            if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
+            if (len(iv)) != 16 if not bool(self.master.decryptAlgorithmVar.get()) else 8:
+                messagebox.showerror("Unencrypted data", f"The text you've entered seems to be not encrypted using {'AES' if not bool(self.master.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
+                self.master.logger.error("Unencrypted text entered.")
+                self.updateStatus("Ready")
+                return
+            elif not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
                 messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
                 self.master.logger.error("Key with invalid length specified for decryption.")
                 self.updateStatus("Ready")
@@ -279,7 +284,7 @@ class Crypto:
         self.updateStatus("Writing to the file...")
         if bool(self.master.decryptSourceVar.get()):
             try:
-                with open(self.master.fileDecryptEntry.get(), mode="wb") as file:
+                with open(self.master.decryptionFrame.fileDecryptEntry.get(), mode="wb") as file:
                     file.write(result)
             except PermissionError:
                 messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure write access for the file is permitted.")
@@ -291,15 +296,21 @@ class Crypto:
         try:
             result = result.decode("utf-8")
         except UnicodeDecodeError:
-            self.master.decryptOutputText.configure(foreground="gray")
-            self.master.decryptOutputText.replace("Decrypted data is not being displayed because it's in an unknown encoding.")
+            if bool(self.master.decryptSourceVar.get()):
+                self.master.decryptionFrame.decryptOutputText.configure(foreground="gray")
+                self.master.decryptionFrame.decryptOutputText.replace("Decrypted data is not being displayed because it's in an unknown encoding.")
+            else:
+                messagebox.showerror("Invalid key", "The encryption key you've entered seems to be not the right key. Make sure you've entered the correct key.")
+                self.master.logger.error("Wrong key entered for decryption.")
+                self.updateStatus("Ready")
+                return
         else:
             if not len(result) > 15000:
-                self.master.decryptOutputText.configure(foreground="black")
-                self.master.decryptOutputText.replace(result)
+                self.master.decryptionFrame.decryptOutputText.configure(foreground="black")
+                self.master.decryptionFrame.decryptOutputText.replace(result)
             else:
-                self.master.decryptOutputText.configure(foreground="gray")
-                self.master.decryptOutputText.replace("Decrypted data is not being displayed because it's longer than 15.000 characters.")
+                self.master.decryptionFrame.decryptOutputText.configure(foreground="gray")
+                self.master.decryptionFrame.decryptOutputText.replace("Decrypted data is not being displayed because it's longer than 15.000 characters.")
         self.updateStatus("Ready")
 
 class loggingHandler(logging.Handler):
@@ -810,16 +821,16 @@ class EncryptnDecrypt(Tk):
                         self.master.master.master.outputVar.trace("w", self.outputTextCallback)
                         self.master.master.master.AESKeyVar.trace("w", self.AESKeyTextCallback)
 
-                        self.copyOutputButton = Button(self, text = "Copy", width=10, command=lambda: self.master.master.clipboard_set(self.master.master.lastResult), state=DISABLED, takefocus=0)
+                        self.copyOutputButton = Button(self, text = "Copy", width=10, command=lambda: self.master.master.master.clipboard_set(self.master.master.master.lastResult), state=DISABLED, takefocus=0)
                         self.clearOutputButton = Button(self, text = "Clear", width=10, command=lambda: self.outputText.clear(), state=DISABLED, takefocus=0)
                         self.saveOutputButton = Button(self, width=15, text="Save as...", command=self.saveOutput, state=DISABLED, takefocus=0)
-                        self.copyAESKeyButton = Button(self, width = 10, text="Copy", command=lambda: self.master.master.clipboard_set(self.AESKeyText.get("1.0", END)), state=DISABLED, takefocus=0)
+                        self.copyAESKeyButton = Button(self, width = 10, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.AESKeyText.get("1.0", END)), state=DISABLED, takefocus=0)
                         self.clearAESKeyButton = Button(self, width = 10, text="Clear", command=lambda: self.AESKeyText.clear(), state=DISABLED, takefocus=0)
                         self.saveAESKeyButton = Button(self, width=15, text="Save as...", command=self.saveAESKey, state=DISABLED, takefocus=0)
-                        self.copyRSAPublicButton = Button(self, width = 10, text="Copy", command=lambda: self.master.master.clipboard_set(self.RSAPublicText.get("1.0", END)), state=DISABLED, takefocus=0)
+                        self.copyRSAPublicButton = Button(self, width = 10, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.RSAPublicText.get("1.0", END)), state=DISABLED, takefocus=0)
                         self.clearRSAPublicButton = Button(self, width = 10, text="Clear", command=lambda: self.RSAPublicText.clear(), state=DISABLED, takefocus=0)
                         self.saveRSAPublicButton = Button(self, width=15, text="Save as...", command=self.saveRSAPublic, state=DISABLED, takefocus=0)
-                        self.copyRSAPrivateButton = Button(self, width = 10, text="Copy", command=lambda: self.master.master.clipboard_set(self.RSAPrivateText.get("1.0", END)), state=DISABLED, takefocus=0)
+                        self.copyRSAPrivateButton = Button(self, width = 10, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.RSAPrivateText.get("1.0", END)), state=DISABLED, takefocus=0)
                         self.clearRSAPrivateButton = Button(self, width = 10, text="Clear", command=lambda: self.RSAPrivateText.clear(), state=DISABLED, takefocus=0)
                         self.saveRSAPrivateButton = Button(self, width=15, text="Save as...", command=self.saveRSAPrivate, state=DISABLED, takefocus=0)
 
@@ -942,14 +953,14 @@ class EncryptnDecrypt(Tk):
                     self.encryptButton.configure(state=DISABLED)
 
                 if not bool(self.master.master.keySourceSelection.get()):
-                    if not self.symmetricEncryption.keyValidityStatusLabel["foreground"] != "gray" and not "[Blank]" in self.symmetricEncryption.keyValidityStatusLabel["text"]:
-                        self.master.master.keyValidityStatusColor = self.symmetricEncryption.keyValidityStatusLabel["foreground"]
                     self.symmetricEncryption.keyValidityStatusLabel.configure(foreground="gray")
                 else:
-                    try:
-                        self.symmetricEncryption.keyValidityStatusLabel.configure(foreground=self.master.master.keyValidityStatusColor)
-                    except AttributeError:
-                        self.symmetricEncryption.keyValidityStatusLabel.configure(foreground="gray")
+                    colors = {
+                        "Validity: Valid": "green",
+                        "Validity: Invalid": "red",
+                        "Validity: [Blank]": "gray"
+                    }
+                    self.symmetricEncryption.keyValidityStatusLabel.configure(foreground=colors[" ".join(self.symmetricEncryption.keyValidityStatusLabel["text"].split()[:2])])
 
             def getKey(self, path: str) -> Optional[str]:
                 with open(path, encoding = 'utf-8', mode="r") as file:
@@ -1090,16 +1101,19 @@ class EncryptnDecrypt(Tk):
                 if self.fileEntry.get() != "":
                     if os.path.isfile(self.fileEntry.get()):
                         try:
-                            with open(self.fileEntry.get()) as _:
-                                pass
+                            if os.path.getsize(self.fileEntry.get()) < 104857600:
+                                with open(self.fileEntry.get(), mode="rb") as file:
+                                    content = file.read()
+                            else:
+                                self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
                         except OSError:
                             self.fileValidityLabel.configure(text="Validity: Read access was denied", foreground="red")
                         else:
                             try:
-                                with open(self.fileEntry.get(), mode="wb") as _:
-                                    pass
+                                with open(self.fileEntry.get(), mode="wb") as file:
+                                    file.write(content)
                             except OSError:
-                                self.fileValidityLabel.configure(text="Validity: Encryptable but not writable", foreground="orange")
+                                self.fileValidityLabel.configure(text="Validity: Encryptable but not writable", foreground="#c6832a")
                             else:
                                 self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
                     else:
@@ -1146,9 +1160,6 @@ class EncryptnDecrypt(Tk):
                 self.fileDecryptBrowseButton = Button(self, width=15, text="Browse...", state=DISABLED, command=self.decryptBrowseFile, takefocus=0)
                 self.fileDecryptClearButton = Button(self, width=15, text="Clear", state=DISABLED, command=lambda: self.fileDecryptEntry.delete(0, END), takefocus=0)
 
-                self.master.master.textDecryptVar.trace("w", self.textDecryptCallback)
-                self.master.master.fileDecryptVar.trace("w", self.fileDecryptCallback)
-
                 self.decryptNotebook = Notebook(self, height=160, width=765, takefocus=0)
                 self.symmetricDecryption = Frame(self.decryptNotebook, takefocus=0)
                 self.asymmetricEncryption = Frame(self.decryptNotebook, takefocus=0)
@@ -1164,8 +1175,6 @@ class EncryptnDecrypt(Tk):
                 self.decryptKeyPasteButton = Button(self.decryptKeyFrame, width=15, text="Paste", takefocus=0, command=lambda: self.decryptKeyEntry.replace(self.master.master.clipboard_get()))
                 self.decryptKeyClearButton = Button(self.decryptKeyFrame, width=15, text="Clear", takefocus=0, command=lambda: self.decryptKeyEntry.delete(0, END), state=DISABLED)
 
-                self.master.master.decryptKeyVar.trace("w", self.decryptLimitKeyEntry)
-
                 self.decryptButton = Button(self, width=22, text="Decrypt", command=self.master.master.crypto.decrypt, takefocus=0, state=DISABLED)
                 self.decryptOutputFrame = LabelFrame(self, text="Decrypted text", height=84, width=766, takefocus=0)
                 self.decryptOutputText = Text(self.decryptOutputFrame, width=105, height=1, font=("Consolas", 9), state=DISABLED, bg="#F0F0F0", relief=FLAT, highlightbackground="#cccccc", highlightthickness=1, takefocus=0, textvariable=self.master.master.decryptOutputVar, highlightcolor="#cccccc")
@@ -1173,6 +1182,9 @@ class EncryptnDecrypt(Tk):
                 self.decryptClearButton = Button(self.decryptOutputFrame, text="Clear", width=17, takefocus=0, state=DISABLED)
                 self.decryptSaveButton = Button(self.decryptOutputFrame, text="Save as...", width=20, takefocus=0, state=DISABLED)
 
+                self.master.master.textDecryptVar.trace("w", self.textDecryptCallback)
+                self.master.master.fileDecryptVar.trace("w", self.fileDecryptCallback)
+                self.master.master.decryptKeyVar.trace("w", self.decryptLimitKeyEntry)
                 self.master.master.decryptOutputVar.trace("w", self.decryptOutputCallback)
 
                 self.textDecryptRadio.place(x=8, y=2)
@@ -1283,10 +1295,16 @@ class EncryptnDecrypt(Tk):
                     except:
                         self.decryptButton.configure(state=DISABLED)
                     else:
-                        if not ''.join(str(self.fileDecryptEntry.get()).split()) == "" and os.path.isfile(self.fileDecryptEntry.get()):
-                            self.decryptButton.configure(state=NORMAL)
+                        if not bool(self.master.master.decryptSourceVar.get()):
+                            if ''.join(self.textDecryptEntry.get("1.0", END).split()) != "" and base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.textDecryptEntry.get("1.0", END).encode("utf-8"))) == self.textDecryptEntry.get("1.0", END).rstrip().encode("utf-8"):
+                                self.decryptButton.configure(state=NORMAL)
+                            else:
+                                self.decryptButton.configure(state=DISABLED)
                         else:
-                            self.decryptButton.configure(state=DISABLED)
+                            if os.path.isfile(self.fileDecryptEntry.get()):
+                                self.decryptButton.configure(state=NORMAL)
+                            else:
+                                self.decryptButton.configure(state=DISABLED)
             
             def decryptBrowseFile(self):
                 files = [("All files","*.*")]
@@ -1310,28 +1328,33 @@ class EncryptnDecrypt(Tk):
 
                 class base64Frame(LabelFrame):
                     def __init__(self, master: Frame = None):
-                        super().__init__(master=master, height=200, width=410, text="Base64 encoding/decoding")
+                        super().__init__(master=master, height=250, width=410, text="Base64 encoding/decoding")
 
-                        self.base64InputLabel = Label(self, text="Input")
+                        self.base64InputLabel = Label(self, text="Input", takefocus=0)
                         self.base64InputText = ScrolledText(self, height=4, width=45, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                        self.inputClearButton = Button(self, width=15, text="Clear", command=self.base64InputText.clear, takefocus=0)
+                        self.inputPasteButton = Button(self, width=15, text="Paste", command=lambda: self.base64InputText.replace(self.master.master.master.clipboard_get()), takefocus=0)
 
                         class encodeOrDecodeFrame(LabelFrame):
                             def __init__(self, master: LabelFrame = None):
                                 super().__init__(master=master, height=65, width=382, text="Encode/decode")
 
-                                self.encodeRadiobutton = Radiobutton(self, text="Encode")
-                                self.decodeRadiobutton = Radiobutton(self, text="Decode")
+                                self.encodeRadiobutton = Radiobutton(self, text="Encode", value=0, variable=self.master.master.master.master.encodeOrDecodeVar, takefocus=0)
+                                self.decodeRadiobutton = Radiobutton(self, text="Decode", value=1, variable=self.master.master.master.master.encodeOrDecodeVar, takefocus=0)
 
                                 self.encodeRadiobutton.place(x=10, y=0)
                                 self.decodeRadiobutton.place(x=10, y=21)
 
-                        
-                        self.base64OutputLabel = Label(self, text="Output")
+                        self.base64OutputLabel = Label(self, text="Output", takefocus=0)
                         self.base64OutputText = ScrolledText(self, height=4, width=44, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
-                        
+
                         self.base64InputLabel.place(x=8, y=0)
                         self.base64InputText.place(x=10, y=22)
-                        encodeOrDecodeFrame(self).place(x=10, y=95)
+                        self.inputClearButton.place(x=9, y=98)
+                        self.inputPasteButton.place(x=116, y=98)
+
+                        self.encodeOrDecodeFrame = encodeOrDecodeFrame(self)
+                        self.encodeOrDecodeFrame.place(x=10, y=125)
 
                 base64Frame(self).place(x=10, y=5)
 
@@ -1432,6 +1455,8 @@ class EncryptnDecrypt(Tk):
         self.fileDecryptVar = StringVar()
         self.decryptKeyVar = StringVar()
         self.decryptOutputVar = StringVar()
+
+        self.encodeOrDecodeVar = IntVar(value=0)
 
     def __initialize_menu(self):
         self.menuBar = Menu(self)
