@@ -40,6 +40,7 @@ from webbrowser import open as openweb
 from string import ascii_letters, digits
 from datetime import datetime
 from random import randint, choice
+from ttkthemes import ThemedStyle
 from hurry.filesize import size, alternative
 
 from Crypto.Cipher import AES, PKCS1_OAEP, DES3
@@ -194,6 +195,10 @@ class Crypto:
                 self.master.mainNotebook.encryptionFrame.outputFrame.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
 
             self.master.mainNotebook.encryptionFrame.outputFrame.AESKeyText.replace(key.decode("utf-8"))
+            self.master.mainNotebook.encryptionFrame.outputFrame.RSAPublicText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
+            self.master.mainNotebook.encryptionFrame.outputFrame.RSAPrivateText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
+            self.master.mainNotebook.encryptionFrame.outputFrame.RSAPublicText.clear()
+            self.master.mainNotebook.encryptionFrame.outputFrame.RSAPrivateText.clear()
 
             self.updateStatus("Ready")
             if not failure:
@@ -672,6 +677,9 @@ class EncryptnDecrypt(Tk):
         global version
 
         super().__init__()
+
+        self.theme = ThemedStyle(self)
+        self.theme.set_theme("vista")
 
         self.withdraw()
 
@@ -1623,8 +1631,7 @@ class EncryptnDecrypt(Tk):
 
     def __initialize_bindings(self):
         def encrypt(*args, **kwargs):
-            if self.mainNotebook.encryptionFrame.encryptButton["state"] == NORMAL:
-                self.crypto.encrypt()
+            self.crypto.encrypt()
         def give_focus(*args, **kwargs):
             self.after(200, self.encryptionFrame.textEntry.focus_set())
         def changeTab(*args, **kwargs):
