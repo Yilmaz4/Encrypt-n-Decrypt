@@ -672,6 +672,11 @@ class LabelFrame(LabelFrame):
     def clipboard_set(self, text: str = None):
         pyperclip.copy(text)
 
+THEMES = [
+    "adapta", "aquativo", "arc", "black", "blue", "breeze", "clearlooks", "elegance", "equilux", "itft1", "keramik", "winxpblue", "yaru",
+    "kroc", "plastik", "radiance", "scidblue", "scidgreen", "scidgrey", "scidmint", "scidpink", "scidpurple", "scidsand", "smog", "ubuntu"
+]
+
 class EncryptnDecrypt(Tk):
     def __init__(self):
         global version
@@ -1513,6 +1518,7 @@ class EncryptnDecrypt(Tk):
         self.windowAlpha = IntVar(value=1)
         self.updateInterval = IntVar(value=1)
         self.languageVar = IntVar(value=0)
+        self.themeVar = StringVar(value="vista")
 
         self.generateRandomAESVar = IntVar(value=256)
         self.generateRandomDESVar = IntVar(value=192)
@@ -1592,7 +1598,6 @@ class EncryptnDecrypt(Tk):
                                 self.add_cascade(menu=self.speedMenu, label="Titlebar update interval")
                         self.titleMenu = titleMenu(self)
                         self.add_cascade(menu=self.titleMenu, label = "Window titlebar configuration")
-                        self.add_separator()
                         class opacityMenu(Menu):
                             def __init__(self, master: viewMenu):
                                 super().__init__(master, tearoff=0)
@@ -1606,6 +1611,40 @@ class EncryptnDecrypt(Tk):
                                 self.add_command(label = "Reset opacity", command=lambda: self.attributes("-alpha", 10), accelerator="Ctrl+Alt+O", underline=6)
                         self.opacityMenu = opacityMenu(self)
                         self.add_cascade(menu=self.opacityMenu, label="Window opacity configuration")
+                        class themeMenu(Menu):
+                            def __init__(self, master: viewMenu):
+                                super().__init__(master, tearoff=0)
+                                self.add_radiobutton(label="Adapta", value="adapta", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("adapta"), accelerator="adapta")
+                                self.add_radiobutton(label="Aquativo", value="aquativo", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("aquativo"), accelerator="aquativo")
+                                self.add_radiobutton(label="Arc", value="arc", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("arc"), accelerator="arc")
+                                self.add_radiobutton(label="Black", value="black", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("black"), accelerator="black")
+                                self.add_radiobutton(label="Blue", value="blue", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("blue"), accelerator="blue")
+                                self.add_radiobutton(label="Breeze", value="breeze", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("breeze"), accelerator="breeze")
+                                self.add_radiobutton(label="Clearlooks", value="clearlooks", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("clearlooks"), accelerator="clearlooks")
+                                self.add_radiobutton(label="Elegance", value="elegance", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("elegance"), accelerator="elegance")
+                                self.add_radiobutton(label="Equilux", value="equilux", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("equilux"), accelerator="equilux")
+                                self.add_radiobutton(label="Itft1", value="itft1", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("itft1"), accelerator="itft1")
+                                self.add_radiobutton(label="Keramik", value="keramik", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("keramik"), accelerator="keramik")
+                                self.add_radiobutton(label="Kroc", value="kroc", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("kroc"), accelerator="kroc")
+                                self.add_radiobutton(label="Plastik", value="plastik", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("plastik"), accelerator="plastik")
+                                self.add_radiobutton(label="Radiance", value="radiance", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("radiance"), accelerator="radiance")
+                                self.add_radiobutton(label="Scidblue", value="scidblue", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidblue"), accelerator="scidblue")
+                                self.add_radiobutton(label="Scidgreen", value="scidgreen", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidgreen"), accelerator="scidgreen")
+                                self.add_radiobutton(label="Scidgrey", value="scidgrey", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidgrey"), accelerator="scidgrey")
+                                self.add_radiobutton(label="Scidmint", value="scidmint", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidmint"), accelerator="scidmint")
+                                self.add_radiobutton(label="Scidpink", value="scidpink", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidpink"), accelerator="scidpink")
+                                self.add_radiobutton(label="Scidpurple", value="scidpurple", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidpurple"), accelerator="scidpurple")
+                                self.add_radiobutton(label="Scidsand", value="scidsand", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidsand"), accelerator="scidsand")
+                                self.add_radiobutton(label="Smog", value="smog", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("smog"), accelerator="smog")
+                                self.add_radiobutton(label="Ubuntu", value="ubuntu", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("ubuntu"), accelerator="ubuntu")
+                                self.add_radiobutton(label="Windows XP Blue", value="winxpblue", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("winxpblue"), accelerator="winxpblue")
+                                self.add_radiobutton(label="Yaru", value="yaru", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("yaru"), accelerator="yaru")
+                                self.add_separator()
+                                self.add_command(label="Reset theme", command=lambda: self.master.master.master.theme.set_theme("vista"), accelerator="Ctrl+Alt+T")
+                            def changeTheme(self, theme: str = "vista"):
+                                self.master.master.master.theme.set_theme(theme)
+                        self.themeMenu = themeMenu(self)
+                        self.add_cascade(menu=self.themeMenu, label="Window theme configuration")
                         self.add_separator()
                         class langMenu(Menu):
                             def __init__(self, master: viewMenu):
@@ -1665,6 +1704,13 @@ class EncryptnDecrypt(Tk):
 
         self.bind("<Return>", encrypt)
         self.bind("<Tab>", give_focus)
+
+        self.bind("<Control_L><Alt_L>t", lambda _: self.theme.set_theme("vista"))
+        self.bind("<Control_L>e", lambda _: self.mainNotebook.select(0))
+        self.bind("<Control_L>d", lambda _: self.mainNotebook.select(1))
+        self.bind("<Control_L>m", lambda _: self.mainNotebook.select(2))
+        self.bind("<Control_L>l", lambda _: self.mainNotebook.select(3))
+        self.bind("<F1>", lambda _: self.mainNotebook.select(4))
         self.mainNotebook.bind("<<NotebookTabChanged>>", changeTab)
 
     def clipboard_get(self) -> Optional[str]:
