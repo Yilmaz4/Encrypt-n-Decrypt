@@ -1461,6 +1461,7 @@ try:
                                             self.base64InputValidity.configure(text="Validity: Invalid", foreground="red")
                                     else:
                                         self.base64InputValidity.configure(text="Validity: [Blank]", foreground="gray")
+
                             self.base64Frame = base64Frame(self)
                             self.base64Frame.place(x=10, y=5)
 
