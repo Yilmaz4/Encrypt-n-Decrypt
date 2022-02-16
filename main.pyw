@@ -23,14 +23,24 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 version = "0.2.1"
 
-from tkinter import *
+from tkinter import (
+    NORMAL, DISABLED, WORD, FLAT, END,
+    LEFT, SOLID, X, Y, RIGHT, LEFT, BOTH,
+    TOP, SUNKEN, HORIZONTAL, BOTTOM, W,
+    Text, Toplevel, Menu, Pack, Grid, Tk,
+    Place, IntVar, StringVar, Label, Frame,
+    filedialog, messagebox, TclError
+)
 TkLabel = Label
-TkFrame = Frame
-from tkinter import messagebox, filedialog
-from tkinter.scrolledtext import ScrolledText
-from tkinter.ttk import *
+from tkinter.ttk import (
+    Entry, Button, Label, LabelFrame, Frame,
+    Widget, Notebook, Radiobutton, Checkbutton,
+    Scrollbar, Progressbar, Separator
+)
 
-from typing import Any, Union, Optional, Literal, Callable
+from typing import (Any, Union, Optional,
+    Literal, Callable
+)
 from urllib.request import urlopen
 from markdown import markdown
 from tkinterweb import HtmlFrame
@@ -44,9 +54,12 @@ from hurry.filesize import size, alternative
 
 from Crypto.Cipher import AES, PKCS1_OAEP, DES3
 from Crypto.PublicKey import RSA
+from Crypto.Hash import SHA512
+from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
 
-import base64, os, logging, pyperclip, binascii, functools
+import base64, os, logging, pyperclip, binascii
+import functools, multipledispatch
 
 try:
     class Crypto:
@@ -443,16 +456,16 @@ try:
             if self._textvariable is not None:
                 self.insert("1.0", self._textvariable.get())
             self.tk.eval("""
-    proc widget_proxy {widget widget_command args} {
+            proc widget_proxy {widget widget_command args} {
 
-        set result [uplevel [linsert $args 0 $widget_command]]
+                set result [uplevel [linsert $args 0 $widget_command]]
 
-        if {([lindex $args 0] in {insert replace delete})} {
-            event generate $widget <<Change>> -when tail
-        }
+                if {([lindex $args 0] in {insert replace delete})} {
+                    event generate $widget <<Change>> -when tail
+                }
 
-        return $result
-    }""")
+                return $result
+            }""")
             self.tk.eval('''
                 rename {widget} _{widget}
                 interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
@@ -462,7 +475,7 @@ try:
             if self._textvariable is not None:
                 self._textvariable.trace("wu", self._on_var_change)
 
-            if not not tooltip:
+            if tooltip is not None:
                 def enter(event = None):
                     self.toolTip = ToolTip(self)
                     self.after(1000, self.toolTip.showtip, tooltip, self, event)
@@ -473,13 +486,18 @@ try:
                 self.bind('<Leave>', leave)
                 self.bind('<Button-1>', leave)
 
+        @multipledispatch.dispatch(str)
         def replace(self, chars: str):
             old_val = self["state"]
             self.configure(state=NORMAL)
             self.delete("1.0", END)
             self.insert("1.0", chars)
             self.configure(state=old_val)
-        
+
+        @multipledispatch.dispatch(str, str, str)
+        def replace(self, chars: str, start_index: str, end_index: str):
+            self.tk.call(self._w, 'replace', start_index, end_index, chars)
+
         def clear(self):
             old_val = self["state"]
             self.configure(state=NORMAL)
@@ -512,16 +530,16 @@ try:
             if self._textvariable is not None:
                 self.insert("1.0", self._textvariable.get())
             self.tk.eval("""
-    proc widget_proxy {widget widget_command args} {
+            proc widget_proxy {widget widget_command args} {
 
-        set result [uplevel [linsert $args 0 $widget_command]]
+                set result [uplevel [linsert $args 0 $widget_command]]
 
-        if {([lindex $args 0] in {insert replace delete})} {
-            event generate $widget <<Change>> -when tail
-        }
+                if {([lindex $args 0] in {insert replace delete})} {
+                    event generate $widget <<Change>> -when tail
+                }
 
-        return $result
-    }""")
+                return $result
+            }""")
             self.tk.eval('''
                 rename {widget} _{widget}
                 interp alias {{}} ::{widget} {{}} widget_proxy {widget} _{widget}
@@ -542,12 +560,17 @@ try:
                 self.bind('<Leave>', leave)
                 self.bind('<Button-1>', leave)
 
+        @multipledispatch.dispatch(str)
         def replace(self, chars: str):
             old_val = self["state"]
             self.configure(state=NORMAL)
             self.delete("1.0", END)
             self.insert("1.0", chars)
             self.configure(state=old_val)
+
+        @multipledispatch.dispatch(str, str, str)
+        def replace(self, chars: str, start_index: str, end_index: str):
+            self.tk.call(self._w, 'replace', start_index, end_index, chars)
 
         def clear(self):
             old_val = self["state"]
@@ -624,60 +647,6 @@ try:
                 self.bind('<Leave>', leave)
                 self.bind('<Button-1>', leave)
 
-    class Toplevel(Toplevel):
-        def clipboard_get(self) -> Optional[str]:
-            clipboard = pyperclip.paste()
-            if not clipboard:
-                return ""
-            elif len(clipboard) > 15000:
-                if messagebox.askyesno("Super long text", "The text you're\
-                    trying to paste is too long (longer than 15.000 charac\
-                    ters) which can cause the program to freeze. Are you sure?"):
-                    return clipboard
-                else:
-                    return ""
-            else:
-                return clipboard
-
-        def clipboard_set(self, text: str = None):
-            pyperclip.copy(text)
-
-    class Frame(Frame):
-        def clipboard_get(self) -> Optional[str]:
-            clipboard = pyperclip.paste()
-            if not clipboard:
-                return ""
-            elif len(clipboard) > 15000:
-                if messagebox.askyesno("Super long text", "The text you're\
-                    trying to paste is too long (longer than 15.000 charac\
-                    ters) which can cause the program to freeze. Are you sure?"):
-                    return clipboard
-                else:
-                    return ""
-            else:
-                return clipboard
-
-        def clipboard_set(self, text: str = None):
-            pyperclip.copy(text)
-
-    class LabelFrame(LabelFrame):
-        def clipboard_get(self) -> Optional[str]:
-            clipboard = pyperclip.paste()
-            if not clipboard:
-                return ""
-            elif len(clipboard) > 15000:
-                if messagebox.askyesno("Super long text", "The text you're\
-                    trying to paste is too long (longer than 15.000 charac\
-                    ters) which can cause the program to freeze. Are you sure?"):
-                    return clipboard
-                else:
-                    return ""
-            else:
-                return clipboard
-
-        def clipboard_set(self, text: str = None):
-            pyperclip.copy(text)
-
     class EncryptnDecrypt(Tk):
         def __init__(self):
             global version
@@ -720,7 +689,7 @@ try:
                             self.textEntry = Entry(self, width=48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.master.master.textEntryVar)
                             self.textPasteButton = Button(self, text="Paste", width=14, state=NORMAL, command=lambda: self.textEntry.replace(str(self.master.master.clipboard_get())), takefocus=0)
                             self.textClearButton = Button(self, text="Clear", width=14, command=lambda: self.textEntry.delete(0, END), takefocus=0, state=DISABLED)
-                            self.textEntryHideCharCheck = Checkbutton(self, text="Hide characters", variable=self.master.master.textEntryHideCharVar, onvalue=1, offvalue=0, command=self.toggleHideChar, takefocus=0)
+                            self.textEntryHideCharCheck = Checkbutton(self, text="Hide characters", variable=self.master.master.textEntryHideCharVar, onvalue=1, offvalue=0, command=lambda: self.textEntry.configure(show="●" if bool(self.master.master.textEntryHideCharVar.get()) else ""), takefocus=0)
 
                             self.fileEntryCheck = Radiobutton(self, text="File:", value=1, variable=self.master.master.dataSourceVar, command=self.changeDataSource, takefocus=0)
                             self.fileValidityLabel = Label(self, text="Validity: [Blank]", foreground="gray")
@@ -908,7 +877,7 @@ try:
                                     self.saveRSAPrivateButton.place(x=162, y=449)
 
                                 def saveOutput(self):
-                                    files = [("Text document","*.txt"),("All files","*.*")]
+                                    files = [("Text document", "*.txt"), ("All files", "*.*")]
                                     path = filedialog.asksaveasfilename(title="Save encrypted data", initialfile="Encrypted Data.txt", filetypes=files, defaultextension="*.txt")
                                     if path == "":
                                         return
@@ -916,7 +885,7 @@ try:
                                         file.write(self.master.master.master.outputVar.get())
 
                                 def saveAESKey(self):
-                                    files = [("Encrypt'n'Decrypt key file","*.key"),("Text document","*.txt"),("All files","*.*")]
+                                    files = [("Encrypt'n'Decrypt key file", "*.key"), ("Text document", "*.txt"), ("All files", "*.*")]
                                     path = filedialog.asksaveasfilename(title="Save encryption key", initialfile="Encryption Key.key", filetypes=files, defaultextension="*.key")
                                     if path == "":
                                         return
@@ -927,7 +896,7 @@ try:
                                             file.write(self.master.master.master.AESKeyVar.get())
 
                                 def saveRSAPublic(self):
-                                    files = [("Text document","*.txt"),("All files","*.*")]
+                                    files = [("Text document", "*.txt"), ("All files", "*.*")]
                                     path = filedialog.asksaveasfilename(title="Save public key", initialfile="Public Key.txt", filetypes=files, defaultextension="*.txt")
                                     if path == "":
                                         return
@@ -935,7 +904,7 @@ try:
                                         file.write(self.master.master.master.RSAPublicVar.get())
 
                                 def saveRSAPrivate(self):
-                                    files = [("Text document","*.txt"),("All files","*.*")]
+                                    files = [("Text document", "*.txt"), ("All files", "*.*")]
                                     path = filedialog.asksaveasfilename(title="Save private key", initialfile="Private Key.txt", filetypes=files, defaultextension="*.txt")
                                     if path == "":
                                         return
@@ -1168,13 +1137,10 @@ try:
                                     self.fileValidityLabel.configure(foreground="gray")
 
                         def fileEntryBrowse(self):
-                            files = [("All files","*.*")]
+                            files = [("All files", "*.*")]
                             filePath = filedialog.askopenfilename(title = "Open a file to encrypt", filetypes=files)
 
                             filePath != "" and self.fileEntry.replace(filePath)
-
-                        def toggleHideChar(self):
-                            self.textEntry.configure(show="●" if bool(self.master.master.textEntryHideCharVar.get()) else "")
 
                         def textEntryCallback(self, *args, **kwargs):
                             self.textClearButton.configure(state=DISABLED if self.master.master.textEntryVar.get() == "" else NORMAL)
@@ -1407,12 +1373,12 @@ try:
                                 self.decryptSaveButton.configure(state=DISABLED)
 
                     class miscFrame(Frame):
-                        def __init__(self, master: Notebook = None, **kwargs):
-                            super().__init__(master=master, **kwargs)
+                        def __init__(self, master: mainNotebook = None):
+                            super().__init__(master=master)
 
                             class base64Frame(LabelFrame):
                                 def __init__(self, master: Frame = None):
-                                    super().__init__(master=master, height=500, width=410, text="Base64 encoding/decoding")
+                                    super().__init__(master=master, height=342, width=410, text="Base64 encoding/decoding")
 
                                     self.base64InputLabel = Label(self, text="Input", takefocus=0)
                                     self.base64InputValidity = Label(self, text="Validity: [Blank]", foreground="gray")
@@ -1433,16 +1399,22 @@ try:
                                             self.decodeRadiobutton.place(x=10, y=21)
 
                                     self.base64OutputLabel = Label(self, text="Output", takefocus=0)
-                                    self.base64OutputText = ScrolledText(self, height=4, width=44, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                                    self.base64OutputText = ScrolledText(self, height=4, width=45, textvariable=self.master.master.master.base64OutputVar, state=DISABLED, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                                    self.outputClearButton = Button(self, width=15, text="Clear", command=self.base64OutputText.clear, state=DISABLED, takefocus=0)
+                                    self.outputPasteButton = Button(self, width=15, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.base64OutputText.get("1.0", END)[:-1 if self.base64OutputText.get("1.0", END).endswith("\n") else 0]), takefocus=0)
 
-                                    self.base64InputLabel.place(x=8, y=0)
+                                    self.base64InputLabel.place(x=7, y=0)
                                     self.base64InputValidity.place(x=42, y=0)
                                     self.base64InputText.place(x=10, y=22)
-                                    self.inputClearButton.place(x=9, y=98)
-                                    self.inputPasteButton.place(x=116, y=98)
+                                    self.inputClearButton.place(x=116, y=98)
+                                    self.inputPasteButton.place(x=9, y=98)
 
                                     self.encodeOrDecodeFrame = encodeOrDecodeFrame(self)
                                     self.encodeOrDecodeFrame.place(x=10, y=125)
+                                    self.base64OutputLabel.place(x=7, y=190)
+                                    self.base64OutputText.place(x=10, y=212)
+                                    self.outputClearButton.place(x=116, y=288)
+                                    self.outputPasteButton.place(x=9, y=288)
 
                                 def base64InputCallback(self, *args, **kwargs):
                                     if ''.join(self.base64InputText.get("1.0", END).split()) != "":
@@ -1451,19 +1423,58 @@ try:
                                         self.inputClearButton.configure(state=DISABLED)
                                     if not bool(self.master.master.master.encodeOrDecodeVar.get()) and ''.join(self.base64InputText.get("1.0", END).split()) != "":
                                         self.base64InputValidity.configure(text="Validity: Encodable", foreground="green")
+                                        self.base64OutputText.replace(base64.urlsafe_b64encode(self.base64InputText.get("1.0", END).encode("utf-8")).decode("utf-8"))
                                     elif bool(self.master.master.master.encodeOrDecodeVar.get()) and ''.join(self.base64InputText.get("1.0", END).split()) != "":
                                         try:
-                                            if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.base64InputText.get("1.0", END).encode("utf-8"))) == self.base64InputText.get("1.0", END).rstrip().encode("utf-8"):
+                                            if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.base64InputText.get("1.0", END).encode("utf-8")).decode("utf-8").encode("utf-8")) == self.base64InputText.get("1.0", END).rstrip().encode("utf-8"):
                                                 self.base64InputValidity.configure(text="Validity: Valid base64 encoded data", foreground="green")
+                                                self.base64OutputText.replace(base64.urlsafe_b64decode(self.base64InputText.get("1.0", END).encode("utf-8")).decode("utf-8"))
                                             else:
                                                 self.base64InputValidity.configure(text="Validity: Invalid", foreground="red")
-                                        except:
-                                            self.base64InputValidity.configure(text="Validity: Invalid", foreground="red")
+                                        except binascii.Error as ExceptionDetails:
+                                            self.base64InputValidity.configure(text=f"Validity: {'Incorrect padding' if 'padding' in str(ExceptionDetails) else 'Invalid'}", foreground="red")
+                                        except UnicodeDecodeError:
+                                            self.base64InputValidity.configure(text="Validity: Unknown encoding", foreground="red")
                                     else:
                                         self.base64InputValidity.configure(text="Validity: [Blank]", foreground="gray")
+                                        self.base64OutputText.clear()
+
+                            class keyDerivationFrame(LabelFrame):
+                                def __init__(self, master: miscFrame):
+                                    super().__init__(master=master, height=342, width=349, text="Key Derivation Function (KDF)")
+
+                                    self.keyInputLabel = Label(self, text="Input", takefocus=0)
+                                    self.keyInputValidity = Label(self, text="Validity: [Blank]", foreground="gray")
+                                    self.keyInputEntry = Entry(self, width=54, font=("Consolas", 9), textvariable=self.master.master.master.keyInputVar)
+                                    self.keyInputHideCheck = Checkbutton(self, text="Hide characters", takefocus=0, onvalue=1, offvalue=0, variable=self.master.master.master.keyInputHideVar, command=lambda: self.keyInputEntry.configure(show="●" if bool(self.master.master.master.hideKDFEntryCharVar.get()) else ""))
+                                    self.inputClearButton = Button(self, width=15, text="Clear", command=self.keyInputEntry.clear, state=DISABLED, takefocus=0)
+                                    self.inputPasteButton = Button(self, width=15, text="Paste", command=lambda: self.keyInputEntry.replace(self.master.master.master.clipboard_get()), takefocus=0)
+
+                                    self.keyOutputLabel = Label(self, text="Output", takefocus=0)
+                                    self.keyOutputText = Text(self, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.master.master.master.keyOutputVar, highlightcolor="#cccccc")
+                                    self.outputClearButton = Button(self, width=15, text="Clear", command=self.keyOutputText.clear, state=DISABLED, takefocus=0)
+                                    self.outputPasteButton = Button(self, width=15, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.base64OutputText.get("1.0", END)[:-1 if self.base64OutputText.get("1.0", END).endswith("\n") else 0]), takefocus=0)
+
+                                    self.master.master.master.keyInputVar.trace("w", self.keyInputCallback)
+
+                                    self.keyInputLabel.place(x=7, y=0)
+                                    self.keyInputValidity.place(x=42, y=0)
+                                    self.keyInputHideCheck.place(x=200, y=0)
+                                    self.keyInputEntry.place(x=9, y=22)
+                                    self.inputClearButton.place(x=116, y=98)
+                                    self.inputPasteButton.place(x=9, y=98)
+                                
+                                def keyInputCallback(self, *args, **kwargs):
+                                    salt = get_random_bytes(16)
+                                    result = base64.urlsafe_b64encode(PBKDF2(self.keyInputEntry.get(), salt, 24, N=2**14, r=8, p=1)).decode("utf-8")
+
+
 
                             self.base64Frame = base64Frame(self)
+                            self.keyDerivationFrame = keyDerivationFrame(self)
+
                             self.base64Frame.place(x=10, y=5)
+                            self.keyDerivationFrame.place(x=428, y=5)
 
                     class loggingFrame(Frame):
                         def __init__(self, master: Notebook = None, **kwargs):
@@ -1570,6 +1581,10 @@ try:
 
             self.encodeOrDecodeVar = IntVar(value=0)
             self.base64InputVar = StringVar()
+            self.base64OutputVar = StringVar()
+            self.keyInputVar = StringVar()
+            self.keyInputHideVar = IntVar(value=0)
+            self.keyOutputVar = StringVar()
 
         def __initialize_menu(self):
             class menuBar(Menu):
@@ -1637,6 +1652,7 @@ try:
                                 def __init__(self, master: viewMenu):
                                     super().__init__(master, tearoff=0)
                                     self.add_radiobutton(label="Adapta", value="adapta", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("adapta"), accelerator="adapta")
+                                    self.add_radiobutton(label="Alt", value="alt", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("alt"), accelerator="alt")
                                     self.add_radiobutton(label="Aquativo", value="aquativo", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("aquativo"), accelerator="aquativo")
                                     self.add_radiobutton(label="Arc", value="arc", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("arc"), accelerator="arc")
                                     self.add_radiobutton(label="Black", value="black", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("black"), accelerator="black")
@@ -1659,7 +1675,9 @@ try:
                                     self.add_radiobutton(label="Scidsand", value="scidsand", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidsand"), accelerator="scidsand")
                                     self.add_radiobutton(label="Smog", value="smog", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("smog"), accelerator="smog")
                                     self.add_radiobutton(label="Ubuntu", value="ubuntu", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("ubuntu"), accelerator="ubuntu")
+                                    self.add_radiobutton(label="Windows Native", value="winnative", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("winnative"), accelerator="winnative")
                                     self.add_radiobutton(label="Windows XP Blue", value="winxpblue", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("winxpblue"), accelerator="winxpblue")
+                                    self.add_radiobutton(label="Windows Vista", value="vista", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("vista"), accelerator="vista")
                                     self.add_radiobutton(label="Yaru", value="yaru", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("yaru"), accelerator="yaru")
                                     self.add_separator()
                                     self.add_command(label="Reset theme", command=lambda: self.master.master.master.theme.set_theme("vista"), accelerator="Ctrl+Alt+T")
@@ -1875,5 +1893,7 @@ try:
         root = EncryptnDecrypt()
         root.mainloop()
 except Exception:
+    from tkinter import Tk, messagebox
     import traceback
+    Tk().withdraw()
     messagebox.showerror("Unexpected error", f"An unexpected, unknown & fatal error occured during runtime. Please report this error with full details in the GitHub repository. Error details can be found below:\n\n{traceback.format_exc()}")
