@@ -275,10 +275,7 @@ class Cryptography(object):
         else:
             self.updateStatus("Generating the key...")
             key = RSA.generate(self.master.generateRandomRSAVar.get())
-
-            self.updateStatus("Exporting the public key...")
             publicKey = key.publickey()
-            self.updateStatus("Exporting the private key...")
             privateKey = key.exportKey()
 
             self.updateStatus("Defining the cipher...")
@@ -818,14 +815,15 @@ class Interface(Tk):
 
                                         self.generateRandomKeyCheck = Radiobutton(self, text="Generate a random key", value=0, variable=self.master.master.master.master.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
 
-                                        self.RSA1024Check = Radiobutton(self, text="RSA-1024 Key", value=1024, variable=self.master.master.master.master.generateRandomRSAVar, takefocus=0)
-                                        self.RSA2048Check = Radiobutton(self, text="RSA-2048 Key", value=2048, variable=self.master.master.master.master.generateRandomRSAVar, takefocus=0)
-                                        self.RSA3072Check = Radiobutton(self, text="RSA-3072 Key", value=3072, variable=self.master.master.master.master.generateRandomRSAVar, takefocus=0)
-                                        self.RSA4096Check = Radiobutton(self, text="RSA-4096 Key", value=4096, variable=self.master.master.master.master.generateRandomRSAVar, takefocus=0)
-                                        self.RSA6144Check = Radiobutton(self, text="RSA-6144 Key", value=6144, variable=self.master.master.master.master.generateRandomRSAVar, takefocus=0)
-                                        self.RSA8196Check = Radiobutton(self, text="RSA-8192 Key", value=8192, variable=self.master.master.master.master.generateRandomRSAVar, takefocus=0)
-                                        self.RSACustomCheck = Radiobutton(self, text="Custom RSA key length:", value=0, variable=self.master.master.master.master.generateRandomRSAVar, takefocus=0)
-                                        self.RSACustomEntry = Entry(self, width=6, state=DISABLED, takefocus=0)
+                                        self.RSA1024Check = Radiobutton(self, text="RSA-1024 Key", value=1024, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSA2048Check = Radiobutton(self, text="RSA-2048 Key", value=2048, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSA3072Check = Radiobutton(self, text="RSA-3072 Key", value=3072, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSA4096Check = Radiobutton(self, text="RSA-4096 Key", value=4096, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSA6144Check = Radiobutton(self, text="RSA-6144 Key", value=6144, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSA8196Check = Radiobutton(self, text="RSA-8192 Key", value=8192, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSACustomCheck = Radiobutton(self, text="Custom RSA key length:", value=0, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSACustomEntry = Entry(self, width=6, state=DISABLED, validate = 'all', validatecommand = (self.master.master.master.master.register(lambda P: (str.isdigit(P) or P == "") and len(P) <= 6), '%P'), textvariable=self.master.master.master.master.customRSALengthVar, takefocus=0)
+                                        self.RSACustomEntry.replace("1024")
 
                                         self.selectKeyCheck = Radiobutton(self, text="Use this key:", value=1, variable=self.master.master.master.master.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
                                         self.keyEntry = Entry(self, width=46, font=("Consolas", 9), state=DISABLED, textvariable=self.master.master.master.master.keyEntryVar, takefocus=0)
@@ -847,11 +845,7 @@ class Interface(Tk):
                                         self.RSA6144Check.place(x=120, y=44)
                                         self.RSA8196Check.place(x=120, y=63)
                                         self.RSACustomCheck.place(x=16, y=82)
-                                        self.RSACustomEntry.place(x=130, y=83)
-                                        """self.AES256Check.place(x=27, y=82)
-                                        self.DESAlgorithmCheck.place(x=16, y=101)
-                                        self.DES128Check.place(x=27, y=120)
-                                        self.DES192Check.place(x=27, y=139)"""
+                                        self.RSACustomEntry.place(x=170, y=83)
                                         
                                         self.keyEntry.place(x=18, y=181)
                                         self.keyValidityStatusLabel.place(x=92, y=159)
@@ -862,6 +856,7 @@ class Interface(Tk):
                                         self.selectKeyCheck.place(x=5, y=158)
                                         self.keyEnteredAlgAES.place(x=16, y=235)
                                         self.keyEnteredAlgDES.place(x=16, y=254)
+
 
                                 self.symmetricEncryption = symmetricEncryption(self)
                                 self.asymmetricEncryption = asymmetricEncryption(self)
@@ -1681,6 +1676,7 @@ class Interface(Tk):
         self.AESKeyVar = StringVar()
         self.RSAPublicVar = StringVar()
         self.RSAPrivateVar = StringVar()
+        self.customRSALengthVar = IntVar()
 
         self.decryptSourceVar = IntVar(value=0)
         self.decryptAlgorithmVar = IntVar(value=0)
