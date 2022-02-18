@@ -1,9 +1,9 @@
 """
 MIT License
 
-Copyright 2017-2022 Yilmaz Alpaslan
+Copyright 2017-2022 Yılmaz Alpaslan
 
-Permission is hereby granted, free ofy person obtaining a copy of this
+Permission is hereby granted, free of charge to any person obtaining a copy of this
 software and associated documentation files (the "Software"), to deal in the Software
 without restriction, including without limitation the rights to use, copy, modify,
 merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
@@ -92,25 +92,11 @@ class Cryptography(object):
         except UnicodeDecodeError:
             return None
 
-    def buttons_controlled(function: Callable):
-        @functools.wraps(function)
-        def wrapper(*args, **kwargs):
-            try:
-                return function(*args, **kwargs)
-            except Exception:
-                ...
-            finally:
-                if args[1] == "Ready":
-                    if not bool(args[0].master.mainNotebook.index(args[0].master.mainNotebook.select())):
-                        args[0].master.mainNotebook.encryptionFrame.encryptButton.configure(state=NORMAL)
-                    else:
-                        args[0].master.mainNotebook.decryptionFrame.decryptButton.configure(state=NORMAL)
-        return wrapper
-
     def traffic_controlled(function: Callable):
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
             if function.__name__ == "encrypt":
+                args[0].master.mainNotebook.encryptionFrame.encryptButton.configure(state=DISABLED) if bool(args[0].master.dataSourceVar.get()) else None
                 if args[0].__encryption_busy and args[0].__encryption_busy is not None:
                     pass
                 args[0].__encryption_busy = True
@@ -120,7 +106,12 @@ class Cryptography(object):
                     ...
                 finally:
                     args[0].__encryption_busy = False
+                    if not bool(args[0].master.mainNotebook.index(args[0].master.mainNotebook.select())):
+                        args[0].master.mainNotebook.encryptionFrame.encryptButton.configure(state=NORMAL)
+                    else:
+                        args[0].master.mainNotebook.decryptionFrame.decryptButton.configure(state=NORMAL)
             else:
+                args[0].master.mainNotebook.decryptionFrame.decryptButton.configure(state=DISABLED) if bool(args[0].master.decryptSourceVar.get()) else None
                 if args[0].__decryption_busy and args[0].__decryption_busy is not None:
                     pass
                 args[0].__decryption_busy = True
@@ -130,19 +121,18 @@ class Cryptography(object):
                     ...
                 finally:
                     args[0].__decryption_busy = False
+                    if not bool(args[0].master.mainNotebook.index(args[0].master.mainNotebook.select())):
+                        args[0].master.mainNotebook.encryptionFrame.encryptButton.configure(state=NORMAL)
+                    else:
+                        args[0].master.mainNotebook.decryptionFrame.decryptButton.configure(state=NORMAL)
         return wrapper
 
-    class threaded(object):
-        function = None
-        def __init__(self, function: Callable):
-            self.function = function
-            self.__name__ = function.__name__
-
+    def threaded(function: Callable):
         @functools.wraps(function)
-        def __call__(self, *args, **kwargs):
-            Thread(target=self.function, args=args, kwargs=kwargs).start()
+        def wrapper(*args, **kwargs):
+            Thread(target=function, args=args, kwargs=kwargs).start()
+        return wrapper
 
-    @buttons_controlled
     def updateStatus(self, status: str = "Ready"):
         self.master.statusBar.configure(text=f"Status: {status}")
         self.master.update()
@@ -161,10 +151,9 @@ class Cryptography(object):
     def decryption_busy(self, value: bool):
         self.__decryption_busy = value
 
-    @traffic_controlled
     @threaded
+    @traffic_controlled
     def encrypt(self):
-        self.master.mainNotebook.encryptionFrame.encryptButton.configure(state=DISABLED) if bool(self.master.dataSourceVar.get()) else None
         if not bool(self.master.dataSourceVar.get()):
             data = self.master.textEntryVar.get()
         else:
@@ -263,7 +252,6 @@ class Cryptography(object):
                             failure = True
                             pass
 
-            self.updateStatus("Displaying the result...")
             if not len(self.master.lastResult) > 15000:
                 self.master.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="black", wrap=None)
                 self.master.mainNotebook.encryptionFrame.outputFrame.outputText.replace(self.master.lastResult)
@@ -318,10 +306,9 @@ class Cryptography(object):
 
             self.updateStatus("Ready")
 
-    @traffic_controlled
     @threaded
+    @traffic_controlled
     def decrypt(self):
-        self.master.mainNotebook.decryptionFrame.decryptButton.configure(state=DISABLED)
         if not bool(self.master.decryptSourceVar.get()):
             self.updateStatus("Decoding encrypted data...")
             data = base64.urlsafe_b64decode(self.master.textDecryptVar.get().encode("utf-8"))
@@ -423,7 +410,7 @@ class loggingHandler(logging.Handler):
         super().__init__()
         self.widget = widget
 
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord):
         message = self.format(record)
         def append():
             self.widget.configure(state=NORMAL)
