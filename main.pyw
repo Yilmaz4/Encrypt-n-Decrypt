@@ -38,8 +38,8 @@ from tkinter.ttk import (
     Scrollbar, Progressbar, Separator
 )
 
-from typing import (Any, Union, Optional,
-    Literal, Callable
+from typing import (Union, Optional, Literal,
+    Callable
 )
 from urllib.request import urlopen
 from markdown import markdown
@@ -54,17 +54,19 @@ from hurry.filesize import size, alternative
 
 from Crypto.Cipher import AES, PKCS1_OAEP, DES3
 from Crypto.PublicKey import RSA
-from Crypto.Hash import SHA512
-from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Hash import SHA512, SHA256
+from Crypto.Protocol.KDF import scrypt
 from Crypto.Random import get_random_bytes
 
 import base64, os, logging, pyperclip, binascii
 import functools, multipledispatch
 
 try:
-    class Crypto:
+    class Cryptography:
         def __init__(self, master: Tk):
             self.master = master
+            self.__encryption_busy = False
+            self.__decryption_busy = False
 
         @staticmethod
         def generateKey(length: int = 32) -> str:
@@ -79,12 +81,19 @@ try:
                     key += str(choice("!'^+%&/()=?_<>#${[]}\|__--$__--"))
             return key
 
+        @staticmethod
+        def derivateKey(password: Union[str, bytes]) -> Optional[bytes]:
+            try:
+                return base64.urlsafe_b64encode(scrypt(password.decode("utf-8") if isinstance(password, str) else password, get_random_bytes(16), 24, N=2**14, r=8, p=1))
+            except UnicodeDecodeError:
+                return None
+
         def button_control(function: Callable):
             @functools.wraps(function)
             def wrapper(*args, **kwargs):
                 try:
                     return function(*args, **kwargs)
-                except:
+                except Exception:
                     ...
                 finally:
                     if args[1] == "Ready":
@@ -94,13 +103,53 @@ try:
                             args[0].master.mainNotebook.decryptionFrame.decryptButton.configure(state=NORMAL)
             return wrapper
 
+        def busyness_control(function: Callable):
+            @functools.wraps(function)
+            def wrapper(*args, **kwargs):
+                if function.__name__ == "encrypt":
+                    if args[0].__encryption_busy and args[0].__encryption_busy is not None:
+                        pass
+                    args[0].__encryption_busy = True
+                    try:
+                        return function(*args, **kwargs)
+                    except Exception:
+                        ...
+                    finally:
+                        args[0].__encryption_busy = False
+                else:
+                    if args[0].__decryption_busy and args[0].__decryption_busy is not None:
+                        pass
+                    args[0].__decryption_busy = True
+                    try:
+                        return function(*args, **kwargs)
+                    except Exception:
+                        ...
+                    finally:
+                        args[0].__decryption_busy = False
+            return wrapper
+
         @button_control
-        def updateStatus(self, status: str):
+        def updateStatus(self, status: str = "Ready"):
             self.master.statusBar.configure(text=f"Status: {status}")
             self.master.update()
 
+        @property
+        def encryption_busy(self) -> bool:
+            return self.__encryption_busy
+        @encryption_busy.setter
+        def encryption_busy(self, value: bool):
+            self.__encryption_busy = value
+
+        @property
+        def decryption_busy(self) -> bool:
+            return self.__decryption_busy
+        @decryption_busy.setter
+        def decryption_busy(self, value: bool):
+            self.__decryption_busy = value
+
+        @busyness_control
         def encrypt(self):
-            self.master.mainNotebook.encryptionFrame.encryptButton.configure(state=DISABLED)
+            self.master.mainNotebook.encryptionFrame.encryptButton.configure(state=DISABLED) if bool(self.master.dataSourceVar.get()) else None
             if not bool(self.master.dataSourceVar.get()):
                 data = self.master.textEntryVar.get()
             else:
@@ -254,6 +303,7 @@ try:
 
                 self.updateStatus("Ready")
 
+        @busyness_control
         def decrypt(self):
             self.master.mainNotebook.decryptionFrame.decryptButton.configure(state=DISABLED)
             if not bool(self.master.decryptSourceVar.get()):
@@ -647,7 +697,7 @@ try:
                 self.bind('<Leave>', leave)
                 self.bind('<Button-1>', leave)
 
-    class EncryptnDecrypt(Tk):
+    class Interface(Tk):
         def __init__(self):
             global version
 
@@ -661,24 +711,23 @@ try:
             self.height = 580
             self.width = 800
             self.version = version
-            del version
 
-            self.title(f"Encrypt-n-Decrypt v{self.version}")
-            self.geometry(f"{self.width}x{self.height}")
-            self.resizable(width=False, height=False)
-            self.minsize(width = self.width, height = self.height)
-            self.maxsize(width = self.width, height = self.height)
+            self.wm_title(f"Encrypt-n-Decrypt v{self.version}")
+            self.wm_geometry(f"{self.width}x{self.height}")
+            self.wm_resizable(width=False, height=False)
+            self.wm_minsize(width = self.width, height = self.height)
+            self.wm_maxsize(width = self.width, height = self.height)
             try:
-                self.iconbitmap("icon.ico")
+                self.wm_iconbitmap("icon.ico")
             except TclError:
                 pass
 
             self.__initialize_vars()
 
-            self.crypto = Crypto(self)
+            self.crypto = Cryptography(self)
 
             class mainNotebook(Notebook):
-                def __init__(self, master: EncryptnDecrypt):
+                def __init__(self, master: Interface):
                     super().__init__(master, width=380, height=340)
 
                     class encryptionFrame(Frame):
@@ -704,7 +753,7 @@ try:
                             self.textEntry.place(x=24, y=22)
                             self.textPasteButton.place(x=23, y=49)
                             self.textClearButton.place(x=124, y=49)
-                            self.textEntryHideCharCheck.place(x=261, y=50)
+                            self.textEntryHideCharCheck.place(x=263, y=50)
 
                             self.fileEntryCheck.place(x=8, y=76)
                             self.fileValidityLabel.place(x=51, y=77)
@@ -1378,19 +1427,18 @@ try:
 
                             class base64Frame(LabelFrame):
                                 def __init__(self, master: Frame = None):
-                                    super().__init__(master=master, height=342, width=410, text="Base64 encoding/decoding")
+                                    super().__init__(master=master, height=342, width=405, text="Base64 encoding/decoding")
 
                                     self.base64InputLabel = Label(self, text="Input", takefocus=0)
                                     self.base64InputValidity = Label(self, text="Validity: [Blank]", foreground="gray")
                                     self.base64InputText = ScrolledText(self, height=4, width=45, textvariable=self.master.master.master.base64InputVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                                     self.inputClearButton = Button(self, width=15, text="Clear", command=self.base64InputText.clear, state=DISABLED, takefocus=0)
                                     self.inputPasteButton = Button(self, width=15, text="Paste", command=lambda: self.base64InputText.replace(self.master.master.master.clipboard_get()), takefocus=0)
-
-                                    self.master.master.master.base64InputVar.trace("w", self.base64InputCallback)
+                                    self.inputBrowseButton = Button(self, width=17, text="Browse...", command=self.browseBase64InputFile, takefocus=0)
 
                                     class encodeOrDecodeFrame(LabelFrame):
                                         def __init__(self, master: LabelFrame = None):
-                                            super().__init__(master=master, height=65, width=382, text="Encode/decode")
+                                            super().__init__(master=master, height=65, width=380, text="Encode/decode")
 
                                             self.encodeRadiobutton = Radiobutton(self, text="Encode", value=0, variable=self.master.master.master.master.encodeOrDecodeVar, command=self.master.base64InputCallback, takefocus=0)
                                             self.decodeRadiobutton = Radiobutton(self, text="Decode", value=1, variable=self.master.master.master.master.encodeOrDecodeVar, command=self.master.base64InputCallback, takefocus=0)
@@ -1401,20 +1449,43 @@ try:
                                     self.base64OutputLabel = Label(self, text="Output", takefocus=0)
                                     self.base64OutputText = ScrolledText(self, height=4, width=45, textvariable=self.master.master.master.base64OutputVar, state=DISABLED, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                                     self.outputClearButton = Button(self, width=15, text="Clear", command=self.base64OutputText.clear, state=DISABLED, takefocus=0)
-                                    self.outputPasteButton = Button(self, width=15, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.base64OutputText.get("1.0", END)[:-1 if self.base64OutputText.get("1.0", END).endswith("\n") else 0]), takefocus=0)
+                                    self.outputCopyButton = Button(self, width=15, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.base64OutputText.get("1.0", END)[:-1 if self.base64OutputText.get("1.0", END).endswith("\n") else 0]), state=DISABLED, takefocus=0)
 
+                                    self.master.master.master.base64InputVar.trace("w", self.base64InputCallback)
+                                    self.master.master.master.base64OutputVar.trace("w", self.base64OutputCallback)
+                                    
                                     self.base64InputLabel.place(x=7, y=0)
                                     self.base64InputValidity.place(x=42, y=0)
                                     self.base64InputText.place(x=10, y=22)
                                     self.inputClearButton.place(x=116, y=98)
                                     self.inputPasteButton.place(x=9, y=98)
+                                    self.inputBrowseButton.place(x=279, y=98)
 
                                     self.encodeOrDecodeFrame = encodeOrDecodeFrame(self)
                                     self.encodeOrDecodeFrame.place(x=10, y=125)
                                     self.base64OutputLabel.place(x=7, y=190)
                                     self.base64OutputText.place(x=10, y=212)
                                     self.outputClearButton.place(x=116, y=288)
-                                    self.outputPasteButton.place(x=9, y=288)
+                                    self.outputCopyButton.place(x=9, y=288)
+
+                                def browseBase64InputFile(self):
+                                    filePath = filedialog.askopenfilename(title=f"Open a file to {'encode' if not bool(self.master.master.master.encodeOrDecodeVar.get()) else 'decode'}", filetypes=[("All files", "*.*")])
+                                    if ''.join(filePath.split()) != '':
+                                        try:
+                                            with open(filePath, mode="rb") as file:
+                                                index = file.read()
+                                        except PermissionError:
+                                            messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
+                                            self.master.master.master.logger.error("Read permission for the file specified has been denied, base64 encoding was interrupted.")
+                                            return
+                                        try:
+                                            index = index.decode("utf-8")
+                                        except UnicodeDecodeError:
+                                            self.base64InputText.configure(foreground="gray")
+                                            self.base64InputText.replace("File content is not being displayed because it's in an unknown encoding.")
+                                        else:
+                                            self.base64InputText.configure(foreground="black")
+                                            self.base64InputText.replace(index)
 
                                 def base64InputCallback(self, *args, **kwargs):
                                     if ''.join(self.base64InputText.get("1.0", END).split()) != "":
@@ -1424,57 +1495,87 @@ try:
                                     if not bool(self.master.master.master.encodeOrDecodeVar.get()) and ''.join(self.base64InputText.get("1.0", END).split()) != "":
                                         self.base64InputValidity.configure(text="Validity: Encodable", foreground="green")
                                         self.base64OutputText.replace(base64.urlsafe_b64encode(self.base64InputText.get("1.0", END).encode("utf-8")).decode("utf-8"))
+                                        self.base64OutputText.configure(foreground="black")
                                     elif bool(self.master.master.master.encodeOrDecodeVar.get()) and ''.join(self.base64InputText.get("1.0", END).split()) != "":
                                         try:
                                             if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.base64InputText.get("1.0", END).encode("utf-8")).decode("utf-8").encode("utf-8")) == self.base64InputText.get("1.0", END).rstrip().encode("utf-8"):
                                                 self.base64InputValidity.configure(text="Validity: Valid base64 encoded data", foreground="green")
                                                 self.base64OutputText.replace(base64.urlsafe_b64decode(self.base64InputText.get("1.0", END).encode("utf-8")).decode("utf-8"))
+                                                self.base64OutputText.configure(foreground="black")
                                             else:
                                                 self.base64InputValidity.configure(text="Validity: Invalid", foreground="red")
+                                                self.base64OutputText.configure(foreground="gray")
                                         except binascii.Error as ExceptionDetails:
                                             self.base64InputValidity.configure(text=f"Validity: {'Incorrect padding' if 'padding' in str(ExceptionDetails) else 'Invalid'}", foreground="red")
+                                            self.base64OutputText.configure(foreground="gray")
                                         except UnicodeDecodeError:
                                             self.base64InputValidity.configure(text="Validity: Unknown encoding", foreground="red")
+                                            self.base64OutputText.configure(foreground="gray")
                                     else:
                                         self.base64InputValidity.configure(text="Validity: [Blank]", foreground="gray")
                                         self.base64OutputText.clear()
 
+                                def base64OutputCallback(self, *args, **kwargs):
+                                    if ''.join(self.base64OutputText.get("1.0", END).split()) != "":
+                                        self.outputClearButton.configure(state=NORMAL)
+                                        self.outputCopyButton.configure(state=NORMAL)
+                                    else:
+                                        self.outputClearButton.configure(state=DISABLED)
+                                        self.outputCopyButton.configure(state=DISABLED)
+
                             class keyDerivationFrame(LabelFrame):
                                 def __init__(self, master: miscFrame):
-                                    super().__init__(master=master, height=342, width=349, text="Key Derivation Function (KDF)")
+                                    super().__init__(master=master, height=178, width=354, text="Key Derivation Function (KDF)")
 
                                     self.keyInputLabel = Label(self, text="Input", takefocus=0)
                                     self.keyInputValidity = Label(self, text="Validity: [Blank]", foreground="gray")
-                                    self.keyInputEntry = Entry(self, width=54, font=("Consolas", 9), textvariable=self.master.master.master.keyInputVar)
-                                    self.keyInputHideCheck = Checkbutton(self, text="Hide characters", takefocus=0, onvalue=1, offvalue=0, variable=self.master.master.master.keyInputHideVar, command=lambda: self.keyInputEntry.configure(show="●" if bool(self.master.master.master.hideKDFEntryCharVar.get()) else ""))
+                                    self.keyInputEntry = Entry(self, width=46, font=("Consolas", 9), textvariable=self.master.master.master.keyInputVar, takefocus=0)
+                                    self.keyInputHideCheck = Checkbutton(self, text="Hide characters", takefocus=0, onvalue=1, offvalue=0, variable=self.master.master.master.keyInputHideVar, command=lambda: self.keyInputEntry.configure(show="●" if bool(self.master.master.master.keyInputHideVar.get()) else ""))
                                     self.inputClearButton = Button(self, width=15, text="Clear", command=self.keyInputEntry.clear, state=DISABLED, takefocus=0)
                                     self.inputPasteButton = Button(self, width=15, text="Paste", command=lambda: self.keyInputEntry.replace(self.master.master.master.clipboard_get()), takefocus=0)
 
                                     self.keyOutputLabel = Label(self, text="Output", takefocus=0)
-                                    self.keyOutputText = Text(self, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.master.master.master.keyOutputVar, highlightcolor="#cccccc")
-                                    self.outputClearButton = Button(self, width=15, text="Clear", command=self.keyOutputText.clear, state=DISABLED, takefocus=0)
-                                    self.outputPasteButton = Button(self, width=15, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.base64OutputText.get("1.0", END)[:-1 if self.base64OutputText.get("1.0", END).endswith("\n") else 0]), takefocus=0)
+                                    self.keyOutputEntry = Entry(self, width=46, state="readonly", font=("Consolas",9), textvariable=self.master.master.master.keyOutputVar, takefocus=0)
+                                    self.outputClearButton = Button(self, width=15, text="Clear", command=self.keyOutputEntry.clear, state=DISABLED, takefocus=0)
+                                    self.outputPasteButton = Button(self, width=15, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.keyOutputEntry.get("1.0", END)[:-1 if self.keyOutputEntry.get("1.0", END).endswith("\n") else 0]), takefocus=0)
 
                                     self.master.master.master.keyInputVar.trace("w", self.keyInputCallback)
 
                                     self.keyInputLabel.place(x=7, y=0)
                                     self.keyInputValidity.place(x=42, y=0)
-                                    self.keyInputHideCheck.place(x=200, y=0)
+                                    self.keyInputHideCheck.place(x=235, y=49)
                                     self.keyInputEntry.place(x=9, y=22)
-                                    self.inputClearButton.place(x=116, y=98)
-                                    self.inputPasteButton.place(x=9, y=98)
-                                
+                                    self.inputClearButton.place(x=116, y=48)
+                                    self.inputPasteButton.place(x=9, y=48)
+
+                                    self.keyOutputLabel.place(x=7, y=75)
+                                    self.keyOutputEntry.place(x=9, y=97)
+                                    self.outputClearButton.place(x=116, y=123)
+                                    self.outputPasteButton.place(x=9, y=123)
+
                                 def keyInputCallback(self, *args, **kwargs):
-                                    salt = get_random_bytes(16)
-                                    result = base64.urlsafe_b64encode(PBKDF2(self.keyInputEntry.get(), salt, 24, N=2**14, r=8, p=1)).decode("utf-8")
-
-
+                                    if ''.join(self.keyInputEntry.get().split()) != "":
+                                        self.inputClearButton.configure(state=NORMAL)
+                                        try:
+                                            salt = get_random_bytes(16)
+                                            result = base64.urlsafe_b64encode(scrypt(self.keyInputEntry.get(), salt, 24, N=2**14, r=8, p=1)).decode("utf-8")
+                                        except:
+                                            self.keyInputValidity.configure(text="Validity: Underivative", foreground="red")
+                                            self.keyOutputEntry.configure(foreground="gray")
+                                        else:
+                                            self.keyInputValidity.configure(text="Validity: Derivative", foreground="green")
+                                            self.keyOutputEntry.replace(result)
+                                            self.keyOutputEntry.configure(foreground="black")
+                                    else:
+                                        self.inputClearButton.configure(state=DISABLED)
+                                        self.keyOutputEntry.clear()
+                                        self.keyInputValidity.configure(text="Validity: [Blank]", foreground="gray")
 
                             self.base64Frame = base64Frame(self)
                             self.keyDerivationFrame = keyDerivationFrame(self)
 
                             self.base64Frame.place(x=10, y=5)
-                            self.keyDerivationFrame.place(x=428, y=5)
+                            self.keyDerivationFrame.place(x=423, y=5)
 
                     class loggingFrame(Frame):
                         def __init__(self, master: Notebook = None, **kwargs):
@@ -1533,6 +1634,13 @@ try:
         def logging_level(self) -> int:
             return self.logger.level
 
+        @logging_level.deleter
+        def logging_level(self): ...
+
+        @logging_level.getter
+        def logging_level(self) -> int:
+            return self.logger.level
+
         @logging_level.setter
         def logging_level(self, level: Optional[Literal[0, 10, 20, 30, 40, 50]] = None):
             if not not level:
@@ -1588,7 +1696,7 @@ try:
 
         def __initialize_menu(self):
             class menuBar(Menu):
-                def __init__(self, master: EncryptnDecrypt):
+                def __init__(self, master: Interface):
                     super().__init__(master, tearoff=0)
 
                     class fileMenu(Menu):
@@ -1710,7 +1818,12 @@ try:
 
         def __initialize_bindings(self):
             def encrypt(*args, **kwargs):
-                self.crypto.encrypt()
+                if self.mainNotebook.index(self.mainNotebook.select()) == 0:
+                    self.crypto.encrypt()
+                elif self.mainNotebook.index(self.mainNotebook.select()) == 1:
+                    self.crypto.decrypt()
+                else:
+                    return
             def give_focus(*args, **kwargs):
                 self.after(200, self.encryptionFrame.textEntry.focus_set())
             def changeTab(*args, **kwargs):
@@ -1804,12 +1917,12 @@ try:
                 self.width = 669
                 self.height = 558
 
-                self.title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
-                self.geometry(f"{self.width}x{self.height}")
-                self.resizable(height=False, width=False)
-                self.attributes("-fullscreen", False)
-                self.maxsize(self.width, self.height)
-                self.minsize(self.width, self.height)
+                self.wm_title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
+                self.wm_geometry(f"{self.width}x{self.height}")
+                self.wm_resizable(height=False, width=False)
+                self.wm_attributes("-fullscreen", False)
+                self.wm_maxsize(self.width, self.height)
+                self.wm_minsize(self.width, self.height)
                 try:
                     self.iconbitmap("icon.ico")
                 except TclError:
@@ -1886,12 +1999,12 @@ try:
                 CopyDownloadLink2.place(x=6, y=135)
                 DownloadLinks.place(x=310, y=168)
                 self.focus_force()
-
                 self.mainloop()
 
     if __name__ == "__main__":
-        root = EncryptnDecrypt()
+        root = Interface()
         root.mainloop()
+
 except Exception:
     from tkinter import Tk, messagebox
     import traceback
