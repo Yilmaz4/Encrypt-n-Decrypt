@@ -13,7 +13,7 @@ Hello everyone, this is my second Python project and first project that I've pub
 ### About **Fernet** library and its encryption standard:
 >Fernet guarantees that a message encrypted using it cannot be manipulated or read without the key. [Fernet](https://github.com/fernet/spec/) is an implementation of symmetric (also known as “secret key”) authenticated cryptography. Fernet also has support for implementing key rotation via `MultiFernet`.
 
-`cryptography.fernet` encryption is a symmetric key encryption standard which uses 44-characters long encryption key. Encryption key must be a `base64.urlsafe_b64encode` encoded key (The urlsafe stands for *not containing url encoded restricted chacarters* or *only contains url encoding safe charaters*). In fact, this `cryptography.fernet` key is 32 characters long base64 encoded `AES-256` key. The reason behind this 44-charaters long key's length is base64's encoding algorithm. 
+`cryptography.fernet` encryption is a symmetric key encryption algorithm which uses 44-characters long encryption key. Encryption key must be a `base64.urlsafe_b64encode` encoded key (The urlsafe stands for *not containing url encoded restricted chacarters* or *only contains url encoding safe charaters*). In fact, this `cryptography.fernet` key is 32 characters long base64 encoded `AES-256` key. The reason behind this 44-charaters long key's length is base64's encoding algorithm. 
 > ### Limitations
 > Fernet is ideal for encrypting data that easily fits in memory. As a design feature it does not expose unauthenticated bytes. This means that the complete message contents must be available in memory, making Fernet generally unsuitable for very large files at this time.
 
