@@ -96,9 +96,12 @@ class Cryptography(object):
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
             if function.__name__ == "encrypt":
-                args[0].master.mainNotebook.encryptionFrame.encryptButton.configure(state=DISABLED) if bool(args[0].master.dataSourceVar.get()) else None
+                if not bool(args[0].master.mainNotebook.encryptionFrame.algorithmSelect.index(args[0].master.mainNotebook.encryptionFrame.algorithmSelect.select())):
+                    args[0].master.mainNotebook.encryptionFrame.encryptButton.configure(state=DISABLED if bool(args[0].master.dataSourceVar.get()) else NORMAL)
+                else:
+                    args[0].master.mainNotebook.encryptionFrame.encryptButton.configure(state=DISABLED)
                 if args[0].__encryption_busy and args[0].__encryption_busy is not None:
-                    pass
+                    return
                 args[0].__encryption_busy = True
                 try:
                     return function(*args, **kwargs)
@@ -113,7 +116,7 @@ class Cryptography(object):
             else:
                 args[0].master.mainNotebook.decryptionFrame.decryptButton.configure(state=DISABLED) if bool(args[0].master.decryptSourceVar.get()) else None
                 if args[0].__decryption_busy and args[0].__decryption_busy is not None:
-                    pass
+                    return
                 args[0].__decryption_busy = True
                 try:
                     return function(*args, **kwargs)
@@ -285,7 +288,7 @@ class Cryptography(object):
             try:
                 encrypted = cipher.encrypt(data.encode("utf-8") if isinstance(data, str) else data)
             except ValueError:
-                messagebox.showerror(f"{'Text is too long' if not bool(self.master.dataSourceVar) else 'File is too big'}", "The {} is too {} for RSA-{} encryption. Select a longer RSA key and try again.".format('text you\'ve entered' if not bool(self.master.dataSourceVar) else 'file you\'ve specified', 'long' if not bool(self.master.dataSourceVar) else 'big', self.master.generateRandomRSAVar.get()))
+                messagebox.showerror(f"{'Text is too long' if not bool(self.master.dataSourceVar) else 'File is too big'}", "The {} is too {} for RSA-{} encryption. Select a longer RSA key and try again.".format('text you\'ve entered' if not bool(self.master.dataSourceVar.get()) else 'file you\'ve specified', 'long' if not bool(self.master.dataSourceVar.get()) else 'big', self.master.generateRandomRSAVar.get()))
                 self.master.logger.error(f"Too {'long text' if not bool(self.master.dataSourceVar) else 'big file'} was specified, encryption was interrupted.")
                 self.updateStatus("Ready")
                 return
@@ -784,7 +787,7 @@ class Interface(Tk):
                                         self.keyValidityStatusLabel = Label(self, text="Validity: [Blank]", foreground="gray", takefocus=0)
                                         self.keyEntryHideCharCheck = Checkbutton(self, text="Hide characters", onvalue=1, offvalue=0, variable=self.master.master.master.master.keyEntryHideCharVar, state=DISABLED, takefocus=0)
                                         self.keyBrowseButton = Button(self, text="Browse key file...", width=21, state=DISABLED, command=self.master.master.getKeyFromFile, takefocus=0)
-                                        self.keyPasteButton = Button(self, text="Paste", width=13, state=DISABLED, command=lambda: self.keyEntry.replace(self.master.master.clipboard_get()), takefocus=0)
+                                        self.keyPasteButton = Button(self, text="Paste", width=13, state=DISABLED, command=lambda: self.keyEntry.replace(self.master.master.master.master.clipboard_get()), takefocus=0)
                                         self.keyClearButton = Button(self, text="Clear", width=13, state=DISABLED, command=lambda: self.keyEntry.clear(), takefocus=0)
                                         self.keyEnteredAlgAES = Radiobutton(self, text="AES (Advanced Encryption Standard)", value=0, variable=self.master.master.master.master.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
                                         self.keyEnteredAlgDES = Radiobutton(self, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.master.master.master.master.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
@@ -1534,7 +1537,7 @@ class Interface(Tk):
                                 self.keyOutputLabel = Label(self, text="Output", takefocus=0)
                                 self.keyOutputEntry = Entry(self, width=46, state="readonly", font=("Consolas",9), textvariable=self.master.master.master.keyOutputVar, takefocus=0)
                                 self.outputClearButton = Button(self, width=15, text="Clear", command=self.keyOutputEntry.clear, state=DISABLED, takefocus=0)
-                                self.outputPasteButton = Button(self, width=15, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.keyOutputEntry.get("1.0", END)[:-1 if self.keyOutputEntry.get("1.0", END).endswith("\n") else 0]), takefocus=0)
+                                self.outputPasteButton = Button(self, width=15, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.keyOutputEntry.get()[:-1 if self.keyOutputEntry.get().endswith("\n") else 0]), takefocus=0)
 
                                 self.master.master.master.keyInputVar.trace("w", self.keyInputCallback)
 
@@ -1692,6 +1695,12 @@ class Interface(Tk):
         self.keyInputHideVar = IntVar(value=0)
         self.keyOutputVar = StringVar()
 
+        self.showProgramNameVar = IntVar(value=1)
+        self.showProgramVersionVar = IntVar(value=1)
+        self.showTimeVar = IntVar(value=0)
+        self.showDateVar = IntVar(value=0)
+        self.titlebarUpdateInterval = IntVar(value=200)
+
     def __initialize_menu(self):
         class menuBar(Menu):
             def __init__(self, master: Interface):
@@ -1722,11 +1731,10 @@ class Interface(Tk):
                         class titleMenu(Menu):
                             def __init__(self, master: viewMenu):
                                 super().__init__(master, tearoff=0)
-                                self.add_checkbutton(label = "Show program name in titlebar")
-                                self.add_checkbutton(label = "Show program version in titlebar")
-                                self.add_checkbutton(label = "Show program build number in titlebar")
-                                self.add_checkbutton(label = "Show time in titlebar")
-                                self.add_checkbutton(label = "Show date in titlebar")
+                                self.add_checkbutton(label = "Show program name in titlebar", onvalue=1, offvalue=0, variable=self.master.master.master.showProgramNameVar)
+                                self.add_checkbutton(label = "Show program version in titlebar", onvalue=1, offvalue=0, variable=self.master.master.master.showProgramVersionVar)
+                                self.add_checkbutton(label = "Show time in titlebar", onvalue=1, offvalue=0, variable=self.master.master.master.showTimeVar)
+                                self.add_checkbutton(label = "Show date in titlebar", onvalue=1, offvalue=0, variable=self.master.master.master.showDateVar)
                                 self.add_separator()
                                 class speedMenu(Menu):
                                     def __init__(self, master: titleMenu):
