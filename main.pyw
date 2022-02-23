@@ -1,3 +1,4 @@
+
 """
 MIT License
 
@@ -25,7 +26,7 @@ __title__ = "Encrypt-n-Decrypt"
 __author__ = "Yilmaz04"
 __license__ = "MIT"
 __copyright__ = "Copyright 2017-2022 Yilmaz Alpaslan"
-__version__ = "0.3.0"
+__version__ = "1.0.0"
 
 from tkinter import (
     NORMAL, DISABLED, WORD, FLAT, END,
@@ -52,7 +53,6 @@ from string import ascii_letters, digits
 from datetime import datetime
 from random import randint, choice
 from ttkthemes import ThemedStyle
-from multiprocessing import Process
 from threading import Thread
 from hurry.filesize import size, alternative
 
@@ -65,6 +65,12 @@ from Crypto.Random import get_random_bytes
 
 import base64, os, logging, pyperclip, binascii
 import functools, multipledispatch
+
+def threaded(function: Callable):
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+        Thread(target=function, args=args, kwargs=kwargs).start()
+    return wrapper
 
 class Cryptography(object):
     def __init__(self, master: Tk):
@@ -130,12 +136,6 @@ class Cryptography(object):
                         args[0].master.mainNotebook.decryptionFrame.decryptButton.configure(state=NORMAL)
         return wrapper
 
-    def threaded(function: Callable):
-        @functools.wraps(function)
-        def wrapper(*args, **kwargs):
-            Thread(target=function, args=args, kwargs=kwargs).start()
-        return wrapper
-
     def updateStatus(self, status: str = "Ready"):
         self.master.statusBar.configure(text=f"Status: {status}")
         self.master.update()
@@ -145,6 +145,8 @@ class Cryptography(object):
         return self.__encryption_busy
     @encryption_busy.setter
     def encryption_busy(self, value: bool):
+        if self.__encryption_busy == value and value:
+            raise Exception
         self.__encryption_busy = value
 
     @property
@@ -152,6 +154,8 @@ class Cryptography(object):
         return self.__decryption_busy
     @decryption_busy.setter
     def decryption_busy(self, value: bool):
+        if self.__decryption_busy == value and value:
+            raise Exception
         self.__decryption_busy = value
 
     @threaded
@@ -422,7 +426,7 @@ class loggingHandler(logging.Handler):
         self.widget.after(0, append)
     
     def format(self, record: logging.LogRecord) -> str:
-        return str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S') + " [" + record.levelname + "] " + record.getMessage())
+        return str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S') + f" [{record.levelname}] " + record.getMessage())
 
 class ToolTip(object):
     def __init__(self, widget: Widget):
@@ -454,6 +458,11 @@ class ToolTip(object):
         except TclError:
             pass
         def fade_in():
+            x, y = root.winfo_pointerxy()
+            widget = root.winfo_containing(x, y)
+            if widget is not self.widget:
+                tw.destroy()
+                return
             alpha = tw.attributes("-alpha")
             if alpha != 1:
                 alpha += .1
@@ -461,6 +470,7 @@ class ToolTip(object):
                 tw.after(self.transition, fade_in)
             else:
                 tw.attributes("-alpha", 1)
+                return
         fade_in()
 
     def hidetip(self, *args, **kwargs):
@@ -481,9 +491,8 @@ class ToolTip(object):
         except Exception as e:
             if tw:
                 tw.destroy()
-            else:
-                if self.tipwindow:
-                    self.tipwindow.destroy()
+            elif self.tipwindow:
+                self.tipwindow.destroy()
 
 class ScrolledText(Text):
     def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
@@ -642,7 +651,7 @@ class Text(Text):
         if self._textvariable is not None:
             self._textvariable.set(self.get("1.0", "end-1c"))
 
-class Entry(Entry):
+class Widget(Widget):
     def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
 
@@ -657,6 +666,7 @@ class Entry(Entry):
             self.bind('<Leave>', leave)
             self.bind('<Button-1>', leave)
 
+class Entry(Widget, Entry):
     def replace(self, string: str):
         old_val = self["state"]
         self.configure(state=NORMAL)
@@ -670,35 +680,13 @@ class Entry(Entry):
         self.delete(0, END)
         self.configure(state=old_val)
 
-class Button(Button):
-    def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
-        super().__init__(master, *args, **kwargs)
+class Button(Widget, Button): ...
 
-        if not not tooltip:
-            def enter(event = None):
-                self.toolTip = ToolTip(self)
-                self.after(1000, self.toolTip.showtip, tooltip, self, event)
-            def leave(event = None):
-                self.toolTip.hidetip(self)
+class Label(Widget, Label): ...
 
-            self.bind('<Enter>', enter)
-            self.bind('<Leave>', leave)
-            self.bind('<Button-1>', leave)
+class Radiobutton(Widget, Radiobutton): ...
 
-class Label(Label):
-    def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
-        super().__init__(master, *args, **kwargs)
-
-        if not not tooltip:
-            def enter(event = None):
-                self.toolTip = ToolTip(self)
-                self.after(1000, self.toolTip.showtip, tooltip, self, event)
-            def leave(event = None):
-                self.toolTip.hidetip(self)
-
-            self.bind('<Enter>', enter)
-            self.bind('<Leave>', leave)
-            self.bind('<Button-1>', leave)
+class Checkbutton(Widget, Checkbutton): ...
 
 class Interface(Tk):
     def __init__(self):
@@ -706,7 +694,7 @@ class Interface(Tk):
         super().__init__()
 
         self.theme = ThemedStyle(self)
-        self.theme.set_theme("vista")
+        self.theme.set_theme("vista" if os.name == "nt" else "arc")
 
         self.withdraw()
 
@@ -714,7 +702,7 @@ class Interface(Tk):
         self.width = 800
         self.version = __version__
 
-        self.wm_title(f"Encrypt-n-Decrypt v{self.version}")
+        self.wm_title(f"Encrypt'n'Decrypt v{self.version}")
         self.wm_geometry(f"{self.width}x{self.height}")
         self.wm_resizable(width=False, height=False)
         self.wm_minsize(width = self.width, height = self.height)
@@ -738,7 +726,7 @@ class Interface(Tk):
 
                         self.textEntryCheck = Radiobutton(self, text="Plain text:", value=0, variable=self.master.master.dataSourceVar, command=self.changeDataSource, takefocus=0)
                         self.textEntry = Entry(self, width=48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.master.master.textEntryVar)
-                        self.textPasteButton = Button(self, text="Paste", width=14, state=NORMAL, command=lambda: self.textEntry.replace(str(self.master.master.clipboard_get())), takefocus=0)
+                        self.textPasteButton = Button(self, text="Paste", tooltip="sus", width=14, state=NORMAL, command=lambda: self.textEntry.replace(str(self.master.master.clipboard_get())), takefocus=0)
                         self.textClearButton = Button(self, text="Clear", width=14, command=lambda: self.textEntry.delete(0, END), takefocus=0, state=DISABLED)
                         self.textEntryHideCharCheck = Checkbutton(self, text="Hide characters", variable=self.master.master.textEntryHideCharVar, onvalue=1, offvalue=0, command=lambda: self.textEntry.configure(show="●" if bool(self.master.master.textEntryHideCharVar.get()) else ""), takefocus=0)
 
@@ -1438,7 +1426,7 @@ class Interface(Tk):
 
                                 class encodeOrDecodeFrame(LabelFrame):
                                     def __init__(self, master: LabelFrame = None):
-                                        super().__init__(master=master, height=65, width=380, text="Encode/decode")
+                                        super().__init__(master=master, height=65, width=382, text="Encode/decode")
 
                                         self.encodeRadiobutton = Radiobutton(self, text="Encode", value=0, variable=self.master.master.master.master.encodeOrDecodeVar, command=self.master.base64InputCallback, takefocus=0)
                                         self.decodeRadiobutton = Radiobutton(self, text="Decode", value=1, variable=self.master.master.master.master.encodeOrDecodeVar, command=self.master.base64InputCallback, takefocus=0)
@@ -1459,7 +1447,7 @@ class Interface(Tk):
                                 self.base64InputText.place(x=10, y=22)
                                 self.inputClearButton.place(x=116, y=98)
                                 self.inputPasteButton.place(x=9, y=98)
-                                self.inputBrowseButton.place(x=279, y=98)
+                                self.inputBrowseButton.place(x=281, y=98)
 
                                 self.encodeOrDecodeFrame = encodeOrDecodeFrame(self)
                                 self.encodeOrDecodeFrame.place(x=10, y=125)
@@ -1887,6 +1875,21 @@ class Interface(Tk):
     def clipboard_set(self, text: str = None):
         pyperclip.copy(text)
 
+    class Settings(Toplevel):
+        def __init__(self, master: Tk):
+            self.master = master
+            
+            self.grab_set()
+            self.width = 200
+            self.height = 200
+
+            self.wm_title("Encrypt'n'Decrypt Settings")
+            self.wm_geometry(f"{self.width}x{self.height}")
+            self.wm_resizable(height=False, width=False)
+            self.wm_attributes("-fullscreen", False)
+            self.wm_maxsize(self.width, self.height)
+            self.wm_minsize(self.width, self.height)
+
     class Updates(Toplevel):
         def __init__(self, master: Tk):
             self.master = master
@@ -1898,16 +1901,17 @@ class Interface(Tk):
                     latest = release
                     break
 
-            success = False
-            for i in range(len(latest["tag_name"].split("."))):
-                if latest["tag_name"].split(".")[i] > self.master.version.split(".")[i]:
-                    success = True
-                    break
-                else:
-                    continue
+            success = True if int(__version__.replace(".", "")) < int(latest["tag_name"].replace(".", "").replace("v", "")) else False if int(__version__.replace(".", "")) == int(latest["tag_name"].replace(".", "").replace("v", "")) else None
 
-            if not success:
+            if not success and success is not None:
                 messagebox.showinfo("No updates available", "No updates avaliable yet. Please check back later.")
+                self.master.logger.info("Updates checked. No updates available.")
+                super().__init__(self.master)
+                self.withdraw()
+                self.destroy()
+                return
+            elif not success and success is None:
+                messagebox.showwarning("sus", "I really wonder how you currently have a more up-to-date version than the latest release in the official GitHub page. Pretty sure you're either me or a friend of mine.")
                 self.master.logger.info("Updates checked. No updates available.")
                 super().__init__(self.master)
                 self.withdraw()
@@ -1923,7 +1927,7 @@ class Interface(Tk):
             self.width = 669
             self.height = 558
 
-            self.wm_title("Eɲcrƴpʈ'n'Decrƴpʈ Updater")
+            self.wm_title("Encrypt'n'Decrypt Updater")
             self.wm_geometry(f"{self.width}x{self.height}")
             self.wm_resizable(height=False, width=False)
             self.wm_attributes("-fullscreen", False)
