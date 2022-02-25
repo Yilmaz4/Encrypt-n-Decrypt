@@ -1,24 +1,32 @@
-# About Encrypt'n'Decrypt:
+# About Encrypt'n'Decrypt
+
 [![made-with-python](https://img.shields.io/badge/Made%20With-Python%203%2E9%2E7-396F9E.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![made-for-windows](https://img.shields.io/badge/Made%20For-Windows%20&%20Linux-00A4E3.svg?style=flat&logo=microsoft)](https://www.microsoft.com/)
 [![GitHub license](https://img.shields.io/badge/License-MIT-A10000?style=flat)](https://github.com/Yilmaz4/Encrypt-n-Decrypt/blob/master/LICENSE)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-Yep-009e0a.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-Yep-009e0a.svg?style=flat&logo=powershell&logoColor=white)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 [![Open Source?](https://img.shields.io/badge/Open%20source%3F-Of%20course%21%20%E2%9D%A4-3C9E44.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
-[![Stable?](https://img.shields.io/badge/Release-v1%2E0%2E0%20%7C%20Stable-3C9E44.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+[![Stable?](https://img.shields.io/badge/Release-v1%2E0%2E0%20%7C%20Beta-ffc700.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 
 [//]: <> (009e0a Stable | ffc700 Prerelease | ff0000 Beta)
 
-Hi everyone, welcome to the GitHub repository of my first ever Python project which is capable of encrypting and decrypting using diverse encryption algorithms such as AES (Advanced Encryption Standard), 3DES (Triple Data Encryption Standard) or RSA (Rivest Shamir Adleman).
+Hi everyone, welcome to the GitHub repository of my first ever Python project which is capable of encrypting and decrypting data using diverse encryption algorithms such as AES (Advanced Encryption Standard), 3DES (Triple Data Encryption Standard) or RSA (Rivest Shamir Adleman).
 
 In cryptography, encryption is the process of encoding information. This process converts the original representation of the information, known as plaintext, into an alternative form known as ciphertext. Ideally, only authorized parties can decipher a ciphertext back to plaintext and access the original information. Encryption does not itself prevent interference but denies the intelligible content to a would-be interceptor.
 
+To decrypt the data that you've encrypted using a symmetric key encryption algorithm (AES or 3DES) using this program, you need to have the key called "encryption key" which was used to encrypt the data. Similarly, to decrypt a piece of asymmetrically encrypted data (using RSA algorithm), you need to have a key called "private key".
+
 ## Introduction
 
+As you can see in the screenshot below, the interface of the program consists of 5 tabs: Encryption, Decryption, Miscellaneous, Logs and Help & About respectively.
+![Screenshot](image/README/1645815509083.png)
 
+### Encryption
 
-## License
+The encryption tab is for encrypting, as its name suggests. The program allows you to either enter some text or select a file to encrypt. Right below the area which you select what to encrypt, you can choose whether to generate a new encryption key or use a pre-generated key.
 
-Copyright 2017-2022 Yilmaz Alpaslan
+# License
+
+Copyright © 2017-2022 Yılmaz Alpaslan
 
 Permission is hereby granted, free ofy person obtaining a copy of this
 software and associated documentation files (the "Software"), to deal in the Software
