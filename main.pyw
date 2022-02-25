@@ -1,4 +1,3 @@
-
 """
 MIT License
 
@@ -758,29 +757,30 @@ class Interface(Tk):
                                 class symmetricEncryption(Frame):
                                     def __init__(self, master: Notebook, **kwargs):
                                         super().__init__(master, **kwargs)
+                                        self.root = self.master.master.master.master
 
-                                        self.generateRandomKeyCheck = Radiobutton(self, text="Generate a random key", value=0, variable=self.master.master.master.master.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
+                                        self.generateRandomKeyCheck = Radiobutton(self, text="Generate a random key", value=0, variable=self.root.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
 
-                                        self.AESAlgorithmCheck = Radiobutton(self, text="AES (Advanced Encryption Standard)", value=0, variable=self.master.master.master.master.generateAlgorithmSelection, command=self.master.master.changeAlgorithmSelection, takefocus=0)
-                                        self.AES128Check = Radiobutton(self, text="AES-128 Key", value=128, variable=self.master.master.master.master.generateRandomAESVar, takefocus=0)
-                                        self.AES192Check = Radiobutton(self, text="AES-192 Key", value=192, variable=self.master.master.master.master.generateRandomAESVar, takefocus=0)
-                                        self.AES256Check = Radiobutton(self, text="AES-256 Key", value=256, variable=self.master.master.master.master.generateRandomAESVar, takefocus=0)
+                                        self.AESAlgorithmCheck = Radiobutton(self, text="AES (Advanced Encryption Standard)", value=0, variable=self.root.generateAlgorithmSelection, command=self.master.master.changeAlgorithmSelection, takefocus=0)
+                                        self.AES128Check = Radiobutton(self, text="AES-128 Key", value=128, variable=self.root.generateRandomAESVar, takefocus=0)
+                                        self.AES192Check = Radiobutton(self, text="AES-192 Key", value=192, variable=self.root.generateRandomAESVar, takefocus=0)
+                                        self.AES256Check = Radiobutton(self, text="AES-256 Key", value=256, variable=self.root.generateRandomAESVar, takefocus=0)
 
-                                        self.DESAlgorithmCheck = Radiobutton(self, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.master.master.master.master.generateAlgorithmSelection, command=self.master.master.changeAlgorithmSelection, takefocus=0)
-                                        self.DES128Check = Radiobutton(self, text="3DES-128 Key", value=128, state=DISABLED, variable=self.master.master.master.master.generateRandomDESVar, takefocus=0)
-                                        self.DES192Check = Radiobutton(self, text="3DES-192 Key", value=192, state=DISABLED, variable=self.master.master.master.master.generateRandomDESVar, takefocus=0)
+                                        self.DESAlgorithmCheck = Radiobutton(self, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.root.generateAlgorithmSelection, command=self.master.master.changeAlgorithmSelection, takefocus=0)
+                                        self.DES128Check = Radiobutton(self, text="3DES-128 Key", value=128, state=DISABLED, variable=self.root.generateRandomDESVar, takefocus=0)
+                                        self.DES192Check = Radiobutton(self, text="3DES-192 Key", value=192, state=DISABLED, variable=self.root.generateRandomDESVar, takefocus=0)
 
-                                        self.selectKeyCheck = Radiobutton(self, text="Use this key:", value=1, variable=self.master.master.master.master.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
-                                        self.keyEntry = Entry(self, width=46, font=("Consolas",9), state=DISABLED, textvariable=self.master.master.master.master.keyEntryVar, takefocus=0)
+                                        self.selectKeyCheck = Radiobutton(self, text="Use this key:", value=1, variable=self.root.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
+                                        self.keyEntry = Entry(self, width=46, font=("Consolas",9), state=DISABLED, textvariable=self.root.keyEntryVar, takefocus=0)
                                         self.keyValidityStatusLabel = Label(self, text="Validity: [Blank]", foreground="gray", takefocus=0)
-                                        self.keyEntryHideCharCheck = Checkbutton(self, text="Hide characters", onvalue=1, offvalue=0, variable=self.master.master.master.master.keyEntryHideCharVar, state=DISABLED, takefocus=0)
+                                        self.keyEntryHideCharCheck = Checkbutton(self, text="Hide characters", onvalue=1, offvalue=0, variable=self.root.keyEntryHideCharVar, state=DISABLED, takefocus=0)
                                         self.keyBrowseButton = Button(self, text="Browse key file...", width=21, state=DISABLED, command=self.master.master.getKeyFromFile, takefocus=0)
-                                        self.keyPasteButton = Button(self, text="Paste", width=13, state=DISABLED, command=lambda: self.keyEntry.replace(self.master.master.master.master.clipboard_get()), takefocus=0)
+                                        self.keyPasteButton = Button(self, text="Paste", width=13, state=DISABLED, command=lambda: self.keyEntry.replace(self.root.clipboard_get()), takefocus=0)
                                         self.keyClearButton = Button(self, text="Clear", width=13, state=DISABLED, command=lambda: self.keyEntry.clear(), takefocus=0)
-                                        self.keyEnteredAlgAES = Radiobutton(self, text="AES (Advanced Encryption Standard)", value=0, variable=self.master.master.master.master.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
-                                        self.keyEnteredAlgDES = Radiobutton(self, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.master.master.master.master.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
+                                        self.keyEnteredAlgAES = Radiobutton(self, text="AES (Advanced Encryption Standard)", value=0, variable=self.root.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
+                                        self.keyEnteredAlgDES = Radiobutton(self, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.root.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
 
-                                        self.master.master.master.master.keyEntryVar.trace("w", self.master.master.limitKeyEntry)
+                                        self.root.keyEntryVar.trace("w", self.master.master.limitKeyEntry)
 
                                         self.generateRandomKeyCheck.place(x=5, y=5)
                                         self.AESAlgorithmCheck.place(x=16, y=25)
@@ -803,30 +803,31 @@ class Interface(Tk):
                                 class asymmetricEncryption(Frame):
                                     def __init__(self, master: Notebook, **kwargs):
                                         super().__init__(master, **kwargs)
+                                        self.root = self.master.master.master.master
 
-                                        self.generateRandomKeyCheck = Radiobutton(self, text="Generate a random key", value=0, variable=self.master.master.master.master.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
+                                        self.generateRandomKeyCheck = Radiobutton(self, text="Generate a random key", value=0, variable=self.root.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
 
-                                        self.RSA1024Check = Radiobutton(self, text="RSA-1024 Key", value=1024, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
-                                        self.RSA2048Check = Radiobutton(self, text="RSA-2048 Key", value=2048, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
-                                        self.RSA3072Check = Radiobutton(self, text="RSA-3072 Key", value=3072, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
-                                        self.RSA4096Check = Radiobutton(self, text="RSA-4096 Key", value=4096, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
-                                        self.RSA6144Check = Radiobutton(self, text="RSA-6144 Key", value=6144, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
-                                        self.RSA8196Check = Radiobutton(self, text="RSA-8192 Key", value=8192, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
-                                        self.RSACustomCheck = Radiobutton(self, text="Custom RSA key length:", value=0, variable=self.master.master.master.master.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.master.master.master.master.generateRandomRSAVar.get() else NORMAL), takefocus=0)
-                                        self.RSACustomEntry = Entry(self, width=6, state=DISABLED, validate = 'all', validatecommand = (self.master.master.master.master.register(lambda P: (str.isdigit(P) or P == "") and len(P) <= 6), '%P'), textvariable=self.master.master.master.master.customRSALengthVar, takefocus=0)
+                                        self.RSA1024Check = Radiobutton(self, text="RSA-1024 Key", value=1024, variable=self.root.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.root.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSA2048Check = Radiobutton(self, text="RSA-2048 Key", value=2048, variable=self.root.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.root.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSA3072Check = Radiobutton(self, text="RSA-3072 Key", value=3072, variable=self.root.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.root.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSA4096Check = Radiobutton(self, text="RSA-4096 Key", value=4096, variable=self.root.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.root.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSA6144Check = Radiobutton(self, text="RSA-6144 Key", value=6144, variable=self.root.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.root.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSA8196Check = Radiobutton(self, text="RSA-8192 Key", value=8192, variable=self.root.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.root.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSACustomCheck = Radiobutton(self, text="Custom RSA key length:", value=0, variable=self.root.generateRandomRSAVar, command=lambda: self.RSACustomEntry.configure(state=DISABLED if self.root.generateRandomRSAVar.get() else NORMAL), takefocus=0)
+                                        self.RSACustomEntry = Entry(self, width=6, state=DISABLED, validate = 'all', validatecommand = (self.root.register(lambda P: (str.isdigit(P) or P == "") and len(P) <= 6), '%P'), textvariable=self.root.customRSALengthVar, takefocus=0)
                                         self.RSACustomEntry.replace("1024")
 
-                                        self.selectKeyCheck = Radiobutton(self, text="Use this key:", value=1, variable=self.master.master.master.master.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
-                                        self.keyEntry = Entry(self, width=46, font=("Consolas", 9), state=DISABLED, textvariable=self.master.master.master.master.keyEntryVar, takefocus=0)
+                                        self.selectKeyCheck = Radiobutton(self, text="Use this key:", value=1, variable=self.root.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
+                                        self.keyEntry = Entry(self, width=46, font=("Consolas", 9), state=DISABLED, textvariable=self.root.keyEntryVar, takefocus=0)
                                         self.keyValidityStatusLabel = Label(self, text="Validity: [Blank]", foreground="gray", takefocus=0)
-                                        self.keyEntryHideCharCheck = Checkbutton(self, text="Hide characters", onvalue=1, offvalue=0, variable=self.master.master.master.master.keyEntryHideCharVar, state=DISABLED, takefocus=0)
+                                        self.keyEntryHideCharCheck = Checkbutton(self, text="Hide characters", onvalue=1, offvalue=0, variable=self.root.keyEntryHideCharVar, state=DISABLED, takefocus=0)
                                         self.keyBrowseButton = Button(self, text="Browse key file...", width=21, state=DISABLED, command=self.master.master.getKeyFromFile, takefocus=0)
                                         self.keyPasteButton = Button(self, text="Paste", width=13, state=DISABLED, command=lambda: self.keyEntry.insert(0, self.master.master.clipboard_get()), takefocus=0)
                                         self.keyClearButton = Button(self, text="Clear", width=13, state=DISABLED, command=lambda: self.keyEntry.delete(0, END), takefocus=0)
-                                        self.keyEnteredAlgAES = Radiobutton(self, text="AES (Advanced Encryption Standard)", value=0, variable=self.master.master.master.master.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
-                                        self.keyEnteredAlgDES = Radiobutton(self, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.master.master.master.master.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
+                                        self.keyEnteredAlgAES = Radiobutton(self, text="AES (Advanced Encryption Standard)", value=0, variable=self.root.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
+                                        self.keyEnteredAlgDES = Radiobutton(self, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.root.entryAlgorithmSelection, command=self.master.master.limitKeyEntry, state=DISABLED, takefocus=0)
 
-                                        self.master.master.master.master.keyEntryVar.trace("w", self.master.master.limitKeyEntry)
+                                        self.root.keyEntryVar.trace("w", self.master.master.limitKeyEntry)
 
                                         self.generateRandomKeyCheck.place(x=5, y=5)
                                         self.RSA1024Check.place(x=16, y=25)
@@ -853,7 +854,7 @@ class Interface(Tk):
                                 self.asymmetricEncryption = asymmetricEncryption(self)
 
                                 self.add(self.symmetricEncryption, text="Symmetric Key Encryption")
-                                self.add(self.asymmetricEncryption, text="Asymmetric Key Encryption")
+                                self.add(self.asymmetricEncryption, text="Asymmetric Key Encryption", state=DISABLED)
 
                         self.algorithmSelect = algorithmSelect(self)
                         self.encryptButton = Button(self, text="Encrypt", width=22, command=self.master.master.crypto.encrypt, takefocus=0)
@@ -866,30 +867,31 @@ class Interface(Tk):
                         class outputFrame(LabelFrame):
                             def __init__(self, master: Frame):
                                 super().__init__(master, text="Output", height=502, width=403, takefocus=0)
+                                self.root = self.master.master.master
 
-                                self.outputText = ScrolledText(self, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.master.master.master.outputVar, highlightcolor="#cccccc")
-                                self.AESKeyText = Text(self, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.master.master.master.AESKeyVar, highlightcolor="#cccccc")
-                                self.RSAPublicText = ScrolledText(self, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", textvariable=self.master.master.master.RSAPublicVar, highlightthickness=1, highlightcolor="#cccccc")
-                                self.RSAPrivateText = ScrolledText(self, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", textvariable=self.master.master.master.RSAPrivateVar, highlightthickness=1, highlightcolor="#cccccc")
+                                self.outputText = ScrolledText(self, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.root.outputVar, highlightcolor="#cccccc")
+                                self.AESKeyText = Text(self, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.root.AESKeyVar, highlightcolor="#cccccc")
+                                self.RSAPublicText = ScrolledText(self, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", textvariable=self.root.RSAPublicVar, highlightthickness=1, highlightcolor="#cccccc")
+                                self.RSAPrivateText = ScrolledText(self, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", textvariable=self.root.RSAPrivateVar, highlightthickness=1, highlightcolor="#cccccc")
                                 self.AESKeyLabel = Label(self, text="AES/3DES Key:", takefocus=0)
                                 self.RSAPublicLabel = Label(self, text="RSA Public Key:", takefocus=0)
                                 self.RSAPrivateLabel = Label(self, text="RSA Private Key:", takefocus=0)
 
-                                self.master.master.master.outputVar.trace("w", self.outputTextCallback)
-                                self.master.master.master.AESKeyVar.trace("w", self.AESKeyTextCallback)
-                                self.master.master.master.RSAPublicVar.trace("w", self.RSAPublicTextCallback)
-                                self.master.master.master.RSAPrivateVar.trace("w", self.RSAPrivateTextCallback)
+                                self.root.outputVar.trace("w", self.outputTextCallback)
+                                self.root.AESKeyVar.trace("w", self.AESKeyTextCallback)
+                                self.root.RSAPublicVar.trace("w", self.RSAPublicTextCallback)
+                                self.root.RSAPrivateVar.trace("w", self.RSAPrivateTextCallback)
 
-                                self.copyOutputButton = Button(self, text = "Copy", width=10, command=lambda: self.master.master.master.clipboard_set(self.master.master.master.lastResult), state=DISABLED, takefocus=0)
+                                self.copyOutputButton = Button(self, text = "Copy", width=10, command=lambda: self.root.clipboard_set(self.root.lastResult), state=DISABLED, takefocus=0)
                                 self.clearOutputButton = Button(self, text = "Clear", width=10, command=lambda: self.outputText.clear(), state=DISABLED, takefocus=0)
                                 self.saveOutputButton = Button(self, width=15, text="Save as...", command=self.saveOutput, state=DISABLED, takefocus=0)
-                                self.copyAESKeyButton = Button(self, width = 10, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.AESKeyText.get("1.0", END)), state=DISABLED, takefocus=0)
+                                self.copyAESKeyButton = Button(self, width = 10, text="Copy", command=lambda: self.root.clipboard_set(self.AESKeyText.get("1.0", END)), state=DISABLED, takefocus=0)
                                 self.clearAESKeyButton = Button(self, width = 10, text="Clear", command=lambda: self.AESKeyText.clear(), state=DISABLED, takefocus=0)
                                 self.saveAESKeyButton = Button(self, width=15, text="Save as...", command=self.saveAESKey, state=DISABLED, takefocus=0)
-                                self.copyRSAPublicButton = Button(self, width = 10, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.RSAPublicText.get("1.0", END)), state=DISABLED, takefocus=0)
+                                self.copyRSAPublicButton = Button(self, width = 10, text="Copy", command=lambda: self.root.clipboard_set(self.RSAPublicText.get("1.0", END)), state=DISABLED, takefocus=0)
                                 self.clearRSAPublicButton = Button(self, width = 10, text="Clear", command=lambda: self.RSAPublicText.clear(), state=DISABLED, takefocus=0)
                                 self.saveRSAPublicButton = Button(self, width=15, text="Save as...", command=self.saveRSAPublic, state=DISABLED, takefocus=0)
-                                self.copyRSAPrivateButton = Button(self, width = 10, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.RSAPrivateText.get("1.0", END)), state=DISABLED, takefocus=0)
+                                self.copyRSAPrivateButton = Button(self, width = 10, text="Copy", command=lambda: self.root.clipboard_set(self.RSAPrivateText.get("1.0", END)), state=DISABLED, takefocus=0)
                                 self.clearRSAPrivateButton = Button(self, width = 10, text="Clear", command=lambda: self.RSAPrivateText.clear(), state=DISABLED, takefocus=0)
                                 self.saveRSAPrivateButton = Button(self, width=15, text="Save as...", command=self.saveRSAPrivate, state=DISABLED, takefocus=0)
 
@@ -919,7 +921,7 @@ class Interface(Tk):
                                 if path == "":
                                     return
                                 with open(path, encoding="utf-8", mode="w") as file:
-                                    file.write(self.master.master.master.outputVar.get())
+                                    file.write(self.root.outputVar.get())
 
                             def saveAESKey(self):
                                 files = [("Encrypt'n'Decrypt key file", "*.key"), ("Text document", "*.txt"), ("All files", "*.*")]
@@ -927,10 +929,10 @@ class Interface(Tk):
                                 if path == "":
                                     return
                                 if os.path.splitext(path)[1] == ".key":
-                                    self.master.saveKey(path, self.master.master.master.AESKeyVar.get())
+                                    self.master.saveKey(path, self.root.AESKeyVar.get())
                                 else:
                                     with open(path, encoding="utf-8", mode="w") as file:
-                                        file.write(self.master.master.master.AESKeyVar.get())
+                                        file.write(self.root.AESKeyVar.get())
 
                             def saveRSAPublic(self):
                                 files = [("Text document", "*.txt"), ("All files", "*.*")]
@@ -938,7 +940,7 @@ class Interface(Tk):
                                 if path == "":
                                     return
                                 with open(path, encoding="utf-8", mode="w") as file:
-                                    file.write(self.master.master.master.RSAPublicVar.get())
+                                    file.write(self.root.RSAPublicVar.get())
 
                             def saveRSAPrivate(self):
                                 files = [("Text document", "*.txt"), ("All files", "*.*")]
@@ -946,10 +948,10 @@ class Interface(Tk):
                                 if path == "":
                                     return
                                 with open(path, encoding="utf-8", mode="w") as file:
-                                    file.write(self.master.master.master.RSAPrivateVar.get())
+                                    file.write(self.root.RSAPrivateVar.get())
 
                             def outputTextCallback(self, *args, **kwargs):
-                                if self.master.master.master.outputVar.get() == "":
+                                if self.root.outputVar.get() == "":
                                     self.outputText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
                                     self.clearOutputButton.configure(state=DISABLED)
                                     self.copyOutputButton.configure(state=DISABLED)
@@ -961,7 +963,7 @@ class Interface(Tk):
                                     self.saveOutputButton.configure(state=NORMAL)
 
                             def AESKeyTextCallback(self, *args, **kwargs):
-                                if self.master.master.master.AESKeyVar.get() == "":
+                                if self.root.AESKeyVar.get() == "":
                                     self.AESKeyText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
                                     self.clearAESKeyButton.configure(state=DISABLED)
                                     self.copyAESKeyButton.configure(state=DISABLED)
@@ -973,7 +975,7 @@ class Interface(Tk):
                                     self.saveAESKeyButton.configure(state=NORMAL)
 
                             def RSAPublicTextCallback(self, *args, **kwargs):
-                                if self.master.master.master.RSAPublicVar.get() == "":
+                                if self.root.RSAPublicVar.get() == "":
                                     self.RSAPublicText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
                                     self.clearRSAPublicButton.configure(state=DISABLED)
                                     self.copyRSAPublicButton.configure(state=DISABLED)
@@ -985,7 +987,7 @@ class Interface(Tk):
                                     self.saveRSAPublicButton.configure(state=NORMAL)
 
                             def RSAPrivateTextCallback(self, *args, **kwargs):
-                                if self.master.master.master.RSAPrivateVar.get() == "":
+                                if self.root.RSAPrivateVar.get() == "":
                                     self.RSAPrivateText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
                                     self.clearRSAPrivateButton.configure(state=DISABLED)
                                     self.copyRSAPrivateButton.configure(state=DISABLED)
@@ -1251,7 +1253,7 @@ class Interface(Tk):
                         self.symmetricDecryption = Frame(self.decryptNotebook, takefocus=0)
                         self.asymmetricEncryption = Frame(self.decryptNotebook, takefocus=0)
                         self.decryptNotebook.add(self.symmetricDecryption, text="Symmetric Key Decryption")
-                        self.decryptNotebook.add(self.asymmetricEncryption, text="Asymmetric Key Decryption")
+                        self.decryptNotebook.add(self.asymmetricEncryption, text="Asymmetric Key Decryption", state=DISABLED)
                         self.decryptAlgorithmFrame = LabelFrame(self.symmetricDecryption, text="Select algorithm", height=63, width=749, takefocus=0)
                         self.decryptAESCheck = Radiobutton(self.decryptAlgorithmFrame, text="AES (Advanced Encryption Standard)", value=0, variable=self.master.master.decryptAlgorithmVar, takefocus=0)
                         self.decryptDESCheck = Radiobutton(self.decryptAlgorithmFrame, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.master.master.decryptAlgorithmVar, takefocus=0)
@@ -1416,32 +1418,34 @@ class Interface(Tk):
                         class base64Frame(LabelFrame):
                             def __init__(self, master: Frame = None):
                                 super().__init__(master=master, height=342, width=405, text="Base64 encoding/decoding")
+                                self.root = self.master.master.master
 
                                 self.base64InputLabel = Label(self, text="Input", takefocus=0)
                                 self.base64InputValidity = Label(self, text="Validity: [Blank]", foreground="gray")
-                                self.base64InputText = ScrolledText(self, height=4, width=45, textvariable=self.master.master.master.base64InputVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                                self.base64InputText = ScrolledText(self, height=4, width=45, textvariable=self.root.base64InputVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                                 self.inputClearButton = Button(self, width=15, text="Clear", command=self.base64InputText.clear, state=DISABLED, takefocus=0)
-                                self.inputPasteButton = Button(self, width=15, text="Paste", command=lambda: self.base64InputText.replace(self.master.master.master.clipboard_get()), takefocus=0)
+                                self.inputPasteButton = Button(self, width=15, text="Paste", command=lambda: self.base64InputText.replace(self.root.clipboard_get()), takefocus=0)
                                 self.inputBrowseButton = Button(self, width=17, text="Browse...", command=self.browseBase64InputFile, takefocus=0)
 
                                 class encodeOrDecodeFrame(LabelFrame):
                                     def __init__(self, master: LabelFrame = None):
                                         super().__init__(master=master, height=65, width=382, text="Encode/decode")
+                                        self.root = self.master.master.master.master
 
-                                        self.encodeRadiobutton = Radiobutton(self, text="Encode", value=0, variable=self.master.master.master.master.encodeOrDecodeVar, command=self.master.base64InputCallback, takefocus=0)
-                                        self.decodeRadiobutton = Radiobutton(self, text="Decode", value=1, variable=self.master.master.master.master.encodeOrDecodeVar, command=self.master.base64InputCallback, takefocus=0)
+                                        self.encodeRadiobutton = Radiobutton(self, text="Encode", value=0, variable=self.root.encodeOrDecodeVar, command=self.master.base64InputCallback, takefocus=0)
+                                        self.decodeRadiobutton = Radiobutton(self, text="Decode", value=1, variable=self.root.encodeOrDecodeVar, command=self.master.base64InputCallback, takefocus=0)
 
                                         self.encodeRadiobutton.place(x=10, y=0)
                                         self.decodeRadiobutton.place(x=10, y=21)
 
                                 self.base64OutputLabel = Label(self, text="Output", takefocus=0)
-                                self.base64OutputText = ScrolledText(self, height=4, width=45, textvariable=self.master.master.master.base64OutputVar, state=DISABLED, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                                self.base64OutputText = ScrolledText(self, height=4, width=45, textvariable=self.root.base64OutputVar, state=DISABLED, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                                 self.outputClearButton = Button(self, width=15, text="Clear", command=self.base64OutputText.clear, state=DISABLED, takefocus=0)
-                                self.outputCopyButton = Button(self, width=15, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.base64OutputText.get("1.0", END)[:-1 if self.base64OutputText.get("1.0", END).endswith("\n") else 0]), state=DISABLED, takefocus=0)
+                                self.outputCopyButton = Button(self, width=15, text="Copy", command=lambda: self.root.clipboard_set(self.base64OutputText.get("1.0", END)[:-1 if self.base64OutputText.get("1.0", END).endswith("\n") else 0]), state=DISABLED, takefocus=0)
 
-                                self.master.master.master.base64InputVar.trace("w", self.base64InputCallback)
-                                self.master.master.master.base64OutputVar.trace("w", self.base64OutputCallback)
-                                
+                                self.root.base64InputVar.trace("w", self.base64InputCallback)
+                                self.root.base64OutputVar.trace("w", self.base64OutputCallback)
+
                                 self.base64InputLabel.place(x=7, y=0)
                                 self.base64InputValidity.place(x=42, y=0)
                                 self.base64InputText.place(x=10, y=22)
@@ -1457,14 +1461,14 @@ class Interface(Tk):
                                 self.outputCopyButton.place(x=9, y=288)
 
                             def browseBase64InputFile(self):
-                                filePath = filedialog.askopenfilename(title=f"Open a file to {'encode' if not bool(self.master.master.master.encodeOrDecodeVar.get()) else 'decode'}", filetypes=[("All files", "*.*")])
+                                filePath = filedialog.askopenfilename(title=f"Open a file to {'encode' if not bool(self.root.encodeOrDecodeVar.get()) else 'decode'}", filetypes=[("All files", "*.*")])
                                 if ''.join(filePath.split()) != '':
                                     try:
                                         with open(filePath, mode="rb") as file:
                                             index = file.read()
                                     except PermissionError:
                                         messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
-                                        self.master.master.master.logger.error("Read permission for the file specified has been denied, base64 encoding was interrupted.")
+                                        self.root.logger.error("Read permission for the file specified has been denied, base64 encoding was interrupted.")
                                         return
                                     try:
                                         index = index.decode("utf-8")
@@ -1480,11 +1484,11 @@ class Interface(Tk):
                                     self.inputClearButton.configure(state=NORMAL)
                                 else:
                                     self.inputClearButton.configure(state=DISABLED)
-                                if not bool(self.master.master.master.encodeOrDecodeVar.get()) and ''.join(self.base64InputText.get("1.0", END).split()) != "":
+                                if not bool(self.root.encodeOrDecodeVar.get()) and ''.join(self.base64InputText.get("1.0", END).split()) != "":
                                     self.base64InputValidity.configure(text="Validity: Encodable", foreground="green")
                                     self.base64OutputText.replace(base64.urlsafe_b64encode(self.base64InputText.get("1.0", END).encode("utf-8")).decode("utf-8"))
                                     self.base64OutputText.configure(foreground="black")
-                                elif bool(self.master.master.master.encodeOrDecodeVar.get()) and ''.join(self.base64InputText.get("1.0", END).split()) != "":
+                                elif bool(self.root.encodeOrDecodeVar.get()) and ''.join(self.base64InputText.get("1.0", END).split()) != "":
                                     try:
                                         if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.base64InputText.get("1.0", END).encode("utf-8")).decode("utf-8").encode("utf-8")) == self.base64InputText.get("1.0", END).rstrip().encode("utf-8"):
                                             self.base64InputValidity.configure(text="Validity: Valid base64 encoded data", foreground="green")
@@ -1514,20 +1518,21 @@ class Interface(Tk):
                         class keyDerivationFrame(LabelFrame):
                             def __init__(self, master: miscFrame):
                                 super().__init__(master=master, height=178, width=354, text="Key Derivation Function (KDF)")
+                                self.root = self.master.master.master
 
                                 self.keyInputLabel = Label(self, text="Input", takefocus=0)
                                 self.keyInputValidity = Label(self, text="Validity: [Blank]", foreground="gray")
-                                self.keyInputEntry = Entry(self, width=46, font=("Consolas", 9), textvariable=self.master.master.master.keyInputVar, takefocus=0)
-                                self.keyInputHideCheck = Checkbutton(self, text="Hide characters", takefocus=0, onvalue=1, offvalue=0, variable=self.master.master.master.keyInputHideVar, command=lambda: self.keyInputEntry.configure(show="●" if bool(self.master.master.master.keyInputHideVar.get()) else ""))
+                                self.keyInputEntry = Entry(self, width=46, font=("Consolas", 9), textvariable=self.root.keyInputVar, takefocus=0)
+                                self.keyInputHideCheck = Checkbutton(self, text="Hide characters", takefocus=0, onvalue=1, offvalue=0, variable=self.root.keyInputHideVar, command=lambda: self.keyInputEntry.configure(show="●" if bool(self.root.keyInputHideVar.get()) else ""))
                                 self.inputClearButton = Button(self, width=15, text="Clear", command=self.keyInputEntry.clear, state=DISABLED, takefocus=0)
-                                self.inputPasteButton = Button(self, width=15, text="Paste", command=lambda: self.keyInputEntry.replace(self.master.master.master.clipboard_get()), takefocus=0)
+                                self.inputPasteButton = Button(self, width=15, text="Paste", command=lambda: self.keyInputEntry.replace(self.root.clipboard_get()), takefocus=0)
 
                                 self.keyOutputLabel = Label(self, text="Output", takefocus=0)
-                                self.keyOutputEntry = Entry(self, width=46, state="readonly", font=("Consolas",9), textvariable=self.master.master.master.keyOutputVar, takefocus=0)
+                                self.keyOutputEntry = Entry(self, width=46, state="readonly", font=("Consolas",9), textvariable=self.root.keyOutputVar, takefocus=0)
                                 self.outputClearButton = Button(self, width=15, text="Clear", command=self.keyOutputEntry.clear, state=DISABLED, takefocus=0)
-                                self.outputPasteButton = Button(self, width=15, text="Copy", command=lambda: self.master.master.master.clipboard_set(self.keyOutputEntry.get()[:-1 if self.keyOutputEntry.get().endswith("\n") else 0]), takefocus=0)
+                                self.outputPasteButton = Button(self, width=15, text="Copy", command=lambda: self.root.clipboard_set(self.keyOutputEntry.get()[:-1 if self.keyOutputEntry.get().endswith("\n") else 0]), takefocus=0)
 
-                                self.master.master.master.keyInputVar.trace("w", self.keyInputCallback)
+                                self.root.keyInputVar.trace("w", self.keyInputCallback)
 
                                 self.keyInputLabel.place(x=7, y=0)
                                 self.keyInputValidity.place(x=42, y=0)
@@ -1625,10 +1630,6 @@ class Interface(Tk):
     @logging_level.deleter
     def logging_level(self): ...
 
-    @logging_level.getter
-    def logging_level(self) -> int:
-        return self.logger.level
-
     @logging_level.setter
     def logging_level(self, level: Optional[Literal[0, 10, 20, 30, 40, 50]] = None):
         if not not level:
@@ -1710,27 +1711,30 @@ class Interface(Tk):
                 class viewMenu(Menu):
                     def __init__(self, master: menuBar):
                         super().__init__(master, tearoff=0)
-                        self.add_checkbutton(label = "Show tooltips on hover", accelerator="Ctrl+Alt+T", onvalue=1, offvalue=0, variable=self.master.master.showTooltip, underline=5)
+                        self.root = self.master.master
+                        self.add_checkbutton(label = "Show tooltips on hover", accelerator="Ctrl+Alt+T", onvalue=1, offvalue=0, variable=self.root.showTooltip, underline=5)
                         self.add_separator()
-                        self.add_checkbutton(label = "Show info message dialogs", accelerator="Ctrl+Alt+I", onvalue=1, offvalue=0, variable=self.master.master.showInfoBox, underline=5)
-                        self.add_checkbutton(label = "Show warning message dialogs", accelerator="Ctrl+Alt+W", onvalue=1, offvalue=0, variable=self.master.master.showWarnBox, underline=5)
-                        self.add_checkbutton(label = "Show error message dialogs", accelerator="Ctrl+Alt+E", onvalue=1, offvalue=0, variable=self.master.master.showErrorBox, underline=5)
+                        self.add_checkbutton(label = "Show info message dialogs", accelerator="Ctrl+Alt+I", onvalue=1, offvalue=0, variable=self.root.showInfoBox, underline=5)
+                        self.add_checkbutton(label = "Show warning message dialogs", accelerator="Ctrl+Alt+W", onvalue=1, offvalue=0, variable=self.root.showWarnBox, underline=5)
+                        self.add_checkbutton(label = "Show error message dialogs", accelerator="Ctrl+Alt+E", onvalue=1, offvalue=0, variable=self.root.showErrorBox, underline=5)
                         self.add_separator()
                         class titleMenu(Menu):
                             def __init__(self, master: viewMenu):
                                 super().__init__(master, tearoff=0)
-                                self.add_checkbutton(label = "Show program name in titlebar", onvalue=1, offvalue=0, variable=self.master.master.master.showProgramNameVar)
-                                self.add_checkbutton(label = "Show program version in titlebar", onvalue=1, offvalue=0, variable=self.master.master.master.showProgramVersionVar)
-                                self.add_checkbutton(label = "Show time in titlebar", onvalue=1, offvalue=0, variable=self.master.master.master.showTimeVar)
-                                self.add_checkbutton(label = "Show date in titlebar", onvalue=1, offvalue=0, variable=self.master.master.master.showDateVar)
+                                self.root = self.master.master.master
+                                self.add_checkbutton(label = "Show program name in titlebar", onvalue=1, offvalue=0, variable=self.root.showProgramNameVar)
+                                self.add_checkbutton(label = "Show program version in titlebar", onvalue=1, offvalue=0, variable=self.root.showProgramVersionVar)
+                                self.add_checkbutton(label = "Show time in titlebar", onvalue=1, offvalue=0, variable=self.root.showTimeVar)
+                                self.add_checkbutton(label = "Show date in titlebar", onvalue=1, offvalue=0, variable=self.root.showDateVar)
                                 self.add_separator()
                                 class speedMenu(Menu):
                                     def __init__(self, master: titleMenu):
                                         super().__init__(master, tearoff=0)
-                                        self.add_radiobutton(label = "Fast", value=1, variable=self.master.master.master.master.updateInterval)
-                                        self.add_radiobutton(label = "Moderate", value=2, variable=self.master.master.master.master.updateInterval)
-                                        self.add_radiobutton(label = "Slow", value=3, variable=self.master.master.master.master.updateInterval)
-                                        self.add_radiobutton(label = "Paused", value=0, variable=self.master.master.master.master.updateInterval)
+                                        self.root = self.master.master.master.master
+                                        self.add_radiobutton(label = "Fast", value=1, variable=self.root.updateInterval)
+                                        self.add_radiobutton(label = "Moderate", value=2, variable=self.root.updateInterval)
+                                        self.add_radiobutton(label = "Slow", value=3, variable=self.root.updateInterval)
+                                        self.add_radiobutton(label = "Paused", value=0, variable=self.root.updateInterval)
                                         self.add_separator()
                                         self.add_command(label = "Update now")
                                 self.speedMenu = speedMenu(self)
@@ -1753,48 +1757,50 @@ class Interface(Tk):
                         class themeMenu(Menu):
                             def __init__(self, master: viewMenu):
                                 super().__init__(master, tearoff=0)
-                                self.add_radiobutton(label="Adapta", value="adapta", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("adapta"), accelerator="adapta")
-                                self.add_radiobutton(label="Alt", value="alt", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("alt"), accelerator="alt")
-                                self.add_radiobutton(label="Aquativo", value="aquativo", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("aquativo"), accelerator="aquativo")
-                                self.add_radiobutton(label="Arc", value="arc", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("arc"), accelerator="arc")
-                                self.add_radiobutton(label="Black", value="black", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("black"), accelerator="black")
-                                self.add_radiobutton(label="Blue", value="blue", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("blue"), accelerator="blue")
-                                self.add_radiobutton(label="Breeze", value="breeze", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("breeze"), accelerator="breeze")
-                                self.add_radiobutton(label="Clearlooks", value="clearlooks", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("clearlooks"), accelerator="clearlooks")
-                                self.add_radiobutton(label="Elegance", value="elegance", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("elegance"), accelerator="elegance")
-                                self.add_radiobutton(label="Equilux", value="equilux", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("equilux"), accelerator="equilux")
-                                self.add_radiobutton(label="Itft1", value="itft1", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("itft1"), accelerator="itft1")
-                                self.add_radiobutton(label="Keramik", value="keramik", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("keramik"), accelerator="keramik")
-                                self.add_radiobutton(label="Kroc", value="kroc", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("kroc"), accelerator="kroc")
-                                self.add_radiobutton(label="Plastik", value="plastik", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("plastik"), accelerator="plastik")
-                                self.add_radiobutton(label="Radiance", value="radiance", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("radiance"), accelerator="radiance")
-                                self.add_radiobutton(label="Scidblue", value="scidblue", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidblue"), accelerator="scidblue")
-                                self.add_radiobutton(label="Scidgreen", value="scidgreen", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidgreen"), accelerator="scidgreen")
-                                self.add_radiobutton(label="Scidgrey", value="scidgrey", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidgrey"), accelerator="scidgrey")
-                                self.add_radiobutton(label="Scidmint", value="scidmint", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidmint"), accelerator="scidmint")
-                                self.add_radiobutton(label="Scidpink", value="scidpink", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidpink"), accelerator="scidpink")
-                                self.add_radiobutton(label="Scidpurple", value="scidpurple", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidpurple"), accelerator="scidpurple")
-                                self.add_radiobutton(label="Scidsand", value="scidsand", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("scidsand"), accelerator="scidsand")
-                                self.add_radiobutton(label="Smog", value="smog", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("smog"), accelerator="smog")
-                                self.add_radiobutton(label="Ubuntu", value="ubuntu", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("ubuntu"), accelerator="ubuntu")
-                                self.add_radiobutton(label="Windows Native", value="winnative", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("winnative"), accelerator="winnative")
-                                self.add_radiobutton(label="Windows XP Blue", value="winxpblue", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("winxpblue"), accelerator="winxpblue")
-                                self.add_radiobutton(label="Windows Vista", value="vista", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("vista"), accelerator="vista")
-                                self.add_radiobutton(label="Yaru", value="yaru", variable=self.master.master.master.themeVar, command=lambda: self.master.master.master.theme.set_theme("yaru"), accelerator="yaru")
+                                self.root = self.master.master.master
+                                self.add_radiobutton(label="Adapta", value="adapta", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("adapta"), accelerator="adapta")
+                                self.add_radiobutton(label="Alt", value="alt", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("alt"), accelerator="alt")
+                                self.add_radiobutton(label="Aquativo", value="aquativo", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("aquativo"), accelerator="aquativo")
+                                self.add_radiobutton(label="Arc", value="arc", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("arc"), accelerator="arc")
+                                self.add_radiobutton(label="Black", value="black", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("black"), accelerator="black")
+                                self.add_radiobutton(label="Blue", value="blue", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("blue"), accelerator="blue")
+                                self.add_radiobutton(label="Breeze", value="breeze", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("breeze"), accelerator="breeze")
+                                self.add_radiobutton(label="Clearlooks", value="clearlooks", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("clearlooks"), accelerator="clearlooks")
+                                self.add_radiobutton(label="Elegance", value="elegance", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("elegance"), accelerator="elegance")
+                                self.add_radiobutton(label="Equilux", value="equilux", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("equilux"), accelerator="equilux")
+                                self.add_radiobutton(label="Itft1", value="itft1", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("itft1"), accelerator="itft1")
+                                self.add_radiobutton(label="Keramik", value="keramik", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("keramik"), accelerator="keramik")
+                                self.add_radiobutton(label="Kroc", value="kroc", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("kroc"), accelerator="kroc")
+                                self.add_radiobutton(label="Plastik", value="plastik", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("plastik"), accelerator="plastik")
+                                self.add_radiobutton(label="Radiance", value="radiance", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("radiance"), accelerator="radiance")
+                                self.add_radiobutton(label="Scidblue", value="scidblue", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("scidblue"), accelerator="scidblue")
+                                self.add_radiobutton(label="Scidgreen", value="scidgreen", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("scidgreen"), accelerator="scidgreen")
+                                self.add_radiobutton(label="Scidgrey", value="scidgrey", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("scidgrey"), accelerator="scidgrey")
+                                self.add_radiobutton(label="Scidmint", value="scidmint", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("scidmint"), accelerator="scidmint")
+                                self.add_radiobutton(label="Scidpink", value="scidpink", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("scidpink"), accelerator="scidpink")
+                                self.add_radiobutton(label="Scidpurple", value="scidpurple", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("scidpurple"), accelerator="scidpurple")
+                                self.add_radiobutton(label="Scidsand", value="scidsand", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("scidsand"), accelerator="scidsand")
+                                self.add_radiobutton(label="Smog", value="smog", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("smog"), accelerator="smog")
+                                self.add_radiobutton(label="Ubuntu", value="ubuntu", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("ubuntu"), accelerator="ubuntu")
+                                self.add_radiobutton(label="Windows Native", value="winnative", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("winnative"), accelerator="winnative")
+                                self.add_radiobutton(label="Windows XP Blue", value="winxpblue", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("winxpblue"), accelerator="winxpblue")
+                                self.add_radiobutton(label="Windows Vista", value="vista", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("vista"), accelerator="vista")
+                                self.add_radiobutton(label="Yaru", value="yaru", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("yaru"), accelerator="yaru")
                                 self.add_separator()
-                                self.add_command(label="Reset theme", command=lambda: self.master.master.master.theme.set_theme("vista"), accelerator="Ctrl+Alt+T")
+                                self.add_command(label="Reset theme", command=lambda: self.root.theme.set_theme("vista"), accelerator="Ctrl+Alt+T")
                             def changeTheme(self, theme: str = "vista"):
-                                self.master.master.master.theme.set_theme(theme)
+                                self.root.theme.set_theme(theme)
                         self.themeMenu = themeMenu(self)
                         self.add_cascade(menu=self.themeMenu, label="Window theme configuration")
                         self.add_separator()
                         class langMenu(Menu):
                             def __init__(self, master: viewMenu):
                                 super().__init__(master, tearoff=0)
-                                self.add_radiobutton(label = "English", value=0, variable=self.master.master.master.languageVar)
-                                self.add_radiobutton(label = "Turkish (coming soon)", value=1, variable=self.master.master.master.languageVar, state=DISABLED)
-                                self.add_radiobutton(label = "German (coming soon)", value=2, variable=self.master.master.master.languageVar, state=DISABLED)
-                                self.add_radiobutton(label = "French (coming soon)", value=3, variable=self.master.master.master.languageVar, state=DISABLED)
+                                self.root = self.master.master.master
+                                self.add_radiobutton(label = "English", value=0, variable=self.root.languageVar)
+                                self.add_radiobutton(label = "Turkish (coming soon)", value=1, variable=self.root.languageVar, state=DISABLED)
+                                self.add_radiobutton(label = "German (coming soon)", value=2, variable=self.root.languageVar, state=DISABLED)
+                                self.add_radiobutton(label = "French (coming soon)", value=3, variable=self.root.languageVar, state=DISABLED)
                                 self.add_separator()
                                 self.add_command(label = "Reset language to default", accelerator="Ctrl+Alt+L")
                         self.langMenu = langMenu(self)
@@ -1838,7 +1844,7 @@ class Interface(Tk):
                 self.readmePage.load_html(self.HTML)
                 self.readmePage.set_zoom(0.8)
                 self.readmePage.grid_propagate(0)
-                self.readmePage.enable_images(0)
+                self.readmePage.enable_images(1)
                 self.__tabChangeCount = True
                 self.readmePage.place(x=5, y=27, height=528, width=790)
             else:
