@@ -1,9 +1,9 @@
 # About Encrypt'n'Decrypt
 
-[![made-with-python](https://img.shields.io/badge/Made%20With-Python%203%2E9%2E7-396F9E.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
-[![made-for-windows](https://img.shields.io/badge/Made%20For-Windows-00A4E3.svg?style=flat&logo=microsoft)](https://www.microsoft.com/)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-Yep-009e0a.svg?style=flat&logo=powershell&logoColor=white)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
-[![Open Source?](https://img.shields.io/badge/Open%20source%3F-Of%20course%21%20%E2%9D%A4-3C9E44.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+[![made-with-python](https://img.shields.io/badge/Made%20with-Python%203%2E9%2E7-396F9E.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![made-for-windows](https://img.shields.io/badge/Made%20for-Windows-00A4E3.svg?style=flat&logo=microsoft)](https://www.microsoft.com/)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-Yup-009e0a.svg?style=flat&logo=powershell&logoColor=white)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+[![Open Source?](https://img.shields.io/badge/Open%20source%3F-Of%20course%21%20%E2%9D%A4-009e0a.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 [![Stable?](https://img.shields.io/badge/Release-v1%2E0%2E0%20%7C%20Beta-ffc700.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 
 [//]: <> (009e0a Stable | ffc700 Prerelease | ff0000 Beta)
@@ -18,7 +18,7 @@ To decrypt the data that you've encrypted using a symmetric key encryption algor
 
 As you can see in the screenshot below, the interface of the program consists of 5 tabs: Encryption, Decryption, Miscellaneous, Logs and Help & About respectively.
 
-![1645815509083](https://user-images.githubusercontent.com/77583632/155795442-2df5e428-7139-4970-b973-bfe74fa934fe.png)
+![encrypt-n-decrypt](https://user-images.githubusercontent.com/77583632/155799060-40b90545-2447-4039-abba-cc9cb7b5f072.png)
 
 ### Encryption
 
