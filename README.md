@@ -32,6 +32,7 @@ Finally, you can either press Enter key on your keyboard or click the "Encrypt" 
 
 ### Decryption
 
+![decryption](https://user-images.githubusercontent.com/77583632/155800966-5fc8650b-2077-4bc4-8f4e-56e8fc750712.png)
 
 
 # License
