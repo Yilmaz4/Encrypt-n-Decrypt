@@ -16,13 +16,23 @@ To decrypt the data that you've encrypted using a symmetric key encryption algor
 
 ## Introduction
 
-As you can see in the screenshot below, the interface of the program consists of 5 tabs: Encryption, Decryption, Miscellaneous, Logs and Help & About respectively.
-
-![encrypt-n-decrypt](https://user-images.githubusercontent.com/77583632/155799060-40b90545-2447-4039-abba-cc9cb7b5f072.png)
+As you can see in the screenshots below, the interface of the program consists of 5 tabs: Encryption, Decryption, Miscellaneous, Logs and Help & About respectively.
 
 ### Encryption
 
-The encryption tab is for encrypting, as its name suggests. The program allows you to either enter some text or select a file to encrypt. Right below the area which you select what to encrypt, you can choose whether to generate a new encryption key or use a pre-generated key. If you choose to generate a new encryption key, you have two options as algorithm to use while encrypting which follow as AES or 3DES. Once you choose the algorithm you would like to use too, you can decide how long should the encryption key be. Longer keys are more secure against brute-force attacks (it's currently impossible to brute-force an AES-256 key). The number after either AES or 3DES represents the lenght of the key in bits. When you divide the number with 8, you can find out the amount of characters that are going to be in the key.
+![encrypt-n-decrypt](https://user-images.githubusercontent.com/77583632/155799060-40b90545-2447-4039-abba-cc9cb7b5f072.png)
+
+The encryption tab is for encrypting, as its name suggests. The program allows you to either enter some text or select a file to encrypt. Right below the area which you select what to encrypt, you can choose whether to generate a new encryption key or use a pre-generated key.
+
+If you choose to generate a new encryption key, you have two options as algorithm to use while encrypting which follow as AES or 3DES. Once you choose the algorithm you would like to use too, you can decide how long should the encryption key be. Longer keys are more secure against brute-force attacks (it's currently impossible to brute-force an AES-256 key). The number after either AES or 3DES represents the lenght of the key in bits. When you divide the number with 8, you can find out the amount of characters that are going to be in the key.
+
+If you choose to enter an existent encryption key, you basically can. You also can select a key file (*.key or *.txt) that you've saved with the "Save as..." button in the output pane. When you enter the key, you can select which algorithm you want to encrypt the data with below the entry.
+
+Finally, you can either press Enter key on your keyboard or click the "Encrypt" button to encrypt the data. The encrypted data will appear in the right pane with the encryption key which you can use to decrypt the data later. If you had selected a file to encrypt, the encrypted data will be written on the file unless you uncheck the "Write encrypted data to the file" checkbox next to the button.
+
+### Decryption
+
+
 
 # License
 
