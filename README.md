@@ -1,7 +1,7 @@
 # About Encrypt'n'Decrypt
 
 [![made-with-python](https://img.shields.io/badge/Made%20With-Python%203%2E9%2E7-396F9E.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
-[![made-for-windows](https://img.shields.io/badge/Made%20For-Windows%20&%20Linux-00A4E3.svg?style=flat&logo=microsoft)](https://www.microsoft.com/)
+[![made-for-windows](https://img.shields.io/badge/Made%20For-Windows-00A4E3.svg?style=flat&logo=microsoft)](https://www.microsoft.com/)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-Yep-009e0a.svg?style=flat&logo=powershell&logoColor=white)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 [![Open Source?](https://img.shields.io/badge/Open%20source%3F-Of%20course%21%20%E2%9D%A4-3C9E44.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 [![Stable?](https://img.shields.io/badge/Release-v1%2E0%2E0%20%7C%20Beta-ffc700.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
