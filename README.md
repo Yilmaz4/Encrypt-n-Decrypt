@@ -17,7 +17,8 @@ To decrypt the data that you've encrypted using a symmetric key encryption algor
 ## Introduction
 
 As you can see in the screenshot below, the interface of the program consists of 5 tabs: Encryption, Decryption, Miscellaneous, Logs and Help & About respectively.
-![Screenshot](image/README/1645815509083.png)
+
+![1645815509083](https://user-images.githubusercontent.com/77583632/155795442-2df5e428-7139-4970-b973-bfe74fa934fe.png)
 
 ### Encryption
 
