@@ -28,8 +28,8 @@ __copyright__ = "Copyright 2017-2022 Yilmaz Alpaslan"
 __version__ = "1.0.0"
 
 from tkinter import (
-    NORMAL, DISABLED, WORD, FLAT, END,
-    LEFT, SOLID, X, Y, RIGHT, LEFT, BOTH,
+    NORMAL, DISABLED, WORD, FLAT, END, LEFT,
+    SOLID, X, Y, RIGHT, LEFT, BOTH, CENTER,
     TOP, SUNKEN, HORIZONTAL, BOTTOM, W,
     Text, Toplevel, Menu, Pack, Grid, Tk,
     Place, IntVar, StringVar, Label, Frame,
@@ -74,26 +74,32 @@ def threaded(function: Callable):
 class Cryptography(object):
     def __init__(self, master: Tk):
         self.master = master
-        self.__encryption_busy = False
-        self.__decryption_busy = False
+        self.__encryption_busy: bool = False
+        self.__decryption_busy: bool = False
 
     @staticmethod
-    def generateKey(length: int = 32) -> str:
+    def generate_key(length: int = 32) -> str:
+        if not isinstance(length, int):
+            length = int(length)
         key = str()
-        for i in range(int(length)):
-            random = randint(1,32)
+        for _ in range(length):
+            random = randint(1, 32)
             if random < 25:
-                key += str(choice(ascii_letters))
+                key += choice(ascii_letters)
             elif random >= 25 and random < 30:
-                key += str(choice(digits))
+                key += choice(digits)
             elif random >= 30:
-                key += str(choice("!'^+%&/()=?_<>#${[]}\|__--$__--"))
+                key += choice("!'^+%&/()=?_<>#${[]}\|__--$__--")
         return key
 
-    @staticmethod
-    def derivateKey(password: Union[str, bytes]) -> Optional[bytes]:
+    @multipledispatch.dispatch(bytes)
+    def derivate_key(password: bytes) -> bytes:
+        return base64.urlsafe_b64encode(scrypt(password, get_random_bytes(16), 24, N=2**14, r=8, p=1))
+
+    @multipledispatch.dispatch(str)
+    def derivate_key(password: str) -> Optional[bytes]:
         try:
-            return base64.urlsafe_b64encode(scrypt(password.decode("utf-8") if isinstance(password, str) else password, get_random_bytes(16), 24, N=2**14, r=8, p=1))
+            return base64.urlsafe_b64encode(scrypt(password.decode("utf-8"), get_random_bytes(16), 24, N=2**14, r=8, p=1))
         except UnicodeDecodeError:
             return None
 
@@ -135,7 +141,7 @@ class Cryptography(object):
                         args[0].master.mainNotebook.decryptionFrame.decryptButton.configure(state=NORMAL)
         return wrapper
 
-    def updateStatus(self, status: str = "Ready"):
+    def update_status(self, status: str = "Ready"):
         self.master.statusBar.configure(text=f"Status: {status}")
         self.master.update()
 
@@ -161,32 +167,27 @@ class Cryptography(object):
     @traffic_controlled
     def encrypt(self):
         if not bool(self.master.dataSourceVar.get()):
-            data = self.master.textEntryVar.get()
+            data: str = self.master.textEntryVar.get()
         else:
-            self.updateStatus("Reading the file...")
-            path = self.master.mainNotebook.encryptionFrame.fileEntry.get()
+            self.update_status("Reading the file...")
+            path: str = self.master.mainNotebook.encryptionFrame.fileEntry.get()
             try:
                 with open(path, mode="rb") as file:
-                    data = file.read()
+                    data: bytes = file.read()
             except PermissionError:
                 messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
                 self.master.logger.error("Read permission for the file specified has been denied, encryption was interrupted.")
-                self.updateStatus("Ready")
+                self.update_status("Ready")
                 return
 
         if not bool(self.master.mainNotebook.encryptionFrame.algorithmSelect.index(self.master.mainNotebook.encryptionFrame.algorithmSelect.select())):
             if not bool(self.master.keySourceSelection.get()):
-                self.updateStatus("Generating the key...")
-                if not bool(self.master.generateAlgorithmSelection.get()):
-                    key = self.generateKey(int(self.master.generateRandomAESVar.get() / 8))
-                else:
-                    key = self.generateKey(int(self.master.generateRandomDESVar.get() / 8))
+                self.update_status("Generating the key...")
+                key: bytes = self.generate_key(int(self.master.generateRandomAESVar.get() if not bool(self.master.generateAlgorithmSelection.get()) else self.master.generateRandomDESVar.get()) / 8).encode("utf-8")
             else:
-                key = self.master.keyEntryVar.get()
-            if type(key) is str:
-                key = bytes(key, "utf-8")
+                key: bytes = self.master.keyEntryVar.get().encode("utf-8")
 
-            self.updateStatus("Creating the cipher...")
+            self.update_status("Creating the cipher...")
             try:
                 if (not bool(self.master.generateAlgorithmSelection.get()) and not bool(self.master.keySourceSelection.get())) or (not bool(self.master.entryAlgorithmSelection.get()) and bool(self.master.keySourceSelection.get())):
                     iv = get_random_bytes(AES.block_size)
@@ -198,40 +199,40 @@ class Cryptography(object):
                 if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
                     messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
                     self.master.logger.error("Key with invalid length was specified.")
-                    self.updateStatus("Ready")
+                    self.update_status("Ready")
                     return
                 else:
                     messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
                     self.master.logger.error("Invalid key was specified.")
-                    self.updateStatus("Ready")
+                    self.update_status("Ready")
                     return
 
-            self.updateStatus("Encrypting...")
+            self.update_status("Encrypting...")
             try:
                 self.master.lastResult = iv + cipher.encrypt(data.encode("utf-8") if type(data) is str else data)
             except MemoryError:
                 messagebox.showerror("Not enough memory", "Your computer has run out of memory while encrypting the file. Try closing other applications or restart your computer.")
                 self.master.logger.error("Device has run out of memory while encrypting, encryption was interrupted.")
-                self.updateStatus("Ready")
+                self.update_status("Ready")
                 return
             del data
-            self.updateStatus("Encoding the result...")
+            self.update_status("Encoding the result...")
             try:
                 try:
                     self.master.lastResult = base64.urlsafe_b64encode(self.master.lastResult).decode("utf-8")
                 except TypeError:
-                    self.updateStatus("Ready")
+                    self.update_status("Ready")
                     return
             except MemoryError:
                 messagebox.showerror("Not enough memory", "Your computer has run out of memory while encoding the result. Try closing other applications or restart your computer.")
                 self.master.logger.error("Device has run out of memory while encoding, encryption was interrupted.")
-                self.updateStatus("Ready")
+                self.update_status("Ready")
                 return
             self.master.lastKey = key
 
             failure = False
             if bool(self.master.dataSourceVar.get()) and bool(self.master.writeFileContentVar.get()):
-                self.updateStatus("Writing to the file...")
+                self.update_status("Writing to the file...")
                 for _ in range(1):
                     try:
                         with open(path, mode="wb") as file:
@@ -247,14 +248,14 @@ class Cryptography(object):
                                 with open(newpath, mode="wb") as file:
                                     file.write(self.master.outputVar.get())
                         self.master.logger.error("Write permission for the file specified has been denied, encrypted was interrupted.")
-                        self.updateStatus("Ready")
+                        self.update_status("Ready")
                         failure = True
                         return
                     except OSError as details:
                         if "No space" in str(details):
                             messagebox.showerror("No space left", "There is no space left on your device. Free up some space and try again.")
                             self.master.logger.error("No space left on device, encryption was interrupted.")
-                            self.updateStatus("Ready")
+                            self.update_status("Ready")
                             failure = True
                             pass
 
@@ -271,7 +272,7 @@ class Cryptography(object):
             self.master.mainNotebook.encryptionFrame.outputFrame.RSAPublicText.clear()
             self.master.mainNotebook.encryptionFrame.outputFrame.RSAPrivateText.clear()
 
-            self.updateStatus("Ready")
+            self.update_status("Ready")
             if not failure:
                 if not bool(self.master.keySourceSelection.get()):
                     self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.generateAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
@@ -279,21 +280,21 @@ class Cryptography(object):
                     self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
 
         else:
-            self.updateStatus("Generating the key...")
+            self.update_status("Generating the key...")
             key = RSA.generate(self.master.generateRandomRSAVar.get())
             publicKey = key.publickey()
             privateKey = key.exportKey()
 
-            self.updateStatus("Defining the cipher...")
+            self.update_status("Defining the cipher...")
             cipher = PKCS1_OAEP.new(publicKey)
 
-            self.updateStatus("Encrypting...")
+            self.update_status("Encrypting...")
             try:
                 encrypted = cipher.encrypt(data.encode("utf-8") if isinstance(data, str) else data)
             except ValueError:
                 messagebox.showerror(f"{'Text is too long' if not bool(self.master.dataSourceVar) else 'File is too big'}", "The {} is too {} for RSA-{} encryption. Select a longer RSA key and try again.".format('text you\'ve entered' if not bool(self.master.dataSourceVar.get()) else 'file you\'ve specified', 'long' if not bool(self.master.dataSourceVar.get()) else 'big', self.master.generateRandomRSAVar.get()))
                 self.master.logger.error(f"Too {'long text' if not bool(self.master.dataSourceVar) else 'big file'} was specified, encryption was interrupted.")
-                self.updateStatus("Ready")
+                self.update_status("Ready")
                 return
 
             self.master.mainNotebook.encryptionFrame.outputFrame.outputText.replace(base64.urlsafe_b64encode(encrypted).decode("utf-8"))
@@ -307,31 +308,31 @@ class Cryptography(object):
             print('Decrypted:', decrypted.decode())
             """
 
-            self.updateStatus("Ready")
+            self.update_status("Ready")
 
     @threaded
     @traffic_controlled
     def decrypt(self):
         if not bool(self.master.decryptSourceVar.get()):
-            self.updateStatus("Decoding encrypted data...")
+            self.update_status("Decoding encrypted data...")
             data = base64.urlsafe_b64decode(self.master.textDecryptVar.get().encode("utf-8"))
         else:
-            self.updateStatus("Reading the file...")
+            self.update_status("Reading the file...")
             try:
                 with open(self.master.mainNotebook.decryptionFrame.fileDecryptEntry.get(), mode="r+b") as file:
                     data = file.read()
             except PermissionError:
                 messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
                 self.master.logger.error("Read permission for the file specified has been denied, decryption was interrupted.")
-                self.updateStatus("Ready")
+                self.update_status("Ready")
                 return
-            self.updateStatus("Decoding the file data...")
+            self.update_status("Decoding the file data...")
             try:
                 decodedData = base64.urlsafe_b64decode(data)
             except:
                 messagebox.showerror("Unencrypted file", f"This file seems to be not encrypted using {'AES' if not bool(self.master.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
                 self.master.logger.error("Unencrypted file specified.")
-                self.updateStatus("Ready")
+                self.update_status("Ready")
                 return
             else:
                 if data == base64.urlsafe_b64encode(decodedData):
@@ -340,12 +341,12 @@ class Cryptography(object):
                 else:
                     messagebox.showerror("Unencrypted file", f"This file seems to be not encrypted using {'AES' if not bool(self.master.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
                     self.master.logger.error("Unencrypted file specified.")
-                    self.updateStatus("Ready")
+                    self.update_status("Ready")
                     return
         iv = data[:16 if not bool(self.master.decryptAlgorithmVar.get()) else 8]
         key = self.master.decryptKeyVar.get()[:-1 if self.master.decryptKeyVar.get().endswith("\n") else None].encode("utf-8")
 
-        self.updateStatus("Defining cipher...")
+        self.update_status("Defining cipher...")
         try:
             if not bool(self.master.decryptAlgorithmVar.get()):
                 cipher = AES.new(key, AES.MODE_CFB, iv=iv)
@@ -355,28 +356,28 @@ class Cryptography(object):
             if (len(iv)) != 16 if not bool(self.master.decryptAlgorithmVar.get()) else 8:
                 messagebox.showerror("Unencrypted data", f"The text you've entered seems to be not encrypted using {'AES' if not bool(self.master.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
                 self.master.logger.error("Unencrypted text entered.")
-                self.updateStatus("Ready")
+                self.update_status("Ready")
                 return
             elif not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
                 messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
                 self.master.logger.error("Key with invalid length specified for decryption.")
-                self.updateStatus("Ready")
+                self.update_status("Ready")
                 return
             else:
                 messagebox.showerror("Invalid key", "The key you've entered is invalid.")
                 self.master.logger.error("Invalid key specified for decryption.")
-                self.updateStatus("Ready")
+                self.update_status("Ready")
                 return
-        self.updateStatus("Decrypting...")
+        self.update_status("Decrypting...")
         try:
             result = cipher.decrypt(data.replace(iv, b""))
         except UnicodeDecodeError:
             messagebox.showerror("Invalid key", "The encryption key you've entered seems to be not the right key. Make sure you've entered the correct key.")
             self.master.logger.error("Wrong key entered for decryption.")
-            self.updateStatus("Ready")
+            self.update_status("Ready")
             return
 
-        self.updateStatus("Writing to the file...")
+        self.update_status("Writing to the file...")
         if bool(self.master.decryptSourceVar.get()):
             try:
                 with open(self.master.mainNotebook.decryptionFrame.fileDecryptEntry.get(), mode="wb") as file:
@@ -384,10 +385,10 @@ class Cryptography(object):
             except PermissionError:
                 messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure write access for the file is permitted.")
                 self.master.logger.error("Write permission for the file specified has been denied, decryption was interrupted.")
-                self.updateStatus("Ready")
+                self.update_status("Ready")
                 return
 
-        self.updateStatus("Displaying the result...")
+        self.update_status("Displaying the result...")
         try:
             result = result.decode("utf-8")
         except UnicodeDecodeError:
@@ -397,7 +398,7 @@ class Cryptography(object):
             else:
                 messagebox.showerror("Invalid key", "The encryption key you've entered seems to be not the right key. Make sure you've entered the correct key.")
                 self.master.logger.error("Wrong key entered for decryption.")
-                self.updateStatus("Ready")
+                self.update_status("Ready")
                 return
         else:
             if not len(result) > 15000:
@@ -406,7 +407,7 @@ class Cryptography(object):
             else:
                 self.master.mainNotebook.decryptionFrame.decryptOutputText.configure(foreground="gray")
                 self.master.mainNotebook.decryptionFrame.decryptOutputText.replace("Decrypted data is not being displayed because it's longer than 15.000 characters.")
-        self.updateStatus("Ready")
+        self.update_status("Ready")
 
 class loggingHandler(logging.Handler):
     def __init__(self, widget: Text):
@@ -1571,7 +1572,7 @@ class Interface(Tk):
                         self.keyDerivationFrame.place(x=423, y=5)
 
                 class loggingFrame(Frame):
-                    def __init__(self, master: Notebook = None, **kwargs):
+                    def __init__(self, master: mainNotebook = None, **kwargs):
                         super().__init__(master=master, **kwargs)
 
                         self.loggingWidget = ScrolledText(self, height=22, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
@@ -1598,7 +1599,10 @@ class Interface(Tk):
                 class helpFrame(Frame):
                     def __init__(self, master: Notebook, **kwargs):
                         super().__init__(master, **kwargs)
-                        ...
+
+                        self.loadingText = Label(self, text="Loading...")
+
+                        self.loadingText.place(relx=0.5, rely=0.5, anchor=CENTER)
 
                 self.encryptionFrame = encryptionFrame(self)
                 self.decryptionFrame = decryptionFrame(self)
@@ -1867,14 +1871,14 @@ class Interface(Tk):
         self.mainNotebook.bind("<<NotebookTabChanged>>", changeTab)
 
     def clipboard_get(self) -> Optional[str]:
-        clipboard = pyperclip.paste()
+        clipboard: Optional[str] = pyperclip.paste()
         if not clipboard:
-            return ""
+            return str()
         elif len(clipboard) > 15000:
             if messagebox.askyesno("Super long text", "The text you're trying to paste is too long (longer than 15.000 characters) which can cause the program to freeze. Are you sure?"):
                 return clipboard
             else:
-                return ""
+                return str()
         else:
             return clipboard
 
