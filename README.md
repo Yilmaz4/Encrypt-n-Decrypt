@@ -34,7 +34,11 @@ Finally, you can either press Enter key on your keyboard or click the "Encrypt" 
 
 ![decryption](https://user-images.githubusercontent.com/77583632/155800966-5fc8650b-2077-4bc4-8f4e-56e8fc750712.png)
 
-The decryption tab
+The decryption tab as its name suggests like the encryption tab, is for decrypting the data that you've encryped in the encryption tab. You can enter the encrypted data to the big entry under "Encrypted text" radiobutton, or you can select an encrypted file using the "Browse" button under "Encrypted file" radiobutton.
+
+Under the encrypted data selection area, you can see another entry for the encryption key that was given alongside the encrypted data in the right pane in encryption tab. You can either enter the key directly or select a key file which ends with *.key or *.txt extensions. Above the entry, you can choose the algorithm which was used while encrypting the data.
+
+Finally, like in the encryption tab, you can click the "Decrypt" button to decrypt the data. If you've entered the correct encryption key, the decrypted data should appear below the button. If you had selected a file to decrypt, the decrypted data will be written on the file.
 
 # License
 
