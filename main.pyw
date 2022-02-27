@@ -669,28 +669,28 @@ class Notebook(Notebook):
             else:
                 return None
 
-    def on_tab_change(self, *args, **kwargs):
-        if len(self.tabs()) > 2:
+    def on_tab_change(self, event = None):
+        if self.master.__class__.__name__ == "Interface":
             if self.index(self.select()) == 4:
-                if not hasattr(self, f"_{self.master.__class__.__name__}__tabChangeCount"):
+                if not hasattr(self, "HTML"):
                     self.master.statusBar.configure(text="Status: Downloading HTML...")
-                    self.update()
+                    self.master.update()
                     try:
                         request = get("https://raw.githubusercontent.com/Yilmaz4/Encrypt-n-Decrypt/main/README.md").text
                     except Exception as details:
                         messagebox.showerror("No Internet Connection", "Your internet connection appears to be offline. We were unable to download required content to show this page.")
                         self.master.logger.error(f"Connection to 'raw.githubusercontent.com' has failed, downloading HTML was interrupted. Error details: {str(details)}")
-                        self.master.mainNotebook.select(self.mainNotebook.last_tab)
+                        self.master.mainNotebook.select(self.master.mainNotebook.last_tab)
+                        return
                     self.HTML = markdown(request)
                     self.master.statusBar.configure(text="Status: Ready")
-                    self.update()
-                self.master.readmePage = HtmlFrame(self, messages_enabled=False, vertical_scrollbar=True)
+                    self.master.update()
+                self.master.readmePage = HtmlFrame(self.master, messages_enabled=False, vertical_scrollbar=True)
                 self.master.readmePage.load_html(self.HTML)
                 self.master.readmePage.set_zoom(0.8)
                 self.master.readmePage.grid_propagate(0)
                 self.master.readmePage.enable_images(1)
-                self.master.__tabChangeCount = False
-                self.master.readmePage.place(x=5, y=27, height=528, width=790)
+                self.master.readmePage.place(x=5, y=27, height=488, width=790)
             else:
                 if hasattr(self.master, "readmePage"):
                     try:
@@ -698,7 +698,7 @@ class Notebook(Notebook):
                         self.master.readmePage.destroy()
                     except TclError:
                         pass
-        if len(self.__history) >= 3:
+        if len(self.__history) >= 2:
             del self.__history[0]
         self.__history.append(self.index(self.select()))
 
