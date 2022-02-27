@@ -58,7 +58,9 @@ from hurry.filesize import size, alternative
 from Crypto.Cipher import AES, PKCS1_OAEP, DES3
 from Crypto.PublicKey import RSA, DSA, ECC
 from Crypto.Signature import DSS
-from Crypto.Hash import SHA512, SHA256
+from Crypto.Hash import (
+    SHA1, SHA256, SHA384, SHA512, MD2, MD5
+)
 from Crypto.Protocol.KDF import scrypt
 from Crypto.Random import get_random_bytes
 
@@ -651,11 +653,61 @@ class Text(Text):
         if self._textvariable is not None:
             self._textvariable.set(self.get("1.0", "end-1c"))
 
+class Notebook(Notebook):
+    def __init__(self, master: Union[Tk, Frame, LabelFrame], *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.bind("<<NotebookTabChanged>>", lambda _: self.on_tab_change())
+        self.__history: Optional[list] = list()
+
+    @property
+    def last_tab(self) -> Optional[int]:
+        try:
+            return self.__history[-2]
+        except IndexError:
+            if bool(len(self.__history)):
+                return self.__history[0]
+            else:
+                return None
+
+    def on_tab_change(self, *args, **kwargs):
+        if len(self.tabs()) > 2:
+            if self.index(self.select()) == 4:
+                if not hasattr(self, f"_{self.master.__class__.__name__}__tabChangeCount"):
+                    self.master.statusBar.configure(text="Status: Downloading HTML...")
+                    self.update()
+                    try:
+                        request = get("https://raw.githubusercontent.com/Yilmaz4/Encrypt-n-Decrypt/main/README.md").text
+                    except Exception as details:
+                        messagebox.showerror("No Internet Connection", "Your internet connection appears to be offline. We were unable to download required content to show this page.")
+                        self.master.logger.error(f"Connection to 'raw.githubusercontent.com' has failed, downloading HTML was interrupted. Error details: {str(details)}")
+                        self.master.mainNotebook.select(self.mainNotebook.last_tab)
+                    self.HTML = markdown(request)
+                    self.master.statusBar.configure(text="Status: Ready")
+                    self.update()
+                self.master.readmePage = HtmlFrame(self, messages_enabled=False, vertical_scrollbar=True)
+                self.master.readmePage.load_html(self.HTML)
+                self.master.readmePage.set_zoom(0.8)
+                self.master.readmePage.grid_propagate(0)
+                self.master.readmePage.enable_images(1)
+                self.master.__tabChangeCount = False
+                self.master.readmePage.place(x=5, y=27, height=528, width=790)
+            else:
+                if hasattr(self.master, "readmePage"):
+                    try:
+                        self.master.readmePage.place_forget()
+                        self.master.readmePage.destroy()
+                    except TclError:
+                        pass
+        if len(self.__history) >= 3:
+            del self.__history[0]
+        self.__history.append(self.index(self.select()))
+
 class Widget(Widget):
     def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
 
         if not not tooltip:
+            self.toolTip: ToolTip
             def enter(event = None):
                 self.toolTip = ToolTip(self)
                 self.after(1000, self.toolTip.showtip, tooltip, self, event)
@@ -723,21 +775,22 @@ class Interface(Tk):
                 class encryptionFrame(Frame):
                     def __init__(self, master: mainNotebook = None, **kwargs):
                         super().__init__(master=master, **kwargs)
+                        self.root = self.master.master
 
-                        self.textEntryCheck = Radiobutton(self, text="Plain text:", value=0, variable=self.master.master.dataSourceVar, command=self.changeDataSource, takefocus=0)
-                        self.textEntry = Entry(self, width=48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.master.master.textEntryVar)
-                        self.textPasteButton = Button(self, text="Paste", tooltip="sus", width=14, state=NORMAL, command=lambda: self.textEntry.replace(str(self.master.master.clipboard_get())), takefocus=0)
+                        self.textEntryCheck = Radiobutton(self, text="Plain text:", value=0, variable=self.root.dataSourceVar, command=self.changeDataSource, takefocus=0)
+                        self.textEntry = Entry(self, width=48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.root.textEntryVar)
+                        self.textPasteButton = Button(self, text="Paste", tooltip="sus", width=14, state=NORMAL, command=lambda: self.textEntry.replace(str(self.root.clipboard_get())), takefocus=0)
                         self.textClearButton = Button(self, text="Clear", width=14, command=lambda: self.textEntry.delete(0, END), takefocus=0, state=DISABLED)
-                        self.textEntryHideCharCheck = Checkbutton(self, text="Hide characters", variable=self.master.master.textEntryHideCharVar, onvalue=1, offvalue=0, command=lambda: self.textEntry.configure(show="●" if bool(self.master.master.textEntryHideCharVar.get()) else ""), takefocus=0)
+                        self.textEntryHideCharCheck = Checkbutton(self, text="Hide characters", variable=self.root.textEntryHideCharVar, onvalue=1, offvalue=0, command=lambda: self.textEntry.configure(show="●" if bool(self.root.textEntryHideCharVar.get()) else ""), takefocus=0)
 
-                        self.fileEntryCheck = Radiobutton(self, text="File:", value=1, variable=self.master.master.dataSourceVar, command=self.changeDataSource, takefocus=0)
+                        self.fileEntryCheck = Radiobutton(self, text="File:", value=1, variable=self.root.dataSourceVar, command=self.changeDataSource, takefocus=0)
                         self.fileValidityLabel = Label(self, text="Validity: [Blank]", foreground="gray")
-                        self.fileEntry = Entry(self, width=48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=self.master.master.fileEntryVar)
+                        self.fileEntry = Entry(self, width=48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=self.root.fileEntryVar)
                         self.fileBrowseButton = Button(self, text="Browse...", width=14, state=DISABLED, command=self.fileEntryBrowse, takefocus=0)
                         self.fileClearButton = Button(self, text="Clear", width=14, state=DISABLED, command=lambda: self.fileEntry.delete(0, END), takefocus=0)
 
-                        self.master.master.textEntryVar.trace("w", self.textEntryCallback)
-                        self.master.master.fileEntryVar.trace("w", self.fileEntryCallback)
+                        self.root.textEntryVar.trace("w", self.textEntryCallback)
+                        self.root.fileEntryVar.trace("w", self.fileEntryCallback)
 
                         self.textEntryCheck.place(x=8, y=2)
                         self.textEntry.place(x=24, y=22)
@@ -1418,7 +1471,7 @@ class Interface(Tk):
 
                         class base64Frame(LabelFrame):
                             def __init__(self, master: Frame = None):
-                                super().__init__(master=master, height=342, width=405, text="Base64 encoding/decoding")
+                                super().__init__(master=master, height=342, width=405, text="Base64 Encoder & Decoder")
                                 self.root = self.master.master.master
 
                                 self.base64InputLabel = Label(self, text="Input", takefocus=0)
@@ -1474,17 +1527,24 @@ class Interface(Tk):
                                     try:
                                         index = index.decode("utf-8")
                                     except UnicodeDecodeError:
-                                        self.base64InputText.configure(foreground="gray")
+                                        self.base64InputText.configure(foreground="gray", wrap=WORD)
                                         self.base64InputText.replace("File content is not being displayed because it's in an unknown encoding.")
                                     else:
-                                        self.base64InputText.configure(foreground="black")
-                                        self.base64InputText.replace(index)
+                                        if len(index) > 15000:
+                                            self.base64InputText.configure(foreground="gray", wrap=WORD)
+                                            self.base64InputText.replace("File content is not being displayed because it's longer than 15.000 characters.")
+                                        else:
+                                            self.base64InputText.configure(foreground="black")
+                                            self.base64InputText.replace(index)
+                                    finally:
+                                        self.index = index
 
                             def base64InputCallback(self, *args, **kwargs):
                                 if ''.join(self.base64InputText.get("1.0", END).split()) != "":
                                     self.inputClearButton.configure(state=NORMAL)
                                 else:
                                     self.inputClearButton.configure(state=DISABLED)
+                                index = self.index
                                 if not bool(self.root.encodeOrDecodeVar.get()) and ''.join(self.base64InputText.get("1.0", END).split()) != "":
                                     self.base64InputValidity.configure(text="Validity: Encodable", foreground="green")
                                     self.base64OutputText.replace(base64.urlsafe_b64encode(self.base64InputText.get("1.0", END).encode("utf-8")).decode("utf-8"))
@@ -1565,11 +1625,53 @@ class Interface(Tk):
                                     self.keyOutputEntry.clear()
                                     self.keyInputValidity.configure(text="Validity: [Blank]", foreground="gray")
 
+                        class hashDigestFrame(LabelFrame):
+                            def __init__(self, master: miscFrame):
+                                super().__init__(master, height=200, width=354, text="Hash Calculator")
+                                self.root = self.master.master.master
+
+                                self.plainRadiobutton = Radiobutton(self, text="Plain text:", value=0, variable=self.root.hashCalculationSourceVar, takefocus=0)
+                                self.plainEntry = Entry(self, width=44, font=("Consolas", 9), takefocus=0)
+                                self.plainClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, state=DISABLED, takefocus=0)
+                                self.plainPasteButton = Button(self, width=15, text="Paste", command=lambda: self.plainEntry.replace(self.root.clipboard_get()), takefocus=0)
+
+                                self.fileRadiobutton = Radiobutton(self, text="File:", value=0, variable=self.root.hashCalculationSourceVar, takefocus=0)
+                                self.fileValidity = Label(self, text="Validity: [Blank]", foreground="gray", state=DISABLED)
+                                self.fileEntry = Entry(self, width=44, font=("Consolas", 9), takefocus=0, state=DISABLED)
+                                self.fileClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, takefocus=0, state=DISABLED)
+                                self.filePasteButton = Button(self, width=15, text="Browse...", command=self.browseFile, takefocus=0, state=DISABLED)
+
+                                self.plainRadiobutton.place(x=7, y=0)
+                                self.plainEntry.place(x=22, y=22)
+                                self.plainClearButton.place(x=129, y=48)
+                                self.plainPasteButton.place(x=22, y=48)
+
+                                self.fileRadiobutton.place(x=7, y=76)
+                                self.fileValidity.place(x=51, y=77)
+                                self.fileEntry.place(x=22, y=99)
+                                self.fileClearButton.place(x=129, y=125)
+                                self.filePasteButton.place(x=22, y=125)
+
+                            def browseFile(self):
+                                filePath = filedialog.askopenfilename(title=f"Open a file to check its hash", filetypes=[("All files", "*.*")])
+                                if ''.join(filePath.split()) != '':
+                                    try:
+                                        with open(filePath, mode="rb") as file:
+                                            index = file.read()
+                                    except PermissionError:
+                                        messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
+                                        self.root.logger.error("Read permission for the file specified has been denied, hash calculation was interrupted.")
+                                        return
+                                    else:
+                                        self.fileEntry.replace(filePath)
+
                         self.base64Frame = base64Frame(self)
                         self.keyDerivationFrame = keyDerivationFrame(self)
+                        self.hashDigestFrame = hashDigestFrame(self)
 
                         self.base64Frame.place(x=10, y=5)
                         self.keyDerivationFrame.place(x=423, y=5)
+                        self.hashDigestFrame.place(x=423, y=186)
 
                 class loggingFrame(Frame):
                     def __init__(self, master: mainNotebook = None, **kwargs):
@@ -1687,6 +1789,7 @@ class Interface(Tk):
         self.keyInputVar = StringVar()
         self.keyInputHideVar = IntVar(value=0)
         self.keyOutputVar = StringVar()
+        self.hashCalculationSourceVar = IntVar(value=0)
 
         self.showProgramNameVar = IntVar(value=1)
         self.showProgramVersionVar = IntVar(value=1)
@@ -1830,34 +1933,6 @@ class Interface(Tk):
                 return
         def give_focus(*args, **kwargs):
             self.after(200, self.encryptionFrame.textEntry.focus_set())
-        def changeTab(*args, **kwargs):
-            if self.mainNotebook.index(self.mainNotebook.select()) == 4:
-                if not hasattr(self, f"_{self.__class__.__name__}__tabChangeCount"):
-                    self.statusBar.configure(text="Status: Downloading HTML...")
-                    self.update()
-                    try:
-                        request = get("https://raw.githubusercontent.com/Yilmaz4/Encrypt-n-Decrypt/main/README.md").text
-                    except Exception as details:
-                        messagebox.showerror("No Internet Connection", "Your internet connection appears to be offline. We were unable to download required content to show this page.")
-                        self.logger.error(f"Connection to 'raw.githubusercontent.com' has failed, downloading HTML was interrupted. Error details: {str(details)}")
-                        self.mainNotebook.select(self.mainNotebook.last_tab)
-                    self.HTML = markdown(request)
-                    self.statusBar.configure(text="Status: Ready")
-                    self.update()
-                self.readmePage = HtmlFrame(self, messages_enabled=False, vertical_scrollbar=True)
-                self.readmePage.load_html(self.HTML)
-                self.readmePage.set_zoom(0.8)
-                self.readmePage.grid_propagate(0)
-                self.readmePage.enable_images(1)
-                self.__tabChangeCount = True
-                self.readmePage.place(x=5, y=27, height=528, width=790)
-            else:
-                if hasattr(self, "readmePage"):
-                    try:
-                        self.readmePage.place_forget()
-                        self.readmePage.destroy()
-                    except TclError:
-                        pass
 
         self.bind("<Return>", encrypt)
         self.bind("<Tab>", give_focus)
@@ -1868,7 +1943,6 @@ class Interface(Tk):
         self.bind("<Control_L>m", lambda _: self.mainNotebook.select(2))
         self.bind("<Control_L>l", lambda _: self.mainNotebook.select(3))
         self.bind("<F1>", lambda _: self.mainNotebook.select(4))
-        self.mainNotebook.bind("<<NotebookTabChanged>>", changeTab)
 
     def clipboard_get(self) -> Optional[str]:
         clipboard: Optional[str] = pyperclip.paste()
