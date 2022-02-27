@@ -1,4 +1,7 @@
-# About Encrypt'n'Decrypt
+<p align="center">
+  <img alt="Logo" src="icon.ico" width="100px" />
+  <h1 align="center">Encrypt-n-Decrypt</h1>
+</p>
 
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python%203%2E9%2E7-396F9E.svg?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![made-for-windows](https://img.shields.io/badge/Made%20for-Windows-00A4E3.svg?style=flat&logo=microsoft)](https://www.microsoft.com/)
