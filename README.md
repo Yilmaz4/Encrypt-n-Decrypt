@@ -14,6 +14,8 @@ In cryptography, encryption is the process of encoding information. This process
 
 To decrypt the data that you've encrypted using a symmetric key encryption algorithm (AES or 3DES) using this program, you need to have the key called "encryption key" which was used to encrypt the data. Similarly, to decrypt a piece of asymmetrically encrypted data (using RSA algorithm), you need to have a key called "private key".
 
+However, asymmetric key encryption is not available yet. I'm currently working on it but I'm stuck at the part of placing the input widgets. You can expect RSA algorithm to be usable in the next few months.
+
 ## Introduction
 
 As you can see in the screenshots below, the interface of the program consists of 5 tabs: Encryption, Decryption, Miscellaneous, Logs and Help & About respectively.
