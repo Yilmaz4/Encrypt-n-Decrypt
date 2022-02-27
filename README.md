@@ -19,6 +19,16 @@ To decrypt the data that you've encrypted using a symmetric key encryption algor
 
 However, asymmetric key encryption is not available yet. I'm currently working on it but I'm stuck at the part of placing the input widgets. You can expect RSA algorithm to be usable in the next few months.
 
+## Features
+
+- Plain-text or file encryption/decryption using AES, 3DES and RSA (coming soon) algorithms.
+- Ability to generate, enter or browse an encryption key; and ability to save an encryption key to a file.
+- Encoding/decoding plain-text or file using base64 encoding.
+- Multi-threaded encryption/decryption, meaning the program will not freeze during long processes.
+- Ability to derivate an encryption key from a password (key derivation function).
+
+Despite being memory efficient, encrypting/decrypting files whose sizes are bigger than the amount of RAM installed on the computer can cause to run out of memory.
+
 ## Introduction
 
 As you can see in the screenshots below, the interface of the program consists of 5 tabs: Encryption, Decryption, Miscellaneous, Logs and Help & About respectively.
