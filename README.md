@@ -7,7 +7,7 @@
 [![made-for-windows](https://img.shields.io/badge/Made%20for-Windows%20%26%20Linux-00A4E3.svg?style=flat&logo=microsoft)](https://www.microsoft.com/)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-Actively-009e0a.svg?style=flat&logo=powershell&logoColor=white)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 [![Open Source?](https://img.shields.io/badge/Open%20source%3F-Of%20course%21%20%E2%9D%A4-009e0a.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
-[![Stable?](https://img.shields.io/badge/Release-v1%2E0%2E0%20%7C%20Beta-ffc700.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
+[![Stable?](https://img.shields.io/badge/Release-v1%2E0%2E0%20%7C%20Prerelease-ffc700.svg?style=flat)](https://GitHub.com/Yilmaz4/Encrypt-n-Decrypt/graphs/commit-activity)
 
 [//]: <> (009e0a Stable | ffc700 Prerelease | ff0000 Beta)
 
