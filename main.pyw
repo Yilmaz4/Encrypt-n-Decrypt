@@ -39,10 +39,12 @@ TkLabel = Label
 from tkinter.ttk import (
     Entry, Button, Label, LabelFrame, Frame,
     Widget, Notebook, Radiobutton, Checkbutton,
-    Scrollbar, Progressbar, Separator
+    Scrollbar, Progressbar, Separator, Combobox
 )
 
-from typing import Union, Optional, Literal, Callable
+from typing import (
+    Union, Optional, Literal, Callable, overload
+)
 from urllib.request import urlopen
 from markdown import markdown
 from tkinterweb import HtmlFrame
@@ -94,14 +96,14 @@ class Cryptography(object):
                 key += choice("!'^+%&/()=?_<>#${[]}\|__--$__--")
         return key
 
-    @multipledispatch.dispatch(bytes)
-    def derivate_key(password: bytes) -> bytes:
-        return base64.urlsafe_b64encode(scrypt(password, get_random_bytes(16), 24, N=2**14, r=8, p=1))
+    @overload
+    def derivate_key(password: bytes) -> bytes: ...
+    @overload
+    def derivate_key(password: str) -> Optional[bytes]: ...
 
-    @multipledispatch.dispatch(str)
-    def derivate_key(password: str) -> Optional[bytes]:
+    def derivate_key(password: Union[str, bytes]) -> Optional[bytes]:
         try:
-            return base64.urlsafe_b64encode(scrypt(password.decode("utf-8"), get_random_bytes(16), 24, N=2**14, r=8, p=1))
+            return base64.urlsafe_b64encode(scrypt(password.decode("utf-8") if isinstance(password, bytes) else password, get_random_bytes(16), 24, N=2**14, r=8, p=1))
         except UnicodeDecodeError:
             return None
 
@@ -119,7 +121,7 @@ class Cryptography(object):
                 try:
                     return function(*args, **kwargs)
                 except Exception:
-                    ...
+                    pass
                 finally:
                     args[0].__encryption_busy = False
                     if not bool(args[0].master.mainNotebook.index(args[0].master.mainNotebook.select())):
@@ -134,7 +136,7 @@ class Cryptography(object):
                 try:
                     return function(*args, **kwargs)
                 except Exception:
-                    ...
+                    pass
                 finally:
                     args[0].__decryption_busy = False
                     if not bool(args[0].master.mainNotebook.index(args[0].master.mainNotebook.select())):
@@ -171,7 +173,7 @@ class Cryptography(object):
         if not bool(self.master.dataSourceVar.get()):
             data: str = self.master.textEntryVar.get()
         else:
-            self.update_status("Reading the file...")
+            self.update_status("Reading the file...") 
             path: str = self.master.mainNotebook.encryptionFrame.fileEntry.get()
             try:
                 with open(path, mode="rb") as file:
@@ -249,7 +251,7 @@ class Cryptography(object):
                             else:
                                 with open(newpath, mode="wb") as file:
                                     file.write(self.master.outputVar.get())
-                        self.master.logger.error("Write permission for the file specified has been denied, encrypted was interrupted.")
+                        self.master.logger.error("Write permission for the file specified has been denied, encryption was interrupted.")
                         self.update_status("Ready")
                         failure = True
                         return
@@ -411,23 +413,41 @@ class Cryptography(object):
                 self.master.mainNotebook.decryptionFrame.decryptOutputText.replace("Decrypted data is not being displayed because it's longer than 15.000 characters.")
         self.update_status("Ready")
 
+class Cache(object):
+    def __init__(self, master: Tk):
+        super().__init__()
+        self.master = master
+
+        self.loggings_history: list[dict[logging.LogRecord, str]] = []
+        self.encryptions_history: list[dict] = []
+        self.decryptions_history: list[dict] = []
+
 class loggingHandler(logging.Handler):
-    def __init__(self, widget: Text):
+    def __init__(self, widget: Text, master: Tk, cache: Cache = None):
         super().__init__()
         self.widget = widget
+        self.master = master
+        self.cache = cache
 
     def emit(self, record: logging.LogRecord):
         message = self.format(record)
         def append():
+            levels = {"NOTSET": 0, "DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
+            if record.levelno < levels[self.master.levelSelectVar.get()]:
+                return
             self.widget.configure(state=NORMAL)
-            self.widget.insert(END, message + '\n')
+            self.widget.insert(END, message + '\n', record.levelname.lower())
             self.widget.configure(state=DISABLED)
 
             self.widget.yview(END)
 
         self.widget.after(0, append)
-    
-    def format(self, record: logging.LogRecord) -> str:
+        temp_dict: dict = {}
+        temp_dict[record] = message
+        self.cache.loggings_history.append(temp_dict)
+
+    @staticmethod
+    def format(record: logging.LogRecord) -> str:
         return str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S') + f" [{record.levelname}] " + record.getMessage())
 
 class ToolTip(object):
@@ -690,7 +710,7 @@ class Notebook(Notebook):
                 self.master.readmePage.set_zoom(0.8)
                 self.master.readmePage.grid_propagate(0)
                 self.master.readmePage.enable_images(1)
-                self.master.readmePage.place(x=5, y=27, height=488, width=790)
+                self.master.readmePage.place(x=5, y=27, height=528, width=790)
             else:
                 if hasattr(self.master, "readmePage"):
                     try:
@@ -754,7 +774,7 @@ class Interface(Tk):
         self.width = 800
         self.version = __version__
 
-        self.wm_title(f"Encrypt'n'Decrypt v{self.version}")
+        self.wm_title(f"{__title__} v{self.version}")
         self.wm_geometry(f"{self.width}x{self.height}")
         self.wm_resizable(width=False, height=False)
         self.wm_minsize(width = self.width, height = self.height)
@@ -767,6 +787,7 @@ class Interface(Tk):
         self.__initialize_vars()
 
         self.crypto = Cryptography(self)
+        self.cache = Cache(self)
 
         class mainNotebook(Notebook):
             def __init__(self, master: Interface):
@@ -1594,6 +1615,7 @@ class Interface(Tk):
                                 self.outputPasteButton = Button(self, width=15, text="Copy", command=lambda: self.root.clipboard_set(self.keyOutputEntry.get()[:-1 if self.keyOutputEntry.get().endswith("\n") else 0]), takefocus=0)
 
                                 self.root.keyInputVar.trace("w", self.keyInputCallback)
+                                self.root.keyOutputVar.trace("w", lambda *args, **kwargs: self.outputClearButton.configure(state=NORMAL if ''.join(self.keyOutputEntry.get().split()) != '' else DISABLED))
 
                                 self.keyInputLabel.place(x=7, y=0)
                                 self.keyInputValidity.place(x=42, y=0)
@@ -1676,35 +1698,73 @@ class Interface(Tk):
                 class loggingFrame(Frame):
                     def __init__(self, master: mainNotebook = None, **kwargs):
                         super().__init__(master=master, **kwargs)
+                        self.root: Interface = self.master.master
 
-                        self.loggingWidget = ScrolledText(self, height=22, width=107, font=("Consolas", 9), state=DISABLED, takefocus=0)
+                        self.loggingWidget = ScrolledText(self, height=33, width=107, font=("Consolas", 9), state=DISABLED, textvariable=self.root.loggingTextVar, bg="white", wrap="none", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                        self.loggingWidget.tag_config("debug", foreground="gray")
+                        self.loggingWidget.tag_config("info", foreground="black")
+                        self.loggingWidget.tag_config("warning", foreground="orange")
+                        self.loggingWidget.tag_config("error", foreground="red")
+                        self.loggingWidget.tag_config("critical", foreground="red")
 
-                        loghandler = loggingHandler(widget = self.loggingWidget)
+                        self.root.loggingTextVar.trace("w", self.onLoggingWidgetInsert)
+
+                        loghandler = loggingHandler(widget=self.loggingWidget, master=self.root, cache=self.root.cache)
                         logging.basicConfig(
                             format = '%(asctime)s [%(levelname)s] %(message)s',
                             level = logging.DEBUG,
                             datefmt = r'%Y-%m-%d %H:%M:%S',
                             handlers = [loghandler]
                         )
-                        self.master.master.logger = logging.getLogger()
-                        self.master.master.logger.propagate = False
+                        self.root.logger = logging.getLogger()
+                        self.root.logger.propagate = False
 
-                        self.loggingClearButton = Button(self, text="Clear", width=15, takefocus=0, state=DISABLED)
-                        self.loggingSaveAsButton = Button(self, text="Save as...", width=15, takefocus=0)
-                        self.loggingSaveButton = Button(self, text="Save to 'Encrypt-n-Decrypt.log'", width=28, takefocus=0)
+                        self.copyButton = Button(self, text="Copy", width=15, command=lambda: self.root.clipboard_set(self.loggingWidget.get("1.0", END)), takefocus=0, state=DISABLED)
+                        self.clearButton = Button(self, text="Clear", width=15, command=lambda: self.loggingWidget.clear(), takefocus=0, state=DISABLED)
+                        self.showOnlyLabel = Label(self, text="Logging level:")
+                        levels = ["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+                        self.root.levelSelectVar = StringVar(value=levels[1])
+
+                        self.loggingLevelSelect = Combobox(self, values=levels, textvariable=self.root.levelSelectVar, state="readonly", takefocus=0)
+                        self.loggingLevelSelect.bind("<<ComboboxSelected>>", self.onLoggingLevelChange)
+                        self.autoSaveCheck = Checkbutton(self, text="Auto-save", onvalue=1, offvalue=0, variable=self.root.loggingAutoSaveVar, takefocus=0)
+                        self.saveAsButton = Button(self, text="Save as...", width=19, takefocus=0)
 
                         self.loggingWidget.place(x=10, y=10)
-                        self.loggingClearButton.place(x=9, y=430)
-                        self.loggingSaveAsButton.place(x=494, y=430)
-                        self.loggingSaveButton.place(x=601, y=430)
+                        self.copyButton.place(x=9, y=491)
+                        self.clearButton.place(x=119, y=491)
+                        self.showOnlyLabel.place(x=229, y=494)
+                        self.loggingLevelSelect.place(x=312, y=492)
+                        self.autoSaveCheck.place(x=573, y=493)
+                        self.saveAsButton.place(x=657, y=491)
+
+                    def onLoggingLevelChange(self, event=None):
+                        self.loggingWidget.clear()
+                        levels = {"NOTSET": 0, "DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
+                        for entry in self.root.cache.loggings_history:
+                            record: logging.LogRecord = list(entry.keys())[0]
+                            string: str = list(entry.values())[0]
+                            if record.levelno >= levels[self.root.levelSelectVar.get()]:
+                                self.loggingWidget.configure(state=NORMAL)
+                                self.loggingWidget.insert(END, string + "\n", record.levelname.lower())
+                                self.loggingWidget.configure(state=DISABLED)
+                            else:
+                                continue
+
+                    def onLoggingWidgetInsert(self, *args, **kwargs):
+                        if ''.join(self.loggingWidget.get("1.0", END).split()) == '':
+                            self.clearButton.configure(state=DISABLED)
+                            self.copyButton.configure(state=DISABLED)
+                        else:
+                            self.clearButton.configure(state=NORMAL)
+                            self.copyButton.configure(state=NORMAL)
 
                 class helpFrame(Frame):
                     def __init__(self, master: Notebook, **kwargs):
                         super().__init__(master, **kwargs)
 
                         self.loadingText = Label(self, text="Loading...")
-
-                        self.loadingText.place(relx=0.5, rely=0.5, anchor=CENTER)
+                        self.loadingText.place(relx=.5, rely=.5, anchor=CENTER)
 
                 self.encryptionFrame = encryptionFrame(self)
                 self.decryptionFrame = decryptionFrame(self)
@@ -1755,6 +1815,8 @@ class Interface(Tk):
         self.updateInterval = IntVar(value=1)
         self.languageVar = IntVar(value=0)
         self.themeVar = StringVar(value="vista")
+        self.loggingTextVar = StringVar()
+        self.loggingAutoSaveVar = IntVar(value=0)
 
         self.generateRandomAESVar = IntVar(value=256)
         self.generateRandomDESVar = IntVar(value=192)
@@ -1967,7 +2029,7 @@ class Interface(Tk):
             self.width = 200
             self.height = 200
 
-            self.wm_title("Encrypt'n'Decrypt Settings")
+            self.wm_title("Encrypt-n-Decrypt Settings")
             self.wm_geometry(f"{self.width}x{self.height}")
             self.wm_resizable(height=False, width=False)
             self.wm_attributes("-fullscreen", False)
