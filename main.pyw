@@ -67,7 +67,7 @@ from Crypto.Protocol.KDF import scrypt
 from Crypto.Random import get_random_bytes
 
 import base64, os, logging, pyperclip, binascii
-import functools, multipledispatch
+import functools, multipledispatch, inspect
 
 def threaded(function: Callable):
     @functools.wraps(function)
@@ -173,14 +173,14 @@ class Cryptography(object):
         if not bool(self.master.dataSourceVar.get()):
             data: str = self.master.textEntryVar.get()
         else:
-            self.update_status("Reading the file...") 
+            self.update_status("Reading the file...")
             path: str = self.master.mainNotebook.encryptionFrame.fileEntry.get()
             try:
                 with open(path, mode="rb") as file:
                     data: bytes = file.read()
             except PermissionError:
                 messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
-                self.master.logger.error("Read permission for the file specified has been denied, encryption was interrupted.")
+                self.master.logger.error("Read permission for the file specified has been denied, encryption was interrupted")
                 self.update_status("Ready")
                 return
 
@@ -202,12 +202,12 @@ class Cryptography(object):
             except ValueError as details:
                 if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
                     messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
-                    self.master.logger.error("Key with invalid length was specified.")
+                    self.master.logger.error("Key with invalid length was specified")
                     self.update_status("Ready")
                     return
                 else:
                     messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
-                    self.master.logger.error("Invalid key was specified.")
+                    self.master.logger.error("Invalid key was specified")
                     self.update_status("Ready")
                     return
 
@@ -216,7 +216,7 @@ class Cryptography(object):
                 self.master.lastResult = iv + cipher.encrypt(data.encode("utf-8") if type(data) is str else data)
             except MemoryError:
                 messagebox.showerror("Not enough memory", "Your computer has run out of memory while encrypting the file. Try closing other applications or restart your computer.")
-                self.master.logger.error("Device has run out of memory while encrypting, encryption was interrupted.")
+                self.master.logger.error("Device has run out of memory while encrypting, encryption was interrupted")
                 self.update_status("Ready")
                 return
             del data
@@ -229,7 +229,7 @@ class Cryptography(object):
                     return
             except MemoryError:
                 messagebox.showerror("Not enough memory", "Your computer has run out of memory while encoding the result. Try closing other applications or restart your computer.")
-                self.master.logger.error("Device has run out of memory while encoding, encryption was interrupted.")
+                self.master.logger.error("Device has run out of memory while encoding, encryption was interrupted")
                 self.update_status("Ready")
                 return
             self.master.lastKey = key
@@ -246,19 +246,19 @@ class Cryptography(object):
                             newpath = filedialog.asksaveasfilename(title="Save encrypted data", initialfile=os.path.basename(path[:-1] if path[-1:] == "\\" else path), initialdir=os.path.dirname(path), filetypes=[("All files","*.*")], defaultextension="*.key")
                             if newpath == "":
                                 failure = True
-                                self.master.logger.error("Write permission for the file specified had been denied, encryped data could not be saved to the destination.")
+                                self.master.logger.error("Write permission for the file specified has been denied, encryped data could not be saved to the destination")
                                 break
                             else:
                                 with open(newpath, mode="wb") as file:
-                                    file.write(self.master.outputVar.get())
-                        self.master.logger.error("Write permission for the file specified has been denied, encryption was interrupted.")
+                                    file.write(bytes(self.master.lastResult, "utf-8"))
+                        self.master.logger.error("Write permission for the file specified has been denied, encrypted data could not be saved to the destination")
                         self.update_status("Ready")
                         failure = True
                         return
                     except OSError as details:
                         if "No space" in str(details):
                             messagebox.showerror("No space left", "There is no space left on your device. Free up some space and try again.")
-                            self.master.logger.error("No space left on device, encryption was interrupted.")
+                            self.master.logger.error("No space left on device, encrypted data could not be saved to the destination")
                             self.update_status("Ready")
                             failure = True
                             pass
@@ -279,9 +279,9 @@ class Cryptography(object):
             self.update_status("Ready")
             if not failure:
                 if not bool(self.master.keySourceSelection.get()):
-                    self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.generateAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
+                    self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.generateAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm")
                 else:
-                    self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm.")
+                    self.master.logger.info(f"{'Entered text' if not bool(self.master.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(self.master.entryAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm")
 
         else:
             self.update_status("Generating the key...")
@@ -297,7 +297,7 @@ class Cryptography(object):
                 encrypted = cipher.encrypt(data.encode("utf-8") if isinstance(data, str) else data)
             except ValueError:
                 messagebox.showerror(f"{'Text is too long' if not bool(self.master.dataSourceVar) else 'File is too big'}", "The {} is too {} for RSA-{} encryption. Select a longer RSA key and try again.".format('text you\'ve entered' if not bool(self.master.dataSourceVar.get()) else 'file you\'ve specified', 'long' if not bool(self.master.dataSourceVar.get()) else 'big', self.master.generateRandomRSAVar.get()))
-                self.master.logger.error(f"Too {'long text' if not bool(self.master.dataSourceVar) else 'big file'} was specified, encryption was interrupted.")
+                self.master.logger.error(f"Too {'long text' if not bool(self.master.dataSourceVar) else 'big file'} was specified, encryption was interrupted")
                 self.update_status("Ready")
                 return
 
@@ -327,7 +327,7 @@ class Cryptography(object):
                     data = file.read()
             except PermissionError:
                 messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
-                self.master.logger.error("Read permission for the file specified has been denied, decryption was interrupted.")
+                self.master.logger.error("Read permission for the file specified has been denied, decryption was interrupted")
                 self.update_status("Ready")
                 return
             self.update_status("Decoding the file data...")
@@ -335,7 +335,7 @@ class Cryptography(object):
                 decodedData = base64.urlsafe_b64decode(data)
             except:
                 messagebox.showerror("Unencrypted file", f"This file seems to be not encrypted using {'AES' if not bool(self.master.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
-                self.master.logger.error("Unencrypted file specified.")
+                self.master.logger.error("Unencrypted file was specified")
                 self.update_status("Ready")
                 return
             else:
@@ -344,7 +344,7 @@ class Cryptography(object):
                     del decodedData
                 else:
                     messagebox.showerror("Unencrypted file", f"This file seems to be not encrypted using {'AES' if not bool(self.master.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
-                    self.master.logger.error("Unencrypted file specified.")
+                    self.master.logger.error("Unencrypted file was specified")
                     self.update_status("Ready")
                     return
         iv = data[:16 if not bool(self.master.decryptAlgorithmVar.get()) else 8]
@@ -359,17 +359,17 @@ class Cryptography(object):
         except ValueError as details:
             if (len(iv)) != 16 if not bool(self.master.decryptAlgorithmVar.get()) else 8:
                 messagebox.showerror("Unencrypted data", f"The text you've entered seems to be not encrypted using {'AES' if not bool(self.master.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
-                self.master.logger.error("Unencrypted text entered.")
+                self.master.logger.error("Unencrypted text was entered")
                 self.update_status("Ready")
                 return
             elif not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
                 messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
-                self.master.logger.error("Key with invalid length specified for decryption.")
+                self.master.logger.error("Key with invalid length was entered for decryption")
                 self.update_status("Ready")
                 return
             else:
                 messagebox.showerror("Invalid key", "The key you've entered is invalid.")
-                self.master.logger.error("Invalid key specified for decryption.")
+                self.master.logger.error("Invalid key was entered for decryption")
                 self.update_status("Ready")
                 return
         self.update_status("Decrypting...")
@@ -377,7 +377,7 @@ class Cryptography(object):
             result = cipher.decrypt(data.replace(iv, b""))
         except UnicodeDecodeError:
             messagebox.showerror("Invalid key", "The encryption key you've entered seems to be not the right key. Make sure you've entered the correct key.")
-            self.master.logger.error("Wrong key entered for decryption.")
+            self.master.logger.error("Wrong key entered for decryption")
             self.update_status("Ready")
             return
 
@@ -388,7 +388,7 @@ class Cryptography(object):
                     file.write(result)
             except PermissionError:
                 messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure write access for the file is permitted.")
-                self.master.logger.error("Write permission for the file specified has been denied, decryption was interrupted.")
+                self.master.logger.error("Write permission for the file specified has been denied, decryption was interrupted")
                 self.update_status("Ready")
                 return
 
@@ -401,7 +401,7 @@ class Cryptography(object):
                 self.master.mainNotebook.decryptionFrame.decryptOutputText.replace("Decrypted data is not being displayed because it's in an unknown encoding.")
             else:
                 messagebox.showerror("Invalid key", "The encryption key you've entered seems to be not the right key. Make sure you've entered the correct key.")
-                self.master.logger.error("Wrong key entered for decryption.")
+                self.master.logger.error("Wrong key was entered for decryption")
                 self.update_status("Ready")
                 return
         else:
@@ -422,7 +422,7 @@ class Cache(object):
         self.encryptions_history: list[dict] = []
         self.decryptions_history: list[dict] = []
 
-class loggingHandler(logging.Handler):
+class Handler(logging.Handler):
     def __init__(self, widget: Text, master: Tk, cache: Cache = None):
         super().__init__()
         self.widget = widget
@@ -436,7 +436,7 @@ class loggingHandler(logging.Handler):
             if record.levelno < levels[self.master.levelSelectVar.get()]:
                 return
             self.widget.configure(state=NORMAL)
-            self.widget.insert(END, message + '\n', record.levelname.lower())
+            self.widget.insert(END, message, record.levelname.lower())
             self.widget.configure(state=DISABLED)
 
             self.widget.yview(END)
@@ -446,9 +446,43 @@ class loggingHandler(logging.Handler):
         temp_dict[record] = message
         self.cache.loggings_history.append(temp_dict)
 
+        if bool(self.master.loggingAutoSaveVar.get()):
+            with open(f"{__title__}.log", mode="a", encoding="utf-8") as file:
+                file.write(message)
+
     @staticmethod
     def format(record: logging.LogRecord) -> str:
         return str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S') + f" [{record.levelname}] " + record.getMessage())
+
+class Logger(object):
+    def __init__(self, widget: Text, root: Tk):
+        self.widget = widget
+        self.root = root
+
+        loghandler = Handler(widget=self.widget, master=self.root, cache=self.root.cache)
+        logging.basicConfig(
+            format = '%(asctime)s [%(levelname)s] %(message)s',
+            level = logging.DEBUG,
+            datefmt = r'%Y-%m-%d %H:%M:%S',
+            handlers = [loghandler]
+        )
+        self.logger = logging.getLogger()
+        self.logger.propagate = False
+
+    def debug(self, message: str, newline: bool = True):
+        self.logger.debug(message + ("\n" if newline else ""))
+    
+    def info(self, message: str, newline: bool = True):
+        self.logger.info(message + ("\n" if newline else ""))
+
+    def warning(self, message: str, newline: bool = True):
+        self.logger.warning(message + ("\n" if newline else ""))
+
+    def error(self, message: str, newline: bool = True):
+        self.logger.error(message + ("\n" if newline else ""))
+
+    def critical(self, message: str, newline: bool = True):
+        self.logger.critical(message + ("\n" if newline else ""))
 
 class ToolTip(object):
     def __init__(self, widget: Widget):
@@ -1286,7 +1320,7 @@ class Interface(Tk):
                             self.fileValidityLabel.configure(text="Validity: [Blank]", foreground="gray")
 
                     def saveKey(self, path: str, key: Union[str, bytes]):
-                        key_to_use = self.master.master.crypto.generateKey(32)
+                        key_to_use = self.master.master.crypto.generate_key(32)
 
                         data = bytes(key, "utf-8")
                         iv = get_random_bytes(AES.block_size)
@@ -1308,6 +1342,7 @@ class Interface(Tk):
                             finally:
                                 with open(path, encoding = 'utf-8', mode="w") as file:
                                     file.write(str(encrypted_key))
+                                self.root.logger.debug("Encryption key has been saved to \"{}\"".format(path))
 
                 class decryptionFrame(Frame):
                     def __init__(self, master: Notebook = None, **kwargs):
@@ -1709,15 +1744,7 @@ class Interface(Tk):
 
                         self.root.loggingTextVar.trace("w", self.onLoggingWidgetInsert)
 
-                        loghandler = loggingHandler(widget=self.loggingWidget, master=self.root, cache=self.root.cache)
-                        logging.basicConfig(
-                            format = '%(asctime)s [%(levelname)s] %(message)s',
-                            level = logging.DEBUG,
-                            datefmt = r'%Y-%m-%d %H:%M:%S',
-                            handlers = [loghandler]
-                        )
-                        self.root.logger = logging.getLogger()
-                        self.root.logger.propagate = False
+                        self.root.logger = Logger(self.loggingWidget, self.root)
 
                         self.copyButton = Button(self, text="Copy", width=15, command=lambda: self.root.clipboard_set(self.loggingWidget.get("1.0", END)), takefocus=0, state=DISABLED)
                         self.clearButton = Button(self, text="Clear", width=15, command=lambda: self.loggingWidget.clear(), takefocus=0, state=DISABLED)
@@ -1746,10 +1773,11 @@ class Interface(Tk):
                             string: str = list(entry.values())[0]
                             if record.levelno >= levels[self.root.levelSelectVar.get()]:
                                 self.loggingWidget.configure(state=NORMAL)
-                                self.loggingWidget.insert(END, string + "\n", record.levelname.lower())
+                                self.loggingWidget.insert(END, string, record.levelname.lower())
                                 self.loggingWidget.configure(state=DISABLED)
                             else:
                                 continue
+                        self.root.logger.debug(f"Logging level has been set to {self.root.levelSelectVar.get()}")
 
                     def onLoggingWidgetInsert(self, *args, **kwargs):
                         if ''.join(self.loggingWidget.get("1.0", END).split()) == '':
