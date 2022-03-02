@@ -75,7 +75,7 @@ def threaded(function: Callable):
         Thread(target=function, args=args, kwargs=kwargs).start()
     return wrapper
 
-class Cryptography(object):
+class Cryptography(object, metaclass=type):
     def __init__(self, master: Tk):
         self.master = master
         self.__encryption_busy: bool = False
@@ -423,7 +423,7 @@ class Cache(object):
         self.decryptions_history: list[dict] = []
 
 class Handler(logging.Handler):
-    def __init__(self, widget: Text, master: Tk, cache: Cache = None):
+    def __init__(self, widget: Optional[Text], master: Tk, cache: Cache = None):
         super().__init__()
         self.widget = widget
         self.master = master
@@ -440,8 +440,8 @@ class Handler(logging.Handler):
             self.widget.configure(state=DISABLED)
 
             self.widget.yview(END)
-
-        self.widget.after(0, append)
+        if self.widget is not None:
+            self.widget.after(0, append)
         temp_dict: dict = {}
         temp_dict[record] = message
         self.cache.loggings_history.append(temp_dict)
@@ -455,10 +455,10 @@ class Handler(logging.Handler):
         return str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S') + f" [{record.levelname}] " + record.getMessage())
 
 class Logger(object):
-    def __init__(self, widget: Text, root: Tk):
+    def __init__(self, widget: Optional[Text], root: Tk):
         self.widget = widget
         self.root = root
-
+        
         loghandler = Handler(widget=self.widget, master=self.root, cache=self.root.cache)
         logging.basicConfig(
             format = '%(asctime)s [%(levelname)s] %(message)s',
@@ -468,6 +468,29 @@ class Logger(object):
         )
         self.logger = logging.getLogger()
         self.logger.propagate = False
+
+    def changeWidget(self, widget: Text):
+        self.widget = widget
+
+        loghandler = Handler(widget=self.widget, master=self.root, cache=self.root.cache)
+        logging.basicConfig(
+            format = '%(asctime)s [%(levelname)s] %(message)s',
+            level = logging.DEBUG,
+            datefmt = r'%Y-%m-%d %H:%M:%S',
+            handlers = [loghandler]
+        )
+        self.logger = logging.getLogger()
+
+        levels = {"NOTSET": 0, "DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
+        for entry in self.root.cache.loggings_history:
+            record: logging.LogRecord = list(entry.keys())[0]
+            string: str = list(entry.values())[0]
+            if record.levelno >= levels[self.root.levelSelectVar.get()]:
+                self.widget.configure(state=NORMAL)
+                self.widget.insert(END, string, record.levelname.lower())
+                self.widget.configure(state=DISABLED)
+            else:
+                continue
 
     def debug(self, message: str, newline: bool = True):
         self.logger.debug(message + ("\n" if newline else ""))
@@ -802,6 +825,12 @@ class Interface(Tk):
         self.theme = ThemedStyle(self)
         self.theme.set_theme("vista" if os.name == "nt" else "arc")
 
+        self.__initialize_vars()
+
+        self.crypto = Cryptography(self)
+        self.cache = Cache(self)
+        self.logger = Logger(None, self)
+
         self.withdraw()
 
         self.height = 580
@@ -815,13 +844,10 @@ class Interface(Tk):
         self.wm_maxsize(width = self.width, height = self.height)
         try:
             self.wm_iconbitmap("icon.ico")
+            self.logger.debug("Successfully loaded icon.ico")
         except TclError:
+            self.logger.debug("Using the default icon since icon.ico was not found")
             pass
-
-        self.__initialize_vars()
-
-        self.crypto = Cryptography(self)
-        self.cache = Cache(self)
 
         class mainNotebook(Notebook):
             def __init__(self, master: Interface):
@@ -1684,7 +1710,7 @@ class Interface(Tk):
 
                         class hashDigestFrame(LabelFrame):
                             def __init__(self, master: miscFrame):
-                                super().__init__(master, height=200, width=354, text="Hash Calculator")
+                                super().__init__(master, height=400, width=354, text="Hash Calculator")
                                 self.root = self.master.master.master
 
                                 self.plainRadiobutton = Radiobutton(self, text="Plain text:", value=0, variable=self.root.hashCalculationSourceVar, takefocus=0)
@@ -1692,7 +1718,7 @@ class Interface(Tk):
                                 self.plainClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, state=DISABLED, takefocus=0)
                                 self.plainPasteButton = Button(self, width=15, text="Paste", command=lambda: self.plainEntry.replace(self.root.clipboard_get()), takefocus=0)
 
-                                self.fileRadiobutton = Radiobutton(self, text="File:", value=0, variable=self.root.hashCalculationSourceVar, takefocus=0)
+                                self.fileRadiobutton = Radiobutton(self, text="File:", value=1, variable=self.root.hashCalculationSourceVar, takefocus=0)
                                 self.fileValidity = Label(self, text="Validity: [Blank]", foreground="gray", state=DISABLED)
                                 self.fileEntry = Entry(self, width=44, font=("Consolas", 9), takefocus=0, state=DISABLED)
                                 self.fileClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, takefocus=0, state=DISABLED)
@@ -1744,13 +1770,12 @@ class Interface(Tk):
 
                         self.root.loggingTextVar.trace("w", self.onLoggingWidgetInsert)
 
-                        self.root.logger = Logger(self.loggingWidget, self.root)
+                        self.root.logger.changeWidget(self.loggingWidget)
 
                         self.copyButton = Button(self, text="Copy", width=15, command=lambda: self.root.clipboard_set(self.loggingWidget.get("1.0", END)), takefocus=0, state=DISABLED)
                         self.clearButton = Button(self, text="Clear", width=15, command=lambda: self.loggingWidget.clear(), takefocus=0, state=DISABLED)
                         self.showOnlyLabel = Label(self, text="Logging level:")
                         levels = ["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-                        self.root.levelSelectVar = StringVar(value=levels[1])
 
                         self.loggingLevelSelect = Combobox(self, values=levels, textvariable=self.root.levelSelectVar, state="readonly", takefocus=0)
                         self.loggingLevelSelect.bind("<<ComboboxSelected>>", self.onLoggingLevelChange)
@@ -1768,6 +1793,7 @@ class Interface(Tk):
                     def onLoggingLevelChange(self, event=None):
                         self.loggingWidget.clear()
                         levels = {"NOTSET": 0, "DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
+                        self.root.logger.debug(f"Logging level has been set to {self.root.levelSelectVar.get()}")
                         for entry in self.root.cache.loggings_history:
                             record: logging.LogRecord = list(entry.keys())[0]
                             string: str = list(entry.values())[0]
@@ -1777,7 +1803,6 @@ class Interface(Tk):
                                 self.loggingWidget.configure(state=DISABLED)
                             else:
                                 continue
-                        self.root.logger.debug(f"Logging level has been set to {self.root.levelSelectVar.get()}")
 
                     def onLoggingWidgetInsert(self, *args, **kwargs):
                         if ''.join(self.loggingWidget.get("1.0", END).split()) == '':
@@ -1845,6 +1870,7 @@ class Interface(Tk):
         self.themeVar = StringVar(value="vista")
         self.loggingTextVar = StringVar()
         self.loggingAutoSaveVar = IntVar(value=0)
+        self.levelSelectVar = StringVar(value="INFO")
 
         self.generateRandomAESVar = IntVar(value=256)
         self.generateRandomDESVar = IntVar(value=192)
@@ -2187,4 +2213,5 @@ class Interface(Tk):
 
 if __name__ == "__main__":
     root = Interface()
+    root.logger.info(f"{__title__} v{__version__} has been initialized")
     root.mainloop()
