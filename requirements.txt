@@ -1,0 +1,14 @@
+certifi==2021.10.8
+charset-normalizer==2.0.12
+hurry.filesize==0.9
+idna==3.3
+Markdown==3.3.6
+multipledispatch==0.6.0
+Pillow==9.0.1
+pycryptodome==3.14.1
+pyperclip==1.8.2
+requests==2.27.1
+six==1.16.0
+tkinterweb==3.12.2
+ttkthemes==3.2.2
+urllib3==1.26.8

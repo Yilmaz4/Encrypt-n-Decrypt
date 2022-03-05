@@ -24,7 +24,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 __title__ = "Encrypt-n-Decrypt"
 __author__ = "Yilmaz04"
 __license__ = "MIT"
-__copyright__ = "Copyright 2017-2022 Yilmaz Alpaslan"
+__copyright__ = "Copyright © 2017-2022 Yilmaz Alpaslan"
 __version__ = "1.0.0"
 
 from tkinter import (
@@ -61,13 +61,14 @@ from Crypto.Cipher import AES, PKCS1_OAEP, DES3
 from Crypto.PublicKey import RSA, DSA, ECC
 from Crypto.Signature import DSS
 from Crypto.Hash import (
-    SHA1, SHA256, SHA384, SHA512, MD2, MD5
+    SHA1, SHA224, SHA256, SHA384, SHA512, MD2, MD4, MD5
 )
 from Crypto.Protocol.KDF import scrypt
 from Crypto.Random import get_random_bytes
 
 import base64, os, logging, pyperclip, binascii
-import functools, multipledispatch, inspect
+import functools, multipledispatch, sqlite3
+import atexit, inspect
 
 def threaded(function: Callable):
     @functools.wraps(function)
@@ -418,7 +419,7 @@ class Cache(object):
         super().__init__()
         self.master = master
 
-        self.loggings_history: list[dict[logging.LogRecord, str]] = []
+        self.loggings_history: list[dict[logging.LogRecord, dict[str, Union[str, int, bool]]]] = []
         self.encryptions_history: list[dict] = []
         self.decryptions_history: list[dict] = []
 
@@ -442,12 +443,34 @@ class Handler(logging.Handler):
             self.widget.yview(END)
         if self.widget is not None:
             self.widget.after(0, append)
-        temp_dict: dict = {}
-        temp_dict[record] = message
-        self.cache.loggings_history.append(temp_dict)
+        record_dict: dict = {}
+        record_dict[record] = {
+            "message": message,
+            "levelname": record.levelname,
+            "levelno": record.levelno,
+            "in_file": bool(self.master.loggingAutoSaveVar.get())
+        }
+        self.cache.loggings_history.append(record_dict)
 
         if bool(self.master.loggingAutoSaveVar.get()):
-            with open(f"{__title__}.log", mode="a", encoding="utf-8") as file:
+            temp_list: list = []
+            for entry in self.cache.loggings_history:
+                record: logging.LogRecord = list(entry.keys())[0]
+                message: str = list(entry.values())[0]["message"]
+                in_file: bool = list(entry.values())[0]["in_file"]
+                if in_file:
+                    temp_list.append(message)
+            if os.path.exists(f"{__title__}.log"):
+                with open(f"{__title__}.log", mode="r", encoding="utf-8") as file:
+                    index = file.read()
+                    new_index: list = []
+                    for line in index.splitlines()[::-1]:
+                        if "Start of logging session at" in line:
+                            continue
+                        new_index.append(line)
+            with open(f"{__title__}.log", mode="a+", encoding="utf-8") as file:
+                if not os.path.exists(f"{__title__}.log") or index.endswith("================ End of logging session =================\n"):
+                    file.write(f"\n==== Start of logging session at {str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S'))} ====\n")
                 file.write(message)
 
     @staticmethod
@@ -458,7 +481,7 @@ class Logger(object):
     def __init__(self, widget: Optional[Text], root: Tk):
         self.widget = widget
         self.root = root
-        
+
         loghandler = Handler(widget=self.widget, master=self.root, cache=self.root.cache)
         logging.basicConfig(
             format = '%(asctime)s [%(levelname)s] %(message)s',
@@ -469,28 +492,10 @@ class Logger(object):
         self.logger = logging.getLogger()
         self.logger.propagate = False
 
-    def changeWidget(self, widget: Text):
-        self.widget = widget
-
-        loghandler = Handler(widget=self.widget, master=self.root, cache=self.root.cache)
-        logging.basicConfig(
-            format = '%(asctime)s [%(levelname)s] %(message)s',
-            level = logging.DEBUG,
-            datefmt = r'%Y-%m-%d %H:%M:%S',
-            handlers = [loghandler]
-        )
-        self.logger = logging.getLogger()
-
-        levels = {"NOTSET": 0, "DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
-        for entry in self.root.cache.loggings_history:
-            record: logging.LogRecord = list(entry.keys())[0]
-            string: str = list(entry.values())[0]
-            if record.levelno >= levels[self.root.levelSelectVar.get()]:
-                self.widget.configure(state=NORMAL)
-                self.widget.insert(END, string, record.levelname.lower())
-                self.widget.configure(state=DISABLED)
-            else:
-                continue
+    def end_logging_file(self):
+        if bool(self.root.loggingAutoSaveVar.get()):
+            with open(f"{__title__}.log", mode="a", encoding="utf-8") as file:
+                file.write(f"================ End of logging session =================\n")
 
     def debug(self, message: str, newline: bool = True):
         self.logger.debug(message + ("\n" if newline else ""))
@@ -508,70 +513,80 @@ class Logger(object):
         self.logger.critical(message + ("\n" if newline else ""))
 
 class ToolTip(object):
-    def __init__(self, widget: Widget):
+    def __init__(self, widget: Widget, tooltip: str, interval: int = 1000, length: int = 400):
         self.widget = widget
-        self.tipwindow = None
+        self.interval = interval
+        self.wraplength = length
+        self.text = tooltip
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.leave)
+        self.widget.bind("<ButtonPress>", self.leave)
         self.id = None
-        self.x = self.y = 0
+        self.tw = None
 
-        self.transition = 10
+    def enter(self, event=None):
+        self.schedule()
 
-    def showtip(self, text, *args, **kwargs):
-        self.text = text
-        if self.tipwindow or not self.text:
-            return
+    def leave(self, event=None):
+        self.unschedule()
+        self.hidetip()
 
-        x, y, _, cy = self.widget.bbox("insert")
-        x = x + self.widget.winfo_pointerx() + 2
-        y = y + cy + self.widget.winfo_pointery() + 15
-        self.tipwindow = tw = Toplevel(self.widget)
+    def schedule(self):
+        self.unschedule()
+        self.id = self.widget.after(self.interval, self.showtip)
 
-        tw.wm_overrideredirect(1)
-        tw.wm_geometry("+%d+%d" % (x, y))
-        tw.attributes("-alpha", 0)
-        label = Label(tw, text=self.text, justify=LEFT, relief=SOLID, borderwidth=1, foreground="#6f6f6f", background="white", takefocus=0)
+    def unschedule(self):
+        id = self.id
+        self.id = None
+        if id:
+            self.widget.after_cancel(id)
+
+    def showtip(self, event=None):
+        x = root.winfo_pointerx() + 12
+        y = root.winfo_pointery() + 16
+
+        self.tw = Toplevel(self.widget)
+        self.tw.attributes("-alpha", 0)
+
+        self.tw.wm_overrideredirect(True)
+        self.tw.wm_geometry("+%d+%d" % (x, y))
+        label = Label(self.tw, text=self.text,
+            justify='left', background="#ffffff",
+            foreground="#6f6f6f", relief='solid',
+            borderwidth=1, wraplength=self.wraplength)
         label.pack(ipadx=1)
-        tw.attributes("-alpha", 0)
-        try:
-            tw.tk.call("::tk::unsupported::MacWindowStyle", "style", tw._w, "help", "noActivates")
-        except TclError:
-            pass
+
         def fade_in():
-            x, y = root.winfo_pointerxy()
-            widget = root.winfo_containing(x, y)
-            if widget is not self.widget:
-                tw.destroy()
+            if not self.widget is root.winfo_containing(root.winfo_pointerx(), root.winfo_pointery()):
+                self.tw.destroy()
                 return
-            alpha = tw.attributes("-alpha")
+            alpha = self.tw.attributes("-alpha")
             if alpha != 1:
                 alpha += .1
-                tw.attributes("-alpha", alpha)
-                tw.after(self.transition, fade_in)
+                self.tw.attributes("-alpha", alpha)
+                self.tw.after(8, fade_in)
             else:
-                tw.attributes("-alpha", 1)
+                self.tw.attributes("-alpha", 1)
                 return
         fade_in()
 
-    def hidetip(self, *args, **kwargs):
-        tw = self.tipwindow
-        try:
+    def hidetip(self):
+        if self.tw:
             def fade_away():
-                alpha = tw.attributes("-alpha")
-                if alpha > 0:
+                if not self.widget is root.winfo_containing(root.winfo_pointerx(), root.winfo_pointery()):
+                    self.tw.destroy()
+                    return
+                try:
+                    alpha = self.tw.attributes("-alpha")
+                except TclError:
+                    return
+                if alpha != 0:
                     alpha -= .1
-                    tw.attributes("-alpha", alpha)
-                    tw.after(self.transition, fade_away)
+                    self.tw.attributes("-alpha", alpha)
+                    self.tw.after(8, fade_away)
                 else:
-                    tw.destroy()
-            if not tw.attributes("-alpha") in [0, 1]:
-                tw.destroy()
-            else:
-                fade_away()
-        except Exception as e:
-            if tw:
-                tw.destroy()
-            elif self.tipwindow:
-                self.tipwindow.destroy()
+                    self.tw.destroy()
+            fade_away()
 
 class ScrolledText(Text):
     def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
@@ -617,15 +632,7 @@ class ScrolledText(Text):
             self._textvariable.trace("wu", self._on_var_change)
 
         if tooltip is not None:
-            def enter(event = None):
-                self.toolTip = ToolTip(self)
-                self.after(1000, self.toolTip.showtip, tooltip, self, event)
-            def leave(event = None):
-                self.toolTip.hidetip(self)
-
-            self.bind('<Enter>', enter)
-            self.bind('<Leave>', leave)
-            self.bind('<Button-1>', leave)
+            self.toolTip = ToolTip(widget=self, tooltip=tooltip)
 
     @multipledispatch.dispatch(str)
     def replace(self, chars: str):
@@ -690,16 +697,8 @@ class Text(Text):
         if self._textvariable is not None:
             self._textvariable.trace("wu", self._on_var_change)
         
-        if not not tooltip:
-            def enter(event = None):
-                self.toolTip = ToolTip(self)
-                self.after(1000, self.toolTip.showtip, tooltip, self, event)
-            def leave(event = None):
-                self.toolTip.hidetip(self)
-
-            self.bind('<Enter>', enter)
-            self.bind('<Leave>', leave)
-            self.bind('<Button-1>', leave)
+        if tooltip is not None:
+            self.toolTip = ToolTip(widget=self, tooltip=tooltip)
 
     @multipledispatch.dispatch(str)
     def replace(self, chars: str):
@@ -783,17 +782,8 @@ class Widget(Widget):
     def __init__(self, master: Union[Tk, Frame, LabelFrame], tooltip: Optional[str] = None, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
 
-        if not not tooltip:
-            self.toolTip: ToolTip
-            def enter(event = None):
-                self.toolTip = ToolTip(self)
-                self.after(1000, self.toolTip.showtip, tooltip, self, event)
-            def leave(event = None):
-                self.toolTip.hidetip(self)
-
-            self.bind('<Enter>', enter)
-            self.bind('<Leave>', leave)
-            self.bind('<Button-1>', leave)
+        if tooltip is not None:
+            self.toolTip = ToolTip(widget=self, tooltip=tooltip)
 
 class Entry(Widget, Entry):
     def replace(self, string: str):
@@ -822,14 +812,10 @@ class Interface(Tk):
 
         super().__init__()
 
-        self.theme = ThemedStyle(self)
+        self.theme = ThemedStyle(self, gif_override=True)
         self.theme.set_theme("vista" if os.name == "nt" else "arc")
 
         self.__initialize_vars()
-
-        self.crypto = Cryptography(self)
-        self.cache = Cache(self)
-        self.logger = Logger(None, self)
 
         self.withdraw()
 
@@ -844,10 +830,11 @@ class Interface(Tk):
         self.wm_maxsize(width = self.width, height = self.height)
         try:
             self.wm_iconbitmap("icon.ico")
-            self.logger.debug("Successfully loaded icon.ico")
         except TclError:
-            self.logger.debug("Using the default icon since icon.ico was not found")
             pass
+
+        self.crypto = Cryptography(self)
+        self.cache = Cache(self)
 
         class mainNotebook(Notebook):
             def __init__(self, master: Interface):
@@ -858,11 +845,11 @@ class Interface(Tk):
                         super().__init__(master=master, **kwargs)
                         self.root = self.master.master
 
-                        self.textEntryCheck = Radiobutton(self, text="Plain text:", value=0, variable=self.root.dataSourceVar, command=self.changeDataSource, takefocus=0)
+                        self.textEntryCheck = Radiobutton(self, text="Plain text:", tooltip="Select this if you want to encrypt a short message", value=0, variable=self.root.dataSourceVar, command=self.changeDataSource, takefocus=0)
                         self.textEntry = Entry(self, width=48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.root.textEntryVar)
-                        self.textPasteButton = Button(self, text="Paste", tooltip="sus", width=14, state=NORMAL, command=lambda: self.textEntry.replace(str(self.root.clipboard_get())), takefocus=0)
-                        self.textClearButton = Button(self, text="Clear", width=14, command=lambda: self.textEntry.delete(0, END), takefocus=0, state=DISABLED)
-                        self.textEntryHideCharCheck = Checkbutton(self, text="Hide characters", variable=self.root.textEntryHideCharVar, onvalue=1, offvalue=0, command=lambda: self.textEntry.configure(show="●" if bool(self.root.textEntryHideCharVar.get()) else ""), takefocus=0)
+                        self.textPasteButton = Button(self, text="Paste", tooltip="Paste the contents of the clipboard into the entry above", width=14, state=NORMAL, command=lambda: self.textEntry.replace(str(self.root.clipboard_get())), takefocus=0)
+                        self.textClearButton = Button(self, text="Clear", tooltip="Delete everything written in the above entry", width=14, command=lambda: self.textEntry.delete(0, END), takefocus=0, state=DISABLED)
+                        self.textEntryHideCharCheck = Checkbutton(self, text="Hide characters", tooltip="Check this if you want the things you write in the above entry to be not visible", variable=self.root.textEntryHideCharVar, onvalue=1, offvalue=0, command=self.changeDataEntryHideChar, takefocus=0)
 
                         self.fileEntryCheck = Radiobutton(self, text="File:", value=1, variable=self.root.dataSourceVar, command=self.changeDataSource, takefocus=0)
                         self.fileValidityLabel = Label(self, text="Validity: [Blank]", foreground="gray")
@@ -1136,6 +1123,9 @@ class Interface(Tk):
                         self.outputFrame = outputFrame(self)
                         self.outputFrame.place(x=377, y=4)
 
+                    def changeDataEntryHideChar(self):
+                        self.textEntry.configure(show="●" if bool(self.root.textEntryHideCharVar.get()) else "")
+
                     def changeEnterKeySectionState(self, state = DISABLED):
                         self.algorithmSelect.symmetricEncryption.keyEntry.configure(state=state)
                         self.algorithmSelect.symmetricEncryption.keyEntryHideCharCheck.configure(state=state)
@@ -1165,13 +1155,13 @@ class Interface(Tk):
 
                     def changeSourceSelection(self):
                         self.changeGenerateKeySectionState(state = DISABLED if bool(self.master.master.keySourceSelection.get()) else NORMAL)
-                        self.changeAESState(state = DISABLED if bool(self.master.master.keySourceSelection.get()) else DISABLED if bool(self.master.master.generateAlgorithmSelection.get()) else NORMAL)
-                        self.changeDESState(state = DISABLED if bool(self.master.master.keySourceSelection.get()) else NORMAL if bool(self.master.master.generateAlgorithmSelection.get()) else DISABLED)
+                        self.changeAESState(state = DISABLED if bool(self.root.keySourceSelection.get()) else DISABLED if bool(self.master.master.generateAlgorithmSelection.get()) else NORMAL)
+                        self.changeDESState(state = DISABLED if bool(self.root.keySourceSelection.get()) else NORMAL if bool(self.master.master.generateAlgorithmSelection.get()) else DISABLED)
                         self.changeEnterKeySectionState(state = NORMAL if bool(self.master.master.keySourceSelection.get()) else DISABLED)
 
-                        if not bool(self.master.master.keySourceSelection.get()):
+                        if not bool(self.root.keySourceSelection.get()) and (not bool(self.root.dataSourceVar.get() or (bool(self.root.dataSourceVar.get() and ''.join(self.root.fileEntryVar.get().split()) != '')))):
                             self.encryptButton.configure(state=NORMAL)
-                        elif bool(self.master.master.keySourceSelection.get()):
+                        elif bool(self.root.keySourceSelection.get()) and (not bool(self.root.dataSourceVar.get() or (bool(self.root.dataSourceVar.get() and ''.join(self.root.fileEntryVar.get().split()) != '')))):
                             self.encryptButton.configure(state=NORMAL)
                             self.limitKeyEntry()
 
@@ -1187,7 +1177,9 @@ class Interface(Tk):
 
                     def getKey(self, path: str) -> Optional[str]:
                         if not os.path.getsize(path) in [16, 24, 32, 76, 88, 96]:
-                            messagebox
+                            messagebox.showwarning("ERR_INVALID_KEY_FILE","The specified file does not contain any valid key for encryption.")
+                            self.master.master.logger.error("Key file with no valid key inside was specified.")
+                            return
                         with open(path, encoding = 'utf-8', mode="r") as file:
                             global index
                             index = file.read()
@@ -1209,7 +1201,7 @@ class Interface(Tk):
                                     continue
                                 else:
                                     try:
-                                        if len(output_key) == 16 or len(output_key) == 24 or len(output_key) == 32:
+                                        if len(output_key) in [16, 24, 32]:
                                             return output_key
                                     except:
                                         continue
@@ -1265,7 +1257,7 @@ class Interface(Tk):
                                 self.encryptButton.configure(state=DISABLED)
                             else:
                                 self.algorithmSelect.symmetricEncryption.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
-                                self.encryptButton.configure(state=NORMAL)
+                                self.encryptButton.configure(state=NORMAL if (not bool(self.root.dataSourceVar.get() or (bool(self.root.dataSourceVar.get() and ''.join(self.root.fileEntryVar.get().split()) != '')))) else DISABLED)
 
                     def changeDataSource(self):
                         if bool(self.master.master.dataSourceVar.get()):
@@ -1277,7 +1269,7 @@ class Interface(Tk):
 
                             self.fileEntry.configure(state=NORMAL)
                             self.fileBrowseButton.configure(state=NORMAL)
-                            if self.master.master.fileEntryVar.get() != "":
+                            if  (not bool(self.root.dataSourceVar.get() or (bool(self.root.dataSourceVar.get() and ''.join(self.root.fileEntryVar.get().split()) != '')))):
                                 self.fileClearButton.configure(state=NORMAL)
                                 self.encryptButton.configure(state=NORMAL)
                             else:
@@ -1321,7 +1313,7 @@ class Interface(Tk):
                     
                     def fileEntryCallback(self, *args, **kwargs):
                         self.fileClearButton.configure(state=DISABLED if self.master.master.fileEntryVar.get() == "" else NORMAL)
-                        self.encryptButton.configure(state=DISABLED if self.master.master.fileEntryVar.get() == "" else NORMAL)
+                        self.encryptButton.configure(state=DISABLED if self.master.master.fileEntryVar.get() == "" else NORMAL if (not bool(self.root.dataSourceVar.get() or (bool(self.root.dataSourceVar.get() and ''.join(self.root.fileEntryVar.get().split()) != '')))) else DISABLED)
                         if self.fileEntry.get() != "":
                             if os.path.isfile(self.fileEntry.get()):
                                 try:
@@ -1660,35 +1652,32 @@ class Interface(Tk):
 
                         class keyDerivationFrame(LabelFrame):
                             def __init__(self, master: miscFrame):
-                                super().__init__(master=master, height=178, width=354, text="Key Derivation Function (KDF)")
+                                super().__init__(master=master, height=150, width=354, text="Key Derivation Function (KDF)")
                                 self.root = self.master.master.master
 
                                 self.keyInputLabel = Label(self, text="Input", takefocus=0)
                                 self.keyInputValidity = Label(self, text="Validity: [Blank]", foreground="gray")
-                                self.keyInputEntry = Entry(self, width=46, font=("Consolas", 9), textvariable=self.root.keyInputVar, takefocus=0)
+                                self.keyInputEntry = Entry(self, width=46, font=("Consolas", 10), textvariable=self.root.keyInputVar, takefocus=0)
                                 self.keyInputHideCheck = Checkbutton(self, text="Hide characters", takefocus=0, onvalue=1, offvalue=0, variable=self.root.keyInputHideVar, command=lambda: self.keyInputEntry.configure(show="●" if bool(self.root.keyInputHideVar.get()) else ""))
                                 self.inputClearButton = Button(self, width=15, text="Clear", command=self.keyInputEntry.clear, state=DISABLED, takefocus=0)
                                 self.inputPasteButton = Button(self, width=15, text="Paste", command=lambda: self.keyInputEntry.replace(self.root.clipboard_get()), takefocus=0)
 
-                                self.keyOutputLabel = Label(self, text="Output", takefocus=0)
-                                self.keyOutputEntry = Entry(self, width=46, state="readonly", font=("Consolas",9), textvariable=self.root.keyOutputVar, takefocus=0)
-                                self.outputClearButton = Button(self, width=15, text="Clear", command=self.keyOutputEntry.clear, state=DISABLED, takefocus=0)
-                                self.outputPasteButton = Button(self, width=15, text="Copy", command=lambda: self.root.clipboard_set(self.keyOutputEntry.get()[:-1 if self.keyOutputEntry.get().endswith("\n") else 0]), takefocus=0)
+                                self.keyOutputLabel = Label(self, text="Output (Derived Key)", takefocus=0)
+                                self.keyOutputEntry = Entry(self, width=34, state="readonly", font=("Consolas", 10), textvariable=self.root.keyOutputVar, takefocus=0)
+                                self.outputPasteButton = Button(self, text="Copy", state=DISABLED, command=lambda: self.root.clipboard_set(self.keyOutputEntry.get()[:-1 if self.keyOutputEntry.get().endswith("\n") else 0]), takefocus=0)
 
                                 self.root.keyInputVar.trace("w", self.keyInputCallback)
-                                self.root.keyOutputVar.trace("w", lambda *args, **kwargs: self.outputClearButton.configure(state=NORMAL if ''.join(self.keyOutputEntry.get().split()) != '' else DISABLED))
 
-                                self.keyInputLabel.place(x=7, y=0)
-                                self.keyInputValidity.place(x=42, y=0)
-                                self.keyInputHideCheck.place(x=235, y=49)
-                                self.keyInputEntry.place(x=9, y=22)
-                                self.inputClearButton.place(x=116, y=48)
-                                self.inputPasteButton.place(x=9, y=48)
+                                self.keyInputLabel.place(x=8, y=0)
+                                self.keyInputValidity.place(x=43, y=0)
+                                self.keyInputHideCheck.place(x=236, y=49)
+                                self.keyInputEntry.place(x=10, y=22)
+                                self.inputClearButton.place(x=117, y=48)
+                                self.inputPasteButton.place(x=10, y=48)
 
-                                self.keyOutputLabel.place(x=7, y=75)
-                                self.keyOutputEntry.place(x=9, y=97)
-                                self.outputClearButton.place(x=116, y=123)
-                                self.outputPasteButton.place(x=9, y=123)
+                                self.keyOutputLabel.place(x=8, y=75)
+                                self.keyOutputEntry.place(x=10, y=97)
+                                self.outputPasteButton.place(x=262, y=95)
 
                             def keyInputCallback(self, *args, **kwargs):
                                 if ''.join(self.keyInputEntry.get().split()) != "":
@@ -1710,30 +1699,84 @@ class Interface(Tk):
 
                         class hashDigestFrame(LabelFrame):
                             def __init__(self, master: miscFrame):
-                                super().__init__(master, height=400, width=354, text="Hash Calculator")
+                                super().__init__(master, height=363, width=354, text="Hash Calculator")
                                 self.root = self.master.master.master
 
-                                self.plainRadiobutton = Radiobutton(self, text="Plain text:", value=0, variable=self.root.hashCalculationSourceVar, takefocus=0)
-                                self.plainEntry = Entry(self, width=44, font=("Consolas", 9), takefocus=0)
+                                self.plainRadiobutton = Radiobutton(self, text="Plain text:", value=0, variable=self.root.hashCalculationSourceVar, command=self.changeSourceSelection, takefocus=0)
+                                self.plainEntry = Entry(self, width=44, font=("Consolas", 10), textvariable=self.root.hashPasswordEntryVar, takefocus=0)
                                 self.plainClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, state=DISABLED, takefocus=0)
                                 self.plainPasteButton = Button(self, width=15, text="Paste", command=lambda: self.plainEntry.replace(self.root.clipboard_get()), takefocus=0)
 
-                                self.fileRadiobutton = Radiobutton(self, text="File:", value=1, variable=self.root.hashCalculationSourceVar, takefocus=0)
+                                self.fileRadiobutton = Radiobutton(self, text="File:", value=1, variable=self.root.hashCalculationSourceVar, command=self.changeSourceSelection, takefocus=0)
                                 self.fileValidity = Label(self, text="Validity: [Blank]", foreground="gray", state=DISABLED)
-                                self.fileEntry = Entry(self, width=44, font=("Consolas", 9), takefocus=0, state=DISABLED)
+                                self.fileEntry = Entry(self, width=44, font=("Consolas", 10), textvariable=self.root.hashFileEntryVar, takefocus=0, state=DISABLED)
                                 self.fileClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, takefocus=0, state=DISABLED)
                                 self.filePasteButton = Button(self, width=15, text="Browse...", command=self.browseFile, takefocus=0, state=DISABLED)
+
+                                self.SHA1Label = Label(self, text="SHA-1")
+                                self.SHA1Entry = Entry(self, width=34, font=("Consolas", 10), state="readonly", takefocus=0)
+                                self.SHA1CopyButton = Button(self, text="Copy", state=DISABLED, takefocus=0)
+                                self.SHA256Label = Label(self, text="SHA-256")
+                                self.SHA256Entry = Entry(self, width=34, font=("Consolas", 10), state="readonly", takefocus=0)
+                                self.SHA256CopyButton = Button(self, text="Copy", state=DISABLED, takefocus=0)
+                                self.SHA512Label = Label(self, text="SHA-512")
+                                self.SHA512Entry = Entry(self, width=34, font=("Consolas", 10), state="readonly", takefocus=0)
+                                self.SHA512CopyButton = Button(self, text="Copy", state=DISABLED, takefocus=0)
+                                self.MD5Label = Label(self, text="MD-5")
+                                self.MD5Entry = Entry(self, width=34, font=("Consolas", 10), state="readonly", takefocus=0)
+                                self.MD5CopyButton = Button(self, text="Copy", state=DISABLED, takefocus=0)
+
+                                self.root.hashPasswordEntryVar.trace("w", self.hashPasswordEntryCallback)
 
                                 self.plainRadiobutton.place(x=7, y=0)
                                 self.plainEntry.place(x=22, y=22)
                                 self.plainClearButton.place(x=129, y=48)
                                 self.plainPasteButton.place(x=22, y=48)
 
-                                self.fileRadiobutton.place(x=7, y=76)
-                                self.fileValidity.place(x=51, y=77)
-                                self.fileEntry.place(x=22, y=99)
-                                self.fileClearButton.place(x=129, y=125)
-                                self.filePasteButton.place(x=22, y=125)
+                                self.fileRadiobutton.place(x=8, y=76)
+                                self.fileValidity.place(x=52, y=77)
+                                self.fileEntry.place(x=23, y=99)
+                                self.fileClearButton.place(x=130, y=125)
+                                self.filePasteButton.place(x=23, y=125)
+
+                                self.SHA1Label.place(x=8, y=155)
+                                self.SHA1Entry.place(x=10, y=176)
+                                self.SHA1CopyButton.place(x=262, y=174)
+                                self.SHA256Label.place(x=8, y=200)
+                                self.SHA256Entry.place(x=10, y=221)
+                                self.SHA256CopyButton.place(x=262, y=219)
+                                self.SHA512Label.place(x=8, y=245)
+                                self.SHA512Entry.place(x=10, y=266)
+                                self.SHA512CopyButton.place(x=262, y=264)
+                                self.MD5Label.place(x=8, y=290)
+                                self.MD5Entry.place(x=10, y=311)
+                                self.MD5CopyButton.place(x=262, y=309)
+
+                            def changeSourceSelection(self):
+                                if bool(self.root.hashCalculationSourceVar.get()):
+                                    self.fileValidity.configure(state=NORMAL)
+                                    self.fileEntry.configure(state=NORMAL)
+                                    if ''.join(self.fileEntry.get()) != '':
+                                        self.fileClearButton.configure(state=NORMAL)
+                                    else:
+                                        self.fileClearButton.configure(state=DISABLED)
+                                    self.filePasteButton.configure(state=NORMAL)
+
+                                    self.plainEntry.configure(state=DISABLED)
+                                    self.plainClearButton.configure(state=DISABLED)
+                                    self.plainPasteButton.configure(state=DISABLED)
+                                else:
+                                    self.fileValidity.configure(state=DISABLED)
+                                    self.fileEntry.configure(state=DISABLED)
+                                    self.fileClearButton.configure(state=DISABLED)
+                                    self.filePasteButton.configure(state=DISABLED)
+
+                                    self.plainEntry.configure(state=NORMAL)
+                                    if ''.join(self.plainEntry.get()) != '':
+                                        self.plainClearButton.configure(state=NORMAL)
+                                    else:
+                                        self.plainClearButton.configure(state=DISABLED)
+                                    self.plainPasteButton.configure(state=NORMAL)
 
                             def browseFile(self):
                                 filePath = filedialog.askopenfilename(title=f"Open a file to check its hash", filetypes=[("All files", "*.*")])
@@ -1748,13 +1791,42 @@ class Interface(Tk):
                                     else:
                                         self.fileEntry.replace(filePath)
 
+                            def hashPasswordEntryCallback(self, *args, **kwargs):
+                                if ''.join(self.plainEntry.get().split()) == '':
+                                    self.SHA1Entry.clear()
+                                    self.SHA256Entry.clear()
+                                    self.SHA512Entry.clear()
+                                    self.MD5Entry.clear()
+                                    self.SHA1CopyButton.configure(state=DISABLED)
+                                    self.SHA256CopyButton.configure(state=DISABLED)
+                                    self.SHA512CopyButton.configure(state=DISABLED)
+                                    self.MD5CopyButton.configure(state=DISABLED)
+                                    return
+                                index = bytes(self.plainEntry.get(), "utf-8")
+                                hasher = SHA1.new()
+                                hasher.update(index)
+                                self.SHA1Entry.replace(hasher.hexdigest())
+                                self.SHA1CopyButton.configure(state=NORMAL)
+                                hasher = SHA256.new()
+                                hasher.update(index)
+                                self.SHA256Entry.replace(hasher.hexdigest())
+                                self.SHA256CopyButton.configure(state=NORMAL)
+                                hasher = SHA512.new()
+                                hasher.update(index)
+                                self.SHA512Entry.replace(hasher.hexdigest())
+                                self.SHA512CopyButton.configure(state=NORMAL)
+                                hasher = MD5.new()
+                                hasher.update(index)
+                                self.MD5Entry.replace(hasher.hexdigest())
+                                self.MD5CopyButton.configure(state=NORMAL)
+
                         self.base64Frame = base64Frame(self)
                         self.keyDerivationFrame = keyDerivationFrame(self)
                         self.hashDigestFrame = hashDigestFrame(self)
 
                         self.base64Frame.place(x=10, y=5)
                         self.keyDerivationFrame.place(x=423, y=5)
-                        self.hashDigestFrame.place(x=423, y=186)
+                        self.hashDigestFrame.place(x=423, y=158)
 
                 class loggingFrame(Frame):
                     def __init__(self, master: mainNotebook = None, **kwargs):
@@ -1770,7 +1842,7 @@ class Interface(Tk):
 
                         self.root.loggingTextVar.trace("w", self.onLoggingWidgetInsert)
 
-                        self.root.logger.changeWidget(self.loggingWidget)
+                        self.root.logger = Logger(self.loggingWidget, self.root)
 
                         self.copyButton = Button(self, text="Copy", width=15, command=lambda: self.root.clipboard_set(self.loggingWidget.get("1.0", END)), takefocus=0, state=DISABLED)
                         self.clearButton = Button(self, text="Clear", width=15, command=lambda: self.loggingWidget.clear(), takefocus=0, state=DISABLED)
@@ -1793,10 +1865,11 @@ class Interface(Tk):
                     def onLoggingLevelChange(self, event=None):
                         self.loggingWidget.clear()
                         levels = {"NOTSET": 0, "DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
-                        self.root.logger.debug(f"Logging level has been set to {self.root.levelSelectVar.get()}")
+                        if list(self.root.cache.loggings_history[-1].values())[0]["message"].replace("Logging level has been set to ", "").split()[-1] != self.root.levelSelectVar.get():
+                            self.root.logger.debug(f"Logging level has been set to {self.root.levelSelectVar.get()}")
                         for entry in self.root.cache.loggings_history:
                             record: logging.LogRecord = list(entry.keys())[0]
-                            string: str = list(entry.values())[0]
+                            string: str = list(entry.values())[0]["message"]
                             if record.levelno >= levels[self.root.levelSelectVar.get()]:
                                 self.loggingWidget.configure(state=NORMAL)
                                 self.loggingWidget.insert(END, string, record.levelname.lower())
@@ -1838,7 +1911,9 @@ class Interface(Tk):
         self.statusBar.pack(side=BOTTOM, fill=X)
 
         self.__initialize_menu()
+        self.__initialize_protocols()
         self.__initialize_bindings()
+        self.__load_database()
 
         self.deiconify()
 
@@ -1906,12 +1981,86 @@ class Interface(Tk):
         self.keyInputHideVar = IntVar(value=0)
         self.keyOutputVar = StringVar()
         self.hashCalculationSourceVar = IntVar(value=0)
+        self.hashPasswordEntryVar = StringVar()
+        self.hashFileEntryVar = StringVar()
 
         self.showProgramNameVar = IntVar(value=1)
         self.showProgramVersionVar = IntVar(value=1)
         self.showTimeVar = IntVar(value=0)
         self.showDateVar = IntVar(value=0)
         self.titlebarUpdateInterval = IntVar(value=200)
+
+    def on_close(self):
+        self.logger.end_logging_file()
+        if not hasattr(self, "success"):
+            self.__save_database()
+            self.success = True
+        try:
+            self.destroy()
+        except Exception:
+            return
+
+    def __initialize_protocols(self):
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def __save_database(self):
+        print("call")
+        con = sqlite3.connect("settings.sqlite")
+        cur = con.cursor()
+        operation = "INSERT INTO user_data VALUES ('{key}', '{value}')" if not cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='user_data'").fetchall() else "UPDATE user_data SET value = '{value}' WHERE key = '{key}'"
+        cur.execute("CREATE TABLE IF NOT EXISTS user_data (key, value)")
+        for attribute in [a for a in inspect.getmembers(self, lambda a: not(inspect.isroutine(a))) if not(a[0].startswith('__') and a[0].endswith('__'))]:
+            name: str = attribute[0]
+            value: Union[IntVar, StringVar] = attribute[1]
+            if isinstance(value, IntVar) or any(ext in name for ext in ["themeVar", "levelSelectVar"]):
+                cur.execute(operation.format(key=name, value=value.get()))
+        con.commit()
+        con.close()
+
+    def __load_database(self):
+        con = sqlite3.connect("settings.sqlite")
+        cur = con.cursor()
+        if not cur.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'user_data'").fetchall():
+            return
+        else:
+            cur.execute("SELECT * FROM user_data")
+            for key, value in cur.fetchall():
+                eval(f"self.{key}.set(" + (value if not any(ext in key for ext in ["themeVar", "levelSelectVar"]) else f'\'{value}\'') + ")")
+
+            self.mainNotebook.encryptionFrame.changeAlgorithmSelection()
+            self.mainNotebook.encryptionFrame.changeSourceSelection()
+            self.mainNotebook.encryptionFrame.changeDataSource()
+            self.mainNotebook.encryptionFrame.changeDataEntryHideChar()
+
+            self.mainNotebook.miscFrame.hashDigestFrame.changeSourceSelection()
+
+            self.theme.set_theme(self.themeVar.get())
+
+    def __initialize_bindings(self):
+        def encrypt(*args, **kwargs):
+            if self.mainNotebook.index(self.mainNotebook.select()) == 0:
+                self.crypto.encrypt()
+            elif self.mainNotebook.index(self.mainNotebook.select()) == 1:
+                self.crypto.decrypt()
+            else:
+                return
+        def give_focus(*args, **kwargs):
+            self.after(200, self.encryptionFrame.textEntry.focus_set())
+
+        self.bind("<Return>", encrypt)
+        self.bind("<Tab>", give_focus)
+
+        self.bind("<Control_L><Alt_L>t", lambda _: self.theme.set_theme("vista"))
+        self.bind("<Control_L>e", lambda _: self.mainNotebook.select(0))
+        self.bind("<Control_L>d", lambda _: self.mainNotebook.select(1))
+        self.bind("<Control_L>m", lambda _: self.mainNotebook.select(2))
+        self.bind("<Control_L>l", lambda _: self.mainNotebook.select(3))
+        self.bind("<F1>", lambda _: self.mainNotebook.select(4))
+
+    def __del__(self):
+        if not hasattr(self, "success"):
+            self.__save_database()
+            self.success = True
 
     def __initialize_menu(self):
         class menuBar(Menu):
@@ -1991,7 +2140,6 @@ class Interface(Tk):
                                 self.add_radiobutton(label="Clearlooks", value="clearlooks", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("clearlooks"), accelerator="clearlooks")
                                 self.add_radiobutton(label="Elegance", value="elegance", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("elegance"), accelerator="elegance")
                                 self.add_radiobutton(label="Equilux", value="equilux", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("equilux"), accelerator="equilux")
-                                self.add_radiobutton(label="Itft1", value="itft1", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("itft1"), accelerator="itft1")
                                 self.add_radiobutton(label="Keramik", value="keramik", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("keramik"), accelerator="keramik")
                                 self.add_radiobutton(label="Kroc", value="kroc", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("kroc"), accelerator="kroc")
                                 self.add_radiobutton(label="Plastik", value="plastik", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("plastik"), accelerator="plastik")
@@ -2003,14 +2151,13 @@ class Interface(Tk):
                                 self.add_radiobutton(label="Scidpink", value="scidpink", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("scidpink"), accelerator="scidpink")
                                 self.add_radiobutton(label="Scidpurple", value="scidpurple", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("scidpurple"), accelerator="scidpurple")
                                 self.add_radiobutton(label="Scidsand", value="scidsand", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("scidsand"), accelerator="scidsand")
-                                self.add_radiobutton(label="Smog", value="smog", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("smog"), accelerator="smog")
                                 self.add_radiobutton(label="Ubuntu", value="ubuntu", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("ubuntu"), accelerator="ubuntu")
                                 self.add_radiobutton(label="Windows Native", value="winnative", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("winnative"), accelerator="winnative")
                                 self.add_radiobutton(label="Windows XP Blue", value="winxpblue", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("winxpblue"), accelerator="winxpblue")
                                 self.add_radiobutton(label="Windows Vista", value="vista", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("vista"), accelerator="vista")
                                 self.add_radiobutton(label="Yaru", value="yaru", variable=self.root.themeVar, command=lambda: self.root.theme.set_theme("yaru"), accelerator="yaru")
                                 self.add_separator()
-                                self.add_command(label="Reset theme", command=lambda: self.root.theme.set_theme("vista"), accelerator="Ctrl+Alt+T")
+                                self.add_command(label="Reset theme", command=lambda: (self.root.themeVar.set("vista"), self.root.theme.set_theme("vista")), accelerator="Ctrl+Alt+T")
                             def changeTheme(self, theme: str = "vista"):
                                 self.root.theme.set_theme(theme)
                         self.themeMenu = themeMenu(self)
@@ -2038,27 +2185,6 @@ class Interface(Tk):
 
         self.menuBar = menuBar(self)
         self.config(menu = self.menuBar)
-
-    def __initialize_bindings(self):
-        def encrypt(*args, **kwargs):
-            if self.mainNotebook.index(self.mainNotebook.select()) == 0:
-                self.crypto.encrypt()
-            elif self.mainNotebook.index(self.mainNotebook.select()) == 1:
-                self.crypto.decrypt()
-            else:
-                return
-        def give_focus(*args, **kwargs):
-            self.after(200, self.encryptionFrame.textEntry.focus_set())
-
-        self.bind("<Return>", encrypt)
-        self.bind("<Tab>", give_focus)
-
-        self.bind("<Control_L><Alt_L>t", lambda _: self.theme.set_theme("vista"))
-        self.bind("<Control_L>e", lambda _: self.mainNotebook.select(0))
-        self.bind("<Control_L>d", lambda _: self.mainNotebook.select(1))
-        self.bind("<Control_L>m", lambda _: self.mainNotebook.select(2))
-        self.bind("<Control_L>l", lambda _: self.mainNotebook.select(3))
-        self.bind("<F1>", lambda _: self.mainNotebook.select(4))
 
     def clipboard_get(self) -> Optional[str]:
         clipboard: Optional[str] = pyperclip.paste()
@@ -2111,7 +2237,7 @@ class Interface(Tk):
                 self.destroy()
                 return
             elif not success and success is None:
-                messagebox.showwarning("sus", "I really wonder how you currently have a more up-to-date version than the latest release in the official GitHub page. Pretty sure you're either me or a friend of mine.")
+                messagebox.showwarning("sus amogus", "I really wonder how you currently have a more up-to-date version than the latest release in the official GitHub page. Pretty sure you're either me or a friend of mine.")
                 self.master.logger.info("Updates checked. No updates available.")
                 super().__init__(self.master)
                 self.withdraw()
@@ -2213,5 +2339,6 @@ class Interface(Tk):
 
 if __name__ == "__main__":
     root = Interface()
+    atexit.register(root.on_close)
     root.logger.info(f"{__title__} v{__version__} has been initialized")
     root.mainloop()
