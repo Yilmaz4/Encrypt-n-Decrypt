@@ -26,8 +26,9 @@ However, asymmetric key encryption is not available yet. I'm currently working o
 - Encoding/decoding plain-text or file using base64 encoding.
 - Multi-threaded encryption/decryption, meaning the program will not freeze during long processes.
 - Ability to derivate an encryption key from a password (key derivation function).
+- Ability to save the configurations to a database file on close and load the saved configuration in the next start-up.
 
-Despite being memory efficient, encrypting/decrypting files whose sizes are bigger than the amount of RAM installed on the computer can cause to run out of memory.
+Despite being memory efficient, encrypting/decrypting files whose sizes are bigger than the amount of RAM installed on the computer can cause the program to run out of memory.
 
 ## Introduction
 
