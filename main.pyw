@@ -532,6 +532,8 @@ class ToolTip(object):
         self.id = None
         self.tw = None
 
+        self.speed = 100
+
     def enter(self, event=None):
         self.schedule()
 
@@ -572,7 +574,7 @@ class ToolTip(object):
             if alpha != 1:
                 alpha += .1
                 self.tw.attributes("-alpha", alpha)
-                self.tw.after(8, fade_in)
+                self.tw.after(self.speed, fade_in)
             else:
                 self.tw.attributes("-alpha", 1)
                 return
@@ -581,7 +583,7 @@ class ToolTip(object):
     def hidetip(self):
         if self.tw:
             def fade_away():
-                if not self.widget is root.winfo_containing(root.winfo_pointerx(), root.winfo_pointery()):
+                if self.widget is root.winfo_containing(root.winfo_pointerx(), root.winfo_pointery()):
                     self.tw.destroy()
                     return
                 try:
@@ -591,7 +593,7 @@ class ToolTip(object):
                 if alpha != 0:
                     alpha -= .1
                     self.tw.attributes("-alpha", alpha)
-                    self.tw.after(8, fade_away)
+                    self.tw.after(self.speed, fade_away)
                 else:
                     self.tw.destroy()
             fade_away()
@@ -1167,9 +1169,9 @@ class Interface(Tk):
                         self.changeDESState(state = DISABLED if bool(self.root.keySourceSelection.get()) else NORMAL if bool(self.master.master.generateAlgorithmSelection.get()) else DISABLED)
                         self.changeEnterKeySectionState(state = NORMAL if bool(self.master.master.keySourceSelection.get()) else DISABLED)
 
-                        if not bool(self.root.keySourceSelection.get()) and (not bool(self.root.dataSourceVar.get() or (bool(self.root.dataSourceVar.get() and ''.join(self.root.fileEntryVar.get().split()) != '')))):
+                        if not bool(self.root.keySourceSelection.get()) and (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and os.path.isfile(self.fileEntry.get()))):
                             self.encryptButton.configure(state=NORMAL)
-                        elif bool(self.root.keySourceSelection.get()) and (not bool(self.root.dataSourceVar.get() or (bool(self.root.dataSourceVar.get() and ''.join(self.root.fileEntryVar.get().split()) != '')))):
+                        elif bool(self.root.keySourceSelection.get()) and (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and os.path.isfile(self.fileEntry.get()))):
                             self.encryptButton.configure(state=NORMAL)
                             self.limitKeyEntry()
 
@@ -1265,7 +1267,7 @@ class Interface(Tk):
                                 self.encryptButton.configure(state=DISABLED)
                             else:
                                 self.algorithmSelect.symmetricEncryption.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
-                                self.encryptButton.configure(state=NORMAL if (not bool(self.root.dataSourceVar.get() or (bool(self.root.dataSourceVar.get() and ''.join(self.root.fileEntryVar.get().split()) != '')))) else DISABLED)
+                                self.encryptButton.configure(state=NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and os.path.isfile(self.fileEntry.get()))) else DISABLED)
 
                     def changeDataSource(self):
                         if bool(self.master.master.dataSourceVar.get()):
@@ -1277,7 +1279,7 @@ class Interface(Tk):
 
                             self.fileEntry.configure(state=NORMAL)
                             self.fileBrowseButton.configure(state=NORMAL)
-                            if  (not bool(self.root.dataSourceVar.get() or (bool(self.root.dataSourceVar.get() and ''.join(self.root.fileEntryVar.get().split()) != '')))):
+                            if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and os.path.isfile(self.fileEntry.get()))):
                                 self.fileClearButton.configure(state=NORMAL)
                                 self.encryptButton.configure(state=NORMAL)
                             else:
@@ -1320,8 +1322,8 @@ class Interface(Tk):
                         self.textClearButton.configure(state=DISABLED if self.master.master.textEntryVar.get() == "" else NORMAL)
                     
                     def fileEntryCallback(self, *args, **kwargs):
-                        self.fileClearButton.configure(state=DISABLED if self.master.master.fileEntryVar.get() == "" else NORMAL)
-                        self.encryptButton.configure(state=DISABLED if self.master.master.fileEntryVar.get() == "" else NORMAL if (not bool(self.root.dataSourceVar.get() or (bool(self.root.dataSourceVar.get() and ''.join(self.root.fileEntryVar.get().split()) != '')))) else DISABLED)
+                        self.fileClearButton.configure(state=DISABLED if self.root.fileEntryVar.get() == "" else NORMAL)
+                        self.encryptButton.configure(state=DISABLED if ''.join(self.fileEntry.get().split()) == '' else NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and os.path.isfile(self.fileEntry.get()))) else DISABLED)
                         if self.fileEntry.get() != "":
                             if os.path.isfile(self.fileEntry.get()):
                                 try:
@@ -1338,6 +1340,8 @@ class Interface(Tk):
                                             file.write(content)
                                     except OSError:
                                         self.fileValidityLabel.configure(text="Validity: Encryptable but not writable", foreground="#c6832a")
+                                    except UnboundLocalError:
+                                        return
                                     else:
                                         self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
                             else:
@@ -1823,16 +1827,15 @@ class Interface(Tk):
                                 self.SHA512Entry.configure(foreground="gray")
                                 self.MD5Entry.configure(foreground="gray")
 
-                                self.plainEntry.configure(state=DISABLED)
-                                self.plainPasteButton.configure(state=DISABLED)
-                                self.plainClearButton.configure(state=DISABLED)
-                                self.plainRadiobutton.configure(state=DISABLED)
-                                self.fileEntry.configure(state=DISABLED)
-                                self.fileBrowseButton.configure(state=DISABLED)
-                                self.fileClearButton.configure(state=DISABLED)
-                                self.fileRadiobutton.configure(state=DISABLED)
-
                                 if isinstance(index, str):
+                                    self.plainEntry.configure(state=DISABLED)
+                                    self.plainPasteButton.configure(state=DISABLED)
+                                    self.plainClearButton.configure(state=DISABLED)
+                                    self.plainRadiobutton.configure(state=DISABLED)
+                                    self.fileEntry.configure(state=DISABLED)
+                                    self.fileBrowseButton.configure(state=DISABLED)
+                                    self.fileClearButton.configure(state=DISABLED)
+                                    self.fileRadiobutton.configure(state=DISABLED)
                                     self.root.statusBar.configure(text="Status: Reading the file...")
                                     self.root.update()
                                     try:
