@@ -1,7 +1,7 @@
 """
 MIT License
 
-Copyright 2017-2022 Yılmaz Alpaslan
+Copyright © 2017-2022 Yılmaz Alpaslan
 
 Permission is hereby granted, free of charge to any person obtaining a copy of this
 software and associated documentation files (the "Software"), to deal in the Software
@@ -433,7 +433,10 @@ class Handler(logging.Handler):
     def emit(self, record: logging.LogRecord):
         message = self.format(record)
         def append():
-            levels = {"NOTSET": 0, "DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
+            levels = {
+                "NOTSET": 0, "DEBUG": 10, "INFO": 20,
+                "WARNING": 30, "ERROR": 40, "CRITICAL": 50
+            }
             if record.levelno < levels[self.master.levelSelectVar.get()]:
                 return
             self.widget.configure(state=NORMAL)
@@ -468,9 +471,12 @@ class Handler(logging.Handler):
                         if "Start of logging session at" in line:
                             continue
                         new_index.append(line)
+            else:
+                index = str()
             with open(f"{__title__}.log", mode="a+", encoding="utf-8") as file:
-                if not os.path.exists(f"{__title__}.log") or index.endswith("================ End of logging session =================\n"):
-                    file.write(f"\n==== Start of logging session at {str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S'))} ====\n")
+                if ''.join(index.split()) == '' or index.endswith((f"{'='*24} End of logging session {'='*25}\n", f"{'='*24} End of logging session {'='*25}")):
+                    endl = "\n"
+                    file.write(f"{endl if ''.join(index.split()) != '' else ''}============ Start of logging session at {str(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S'))} ============\n")
                 file.write(message)
 
     @staticmethod
@@ -494,21 +500,23 @@ class Logger(object):
 
     def end_logging_file(self):
         if bool(self.root.loggingAutoSaveVar.get()):
+            try:
+                with open(f"{__title__}.log", mode="r", encoding="utf-8") as file:
+                    index = file.read()
+            except FileNotFoundError:
+                return
             with open(f"{__title__}.log", mode="a", encoding="utf-8") as file:
-                file.write(f"================ End of logging session =================\n")
+                if ''.join(index.split()) != '':
+                    file.write(f"{'='*24} End of logging session {'='*25}\n")
 
     def debug(self, message: str, newline: bool = True):
         self.logger.debug(message + ("\n" if newline else ""))
-    
     def info(self, message: str, newline: bool = True):
         self.logger.info(message + ("\n" if newline else ""))
-
     def warning(self, message: str, newline: bool = True):
         self.logger.warning(message + ("\n" if newline else ""))
-
     def error(self, message: str, newline: bool = True):
         self.logger.error(message + ("\n" if newline else ""))
-
     def critical(self, message: str, newline: bool = True):
         self.logger.critical(message + ("\n" if newline else ""))
 
@@ -1664,9 +1672,10 @@ class Interface(Tk):
 
                                 self.keyOutputLabel = Label(self, text="Output (Derived Key)", takefocus=0)
                                 self.keyOutputEntry = Entry(self, width=34, state="readonly", font=("Consolas", 10), textvariable=self.root.keyOutputVar, takefocus=0)
-                                self.outputPasteButton = Button(self, text="Copy", state=DISABLED, command=lambda: self.root.clipboard_set(self.keyOutputEntry.get()[:-1 if self.keyOutputEntry.get().endswith("\n") else 0]), takefocus=0)
+                                self.outputCopyButton = Button(self, text="Copy", state=DISABLED, command=lambda: self.root.clipboard_set(self.keyOutputEntry.get()[:-1 if self.keyOutputEntry.get().endswith("\n") else 0]), takefocus=0)
 
                                 self.root.keyInputVar.trace("w", self.keyInputCallback)
+                                self.root.keyOutputVar.trace("w", lambda *args, **kwargs: self.outputCopyButton.configure(state=NORMAL if ''.join(self.keyOutputEntry.get().split()) != '' else DISABLED))
 
                                 self.keyInputLabel.place(x=8, y=0)
                                 self.keyInputValidity.place(x=43, y=0)
@@ -1677,7 +1686,7 @@ class Interface(Tk):
 
                                 self.keyOutputLabel.place(x=8, y=75)
                                 self.keyOutputEntry.place(x=10, y=97)
-                                self.outputPasteButton.place(x=262, y=95)
+                                self.outputCopyButton.place(x=262, y=95)
 
                             def keyInputCallback(self, *args, **kwargs):
                                 if ''.join(self.keyInputEntry.get().split()) != "":
@@ -1701,6 +1710,7 @@ class Interface(Tk):
                             def __init__(self, master: miscFrame):
                                 super().__init__(master, height=363, width=354, text="Hash Calculator")
                                 self.root = self.master.master.master
+                                self.__last_file: dict = {"path": None, "size": None}
 
                                 self.plainRadiobutton = Radiobutton(self, text="Plain text:", value=0, variable=self.root.hashCalculationSourceVar, command=self.changeSourceSelection, takefocus=0)
                                 self.plainEntry = Entry(self, width=44, font=("Consolas", 10), textvariable=self.root.hashPasswordEntryVar, takefocus=0)
@@ -1711,7 +1721,7 @@ class Interface(Tk):
                                 self.fileValidity = Label(self, text="Validity: [Blank]", foreground="gray", state=DISABLED)
                                 self.fileEntry = Entry(self, width=44, font=("Consolas", 10), textvariable=self.root.hashFileEntryVar, takefocus=0, state=DISABLED)
                                 self.fileClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, takefocus=0, state=DISABLED)
-                                self.filePasteButton = Button(self, width=15, text="Browse...", command=self.browseFile, takefocus=0, state=DISABLED)
+                                self.fileBrowseButton = Button(self, width=15, text="Browse...", command=self.browseFile, takefocus=0, state=DISABLED)
 
                                 self.SHA1Label = Label(self, text="SHA-1")
                                 self.SHA1Entry = Entry(self, width=34, font=("Consolas", 10), state="readonly", takefocus=0)
@@ -1727,6 +1737,7 @@ class Interface(Tk):
                                 self.MD5CopyButton = Button(self, text="Copy", state=DISABLED, takefocus=0)
 
                                 self.root.hashPasswordEntryVar.trace("w", self.hashPasswordEntryCallback)
+                                self.root.hashFileEntryVar.trace("w", self.hashFileEntryCallback)
 
                                 self.plainRadiobutton.place(x=7, y=0)
                                 self.plainEntry.place(x=22, y=22)
@@ -1737,7 +1748,7 @@ class Interface(Tk):
                                 self.fileValidity.place(x=52, y=77)
                                 self.fileEntry.place(x=23, y=99)
                                 self.fileClearButton.place(x=130, y=125)
-                                self.filePasteButton.place(x=23, y=125)
+                                self.fileBrowseButton.place(x=23, y=125)
 
                                 self.SHA1Label.place(x=8, y=155)
                                 self.SHA1Entry.place(x=10, y=176)
@@ -1758,9 +1769,25 @@ class Interface(Tk):
                                     self.fileEntry.configure(state=NORMAL)
                                     if ''.join(self.fileEntry.get()) != '':
                                         self.fileClearButton.configure(state=NORMAL)
+                                        if os.path.isfile(self.fileEntry.get()):
+                                            self.hash(self.fileEntry.get())
+                                            self.SHA1Entry.configure(foreground="black")
+                                            self.SHA256Entry.configure(foreground="black")
+                                            self.SHA512Entry.configure(foreground="black")
+                                            self.MD5Entry.configure(foreground="black")
+                                        else:
+                                            self.SHA1Entry.configure(foreground="gray")
+                                            self.SHA256Entry.configure(foreground="gray")
+                                            self.SHA512Entry.configure(foreground="gray")
+                                            self.MD5Entry.configure(foreground="gray")
                                     else:
                                         self.fileClearButton.configure(state=DISABLED)
-                                    self.filePasteButton.configure(state=NORMAL)
+                                        self.plainClearButton.configure(state=DISABLED)
+                                        self.SHA1Entry.configure(foreground="gray")
+                                        self.SHA256Entry.configure(foreground="gray")
+                                        self.SHA512Entry.configure(foreground="gray")
+                                        self.MD5Entry.configure(foreground="gray")
+                                    self.fileBrowseButton.configure(state=NORMAL)
 
                                     self.plainEntry.configure(state=DISABLED)
                                     self.plainClearButton.configure(state=DISABLED)
@@ -1769,27 +1796,103 @@ class Interface(Tk):
                                     self.fileValidity.configure(state=DISABLED)
                                     self.fileEntry.configure(state=DISABLED)
                                     self.fileClearButton.configure(state=DISABLED)
-                                    self.filePasteButton.configure(state=DISABLED)
+                                    self.fileBrowseButton.configure(state=DISABLED)
 
                                     self.plainEntry.configure(state=NORMAL)
                                     if ''.join(self.plainEntry.get()) != '':
                                         self.plainClearButton.configure(state=NORMAL)
+                                        self.SHA1Entry.configure(foreground="black")
+                                        self.SHA256Entry.configure(foreground="black")
+                                        self.SHA512Entry.configure(foreground="black")
+                                        self.MD5Entry.configure(foreground="black")
+                                        self.hash(bytes(self.plainEntry.get(), "utf-8"))
                                     else:
                                         self.plainClearButton.configure(state=DISABLED)
+                                        self.SHA1Entry.configure(foreground="gray")
+                                        self.SHA256Entry.configure(foreground="gray")
+                                        self.SHA512Entry.configure(foreground="gray")
+                                        self.MD5Entry.configure(foreground="gray")
                                     self.plainPasteButton.configure(state=NORMAL)
+
+                            @threaded
+                            def hash(self, index: Union[str, bytes], force: bool = False):
+                                if not force and isinstance(index, str) and self.__last_file["path"] == self.fileEntry.get() and self.__last_file["size"] == os.path.getsize(self.fileEntry.get()):
+                                    return
+                                self.SHA1Entry.configure(foreground="gray")
+                                self.SHA256Entry.configure(foreground="gray")
+                                self.SHA512Entry.configure(foreground="gray")
+                                self.MD5Entry.configure(foreground="gray")
+
+                                self.plainEntry.configure(state=DISABLED)
+                                self.plainPasteButton.configure(state=DISABLED)
+                                self.plainClearButton.configure(state=DISABLED)
+                                self.plainRadiobutton.configure(state=DISABLED)
+                                self.fileEntry.configure(state=DISABLED)
+                                self.fileBrowseButton.configure(state=DISABLED)
+                                self.fileClearButton.configure(state=DISABLED)
+                                self.fileRadiobutton.configure(state=DISABLED)
+
+                                if isinstance(index, str):
+                                    self.root.statusBar.configure(text="Status: Reading the file...")
+                                    self.root.update()
+                                    try:
+                                        with open(index, mode="rb") as file:
+                                            index = file.read()
+                                    except (OSError, PermissionError):
+                                        messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
+                                        self.root.logger.error("Read permission for the file specified has been denied, hash calculation was interrupted.")
+                                        self.root.statusBar.configure(text="Status: Ready")
+                                        self.root.update()
+                                        return
+                                    else:
+                                        self.__last_file["path"] = self.fileEntry.get()
+                                        self.__last_file["size"] = os.path.getsize(self.fileEntry.get())
+                                self.root.statusBar.configure(text="Status: Calculating SHA-1 hash...")
+                                self.root.update()
+                                hasher = SHA1.new()
+                                hasher.update(index)
+                                self.SHA1Entry.replace(hasher.hexdigest())
+                                self.SHA1Entry.configure(foreground="black")
+                                self.SHA1CopyButton.configure(state=NORMAL)
+                                self.root.statusBar.configure(text="Status: Calculating SHA-256 hash...")
+                                self.root.update()
+                                hasher = SHA256.new()
+                                hasher.update(index)
+                                self.SHA256Entry.replace(hasher.hexdigest())
+                                self.SHA256Entry.configure(foreground="black")
+                                self.SHA256CopyButton.configure(state=NORMAL)
+                                self.root.statusBar.configure(text="Status: Calculating SHA-512 hash...")
+                                self.root.update()
+                                hasher = SHA512.new()
+                                hasher.update(index)
+                                self.SHA512Entry.replace(hasher.hexdigest())
+                                self.SHA512Entry.configure(foreground="black")
+                                self.SHA512CopyButton.configure(state=NORMAL)
+                                self.root.statusBar.configure(text="Status: Calculating MD-5 hash...")
+                                self.root.update()
+                                hasher = MD5.new()
+                                hasher.update(index)
+                                self.MD5Entry.replace(hasher.hexdigest())
+                                self.MD5Entry.configure(foreground="black")
+                                self.MD5CopyButton.configure(state=NORMAL)
+                                self.root.statusBar.configure(text="Status: Ready")
+                                self.root.update()
+                                
+                                self.fileRadiobutton.configure(state=NORMAL)
+                                self.plainRadiobutton.configure(state=NORMAL)
+                                if not bool(self.root.hashCalculationSourceVar.get()):
+                                    self.plainEntry.configure(state=NORMAL)
+                                    self.plainPasteButton.configure(state=NORMAL)
+                                    self.plainClearButton.configure(state=NORMAL)
+                                else:
+                                    self.fileEntry.configure(state=NORMAL)
+                                    self.fileBrowseButton.configure(state=NORMAL)
+                                    self.fileClearButton.configure(state=NORMAL)
 
                             def browseFile(self):
                                 filePath = filedialog.askopenfilename(title=f"Open a file to check its hash", filetypes=[("All files", "*.*")])
                                 if ''.join(filePath.split()) != '':
-                                    try:
-                                        with open(filePath, mode="rb") as file:
-                                            index = file.read()
-                                    except PermissionError:
-                                        messagebox.showerror("Permission denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
-                                        self.root.logger.error("Read permission for the file specified has been denied, hash calculation was interrupted.")
-                                        return
-                                    else:
-                                        self.fileEntry.replace(filePath)
+                                    self.fileEntry.replace(filePath)
 
                             def hashPasswordEntryCallback(self, *args, **kwargs):
                                 if ''.join(self.plainEntry.get().split()) == '':
@@ -1803,22 +1906,46 @@ class Interface(Tk):
                                     self.MD5CopyButton.configure(state=DISABLED)
                                     return
                                 index = bytes(self.plainEntry.get(), "utf-8")
-                                hasher = SHA1.new()
-                                hasher.update(index)
-                                self.SHA1Entry.replace(hasher.hexdigest())
-                                self.SHA1CopyButton.configure(state=NORMAL)
-                                hasher = SHA256.new()
-                                hasher.update(index)
-                                self.SHA256Entry.replace(hasher.hexdigest())
-                                self.SHA256CopyButton.configure(state=NORMAL)
-                                hasher = SHA512.new()
-                                hasher.update(index)
-                                self.SHA512Entry.replace(hasher.hexdigest())
-                                self.SHA512CopyButton.configure(state=NORMAL)
-                                hasher = MD5.new()
-                                hasher.update(index)
-                                self.MD5Entry.replace(hasher.hexdigest())
-                                self.MD5CopyButton.configure(state=NORMAL)
+                                self.SHA1Entry.configure(foreground="black")
+                                self.SHA256Entry.configure(foreground="black")
+                                self.SHA512Entry.configure(foreground="black")
+                                self.MD5Entry.configure(foreground="black")
+                                self.hash(index)
+
+                            def hashFileEntryCallback(self, *args, **kwargs):
+                                def grayoutEntries():
+                                    self.SHA1Entry.configure(foreground="gray")
+                                    self.SHA256Entry.configure(foreground="gray")
+                                    self.SHA512Entry.configure(foreground="gray")
+                                    self.MD5Entry.configure(foreground="gray")
+                                def degrayEntries():
+                                    self.SHA1Entry.configure(foreground="black")
+                                    self.SHA256Entry.configure(foreground="black")
+                                    self.SHA512Entry.configure(foreground="black")
+                                    self.MD5Entry.configure(foreground="black")
+                                if ''.join(self.fileEntry.get().split()) != '':
+                                    self.fileClearButton.configure(state=NORMAL)
+                                    if os.path.isfile(self.fileEntry.get()):
+                                        try:
+                                            self.fileValidity.configure(text="Validity: Hashable", foreground="green")
+                                            degrayEntries()
+                                            self.hash(self.fileEntry.get())
+                                            return
+                                        except (OSError, PermissionError):
+                                            self.fileValidity.configure(text="Validity: Read access was denied", foreground="red")
+                                            grayoutEntries()
+                                            return
+                                        except Exception:
+                                            self.fileValidity.configure(text="Validity: Not hashable", foreground="red")
+                                            grayoutEntries()
+                                            return
+                                    else:
+                                        self.fileValidity.configure(text="Validity: Not a file", foreground="red")
+                                        grayoutEntries()
+                                else:
+                                    self.fileClearButton.configure(state=DISABLED)
+                                    self.fileValidity.configure(text="Validity: [Blank]", foreground="gray")
+                                    grayoutEntries()
 
                         self.base64Frame = base64Frame(self)
                         self.keyDerivationFrame = keyDerivationFrame(self)
@@ -1867,7 +1994,7 @@ class Interface(Tk):
                         levels = {"NOTSET": 0, "DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
                         if list(self.root.cache.loggings_history[-1].values())[0]["message"].replace("Logging level has been set to ", "").split()[-1] != self.root.levelSelectVar.get():
                             self.root.logger.debug(f"Logging level has been set to {self.root.levelSelectVar.get()}")
-                        for entry in self.root.cache.loggings_history:
+                        for entry in self.root.cache.loggings_history[:-1]:
                             record: logging.LogRecord = list(entry.keys())[0]
                             string: str = list(entry.values())[0]["message"]
                             if record.levelno >= levels[self.root.levelSelectVar.get()]:
@@ -1916,22 +2043,6 @@ class Interface(Tk):
         self.__load_database()
 
         self.deiconify()
-
-    @property
-    def logging_level(self) -> int:
-        return self.logger.level
-
-    @logging_level.deleter
-    def logging_level(self): ...
-
-    @logging_level.setter
-    def logging_level(self, level: Optional[Literal[0, 10, 20, 30, 40, 50]] = None):
-        if not not level:
-            self.logger.setLevel(level=level)
-            self.logger.disabled = False
-        else:
-            self.logger.setLevel(level=logging.CRITICAL + 1)
-            self.logger.disabled = True
 
     def __initialize_vars(self):
         self.showTextChar = IntVar(value=0)
@@ -1989,6 +2100,7 @@ class Interface(Tk):
         self.showTimeVar = IntVar(value=0)
         self.showDateVar = IntVar(value=0)
         self.titlebarUpdateInterval = IntVar(value=200)
+        self.autoSaveConfigVar = IntVar(value=1)
 
     def on_close(self):
         self.logger.end_logging_file()
@@ -2004,8 +2116,7 @@ class Interface(Tk):
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def __save_database(self):
-        print("call")
-        con = sqlite3.connect("settings.sqlite")
+        con = sqlite3.connect(f"{os.getenv('APPDATA')}\\Encrypt-n-Decrypt\\settings.sqlite")
         cur = con.cursor()
         operation = "INSERT INTO user_data VALUES ('{key}', '{value}')" if not cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='user_data'").fetchall() else "UPDATE user_data SET value = '{value}' WHERE key = '{key}'"
         cur.execute("CREATE TABLE IF NOT EXISTS user_data (key, value)")
@@ -2018,7 +2129,11 @@ class Interface(Tk):
         con.close()
 
     def __load_database(self):
-        con = sqlite3.connect("settings.sqlite")
+        try:
+            con = sqlite3.connect(f"{os.getenv('APPDATA')}\\Encrypt-n-Decrypt\\settings.sqlite")
+        except sqlite3.OperationalError:
+            os.mkdir(f"{os.getenv('APPDATA')}\\Encrypt-n-Decrypt")
+            con = sqlite3.connect(f"{os.getenv('APPDATA')}\\Encrypt-n-Decrypt\\settings.sqlite")
         cur = con.cursor()
         if not cur.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'user_data'").fetchall():
             return
@@ -2163,16 +2278,19 @@ class Interface(Tk):
                         self.themeMenu = themeMenu(self)
                         self.add_cascade(menu=self.themeMenu, label="Window theme configuration")
                         self.add_separator()
+                        self.add_checkbutton(label="Auto-save configurations", onvalue=1, offvalue=0, variable=self.root.autoSaveConfigVar)
+                        self.add_command(label="Save the configurations now", command=self.root._Interface__save_database)
+                        self.add_separator()
                         class langMenu(Menu):
                             def __init__(self, master: viewMenu):
                                 super().__init__(master, tearoff=0)
                                 self.root = self.master.master.master
-                                self.add_radiobutton(label = "English", value=0, variable=self.root.languageVar)
-                                self.add_radiobutton(label = "Turkish (coming soon)", value=1, variable=self.root.languageVar, state=DISABLED)
-                                self.add_radiobutton(label = "German (coming soon)", value=2, variable=self.root.languageVar, state=DISABLED)
-                                self.add_radiobutton(label = "French (coming soon)", value=3, variable=self.root.languageVar, state=DISABLED)
+                                self.add_radiobutton(label="English", value=0, variable=self.root.languageVar)
+                                self.add_radiobutton(label="Turkish (coming soon)", value=1, variable=self.root.languageVar, state=DISABLED)
+                                self.add_radiobutton(label="German (coming soon)", value=2, variable=self.root.languageVar, state=DISABLED)
+                                self.add_radiobutton(label="French (coming soon)", value=3, variable=self.root.languageVar, state=DISABLED)
                                 self.add_separator()
-                                self.add_command(label = "Reset language to default", accelerator="Ctrl+Alt+L")
+                                self.add_command(label="Reset language to default", accelerator="Ctrl+Alt+L")
                         self.langMenu = langMenu(self)
                         self.add_cascade(menu=self.langMenu, label="Language")
 
@@ -2226,7 +2344,6 @@ class Interface(Tk):
                 if not release["draft"] and not release["prerelease"]:
                     latest = release
                     break
-
             success = True if int(__version__.replace(".", "")) < int(latest["tag_name"].replace(".", "").replace("v", "")) else False if int(__version__.replace(".", "")) == int(latest["tag_name"].replace(".", "").replace("v", "")) else None
 
             if not success and success is not None:
@@ -2339,6 +2456,5 @@ class Interface(Tk):
 
 if __name__ == "__main__":
     root = Interface()
-    atexit.register(root.on_close)
     root.logger.info(f"{__title__} v{__version__} has been initialized")
     root.mainloop()
