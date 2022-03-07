@@ -509,16 +509,16 @@ class Logger(object):
                 if ''.join(index.split()) != '':
                     file.write(f"{'='*24} End of logging session {'='*25}\n")
 
-    def debug(self, message: str, newline: bool = True):
-        self.logger.debug(message + ("\n" if newline else ""))
-    def info(self, message: str, newline: bool = True):
-        self.logger.info(message + ("\n" if newline else ""))
-    def warning(self, message: str, newline: bool = True):
-        self.logger.warning(message + ("\n" if newline else ""))
-    def error(self, message: str, newline: bool = True):
-        self.logger.error(message + ("\n" if newline else ""))
-    def critical(self, message: str, newline: bool = True):
-        self.logger.critical(message + ("\n" if newline else ""))
+    def debug(self, message: str):
+        self.logger.debug(message + "\n" if not message.endswith("\n") else message)
+    def info(self, message: str):
+        self.logger.info(message + "\n" if not message.endswith("\n") else message)
+    def warning(self, message: str):
+        self.logger.warning(message + "\n" if not message.endswith("\n") else message)
+    def error(self, message: str):
+        self.logger.error(message + "\n" if not message.endswith("\n") else message)
+    def critical(self, message: str):
+        self.logger.critical(message + "\n" if not message.endswith("\n") else message)
 
 class ToolTip(object):
     def __init__(self, widget: Widget, tooltip: str, interval: int = 1000, length: int = 400):
@@ -1316,7 +1316,7 @@ class Interface(Tk):
                         files = [("All files", "*.*")]
                         filePath = filedialog.askopenfilename(title = "Open a file to encrypt", filetypes=files)
 
-                        filePath != "" and self.fileEntry.replace(filePath)
+                        ''.join(filePath.split()) != '' and self.fileEntry.replace(filePath)
 
                     def textEntryCallback(self, *args, **kwargs):
                         self.textClearButton.configure(state=DISABLED if self.master.master.textEntryVar.get() == "" else NORMAL)
@@ -1335,13 +1335,14 @@ class Interface(Tk):
                                 except OSError:
                                     self.fileValidityLabel.configure(text="Validity: Read access was denied", foreground="red")
                                 else:
-                                    try:
-                                        with open(self.fileEntry.get(), mode="wb") as file:
-                                            file.write(content)
-                                    except OSError:
-                                        self.fileValidityLabel.configure(text="Validity: Encryptable but not writable", foreground="#c6832a")
-                                    except UnboundLocalError:
-                                        return
+                                    if "content" in locals():
+                                        try:
+                                            with open(self.fileEntry.get(), mode="wb") as file:
+                                                file.write(content)
+                                        except (OSError, PermissionError):
+                                            self.fileValidityLabel.configure(text="Validity: Encryptable but not writable", foreground="#c6832a")
+                                        else:
+                                            self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
                                     else:
                                         self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
                             else:
@@ -2053,7 +2054,7 @@ class Interface(Tk):
         self.showInfoBox = IntVar(value=1)
         self.showWarnBox = IntVar(value=1)
         self.showErrorBox = IntVar(value=1)
-        self.windowAlpha = IntVar(value=1)
+        self.windowAlpha = IntVar(value=100)
         self.updateInterval = IntVar(value=1)
         self.languageVar = IntVar(value=0)
         self.themeVar = StringVar(value="vista")
@@ -2150,6 +2151,8 @@ class Interface(Tk):
             self.mainNotebook.encryptionFrame.changeDataSource()
             self.mainNotebook.encryptionFrame.changeDataEntryHideChar()
 
+            self.mainNotebook.decryptionFrame.changeDecryptSource()
+
             self.mainNotebook.miscFrame.hashDigestFrame.changeSourceSelection()
 
             self.theme.set_theme(self.themeVar.get())
@@ -2239,7 +2242,7 @@ class Interface(Tk):
                                 self.add_radiobutton(label = "%60", value=60, variable=self.master.master.master.windowAlpha, command=lambda: self.master.master.master.attributes("-alpha", 60/100))
                                 self.add_radiobutton(label = "%80", value=80, variable=self.master.master.master.windowAlpha, command=lambda: self.master.master.master.attributes("-alpha", 80/100))
                                 self.add_radiobutton(label = "%90", value=90, variable=self.master.master.master.windowAlpha, command=lambda: self.master.master.master.attributes("-alpha", 90/100))
-                                self.add_radiobutton(label = "Opaque", value=100, variable=self.master.master.master.windowAlpha, command=lambda: self.master.master.master.attributes("-alpha", 10))
+                                self.add_radiobutton(label = "Opaque", value=100, variable=self.master.master.master.windowAlpha, command=lambda: self.master.master.master.attributes("-alpha", 1))
                                 self.add_separator()
                                 self.add_command(label = "Reset opacity", command=lambda: self.attributes("-alpha", 10), accelerator="Ctrl+Alt+O", underline=6)
                         self.opacityMenu = opacityMenu(self)
@@ -2282,8 +2285,7 @@ class Interface(Tk):
                         self.add_cascade(menu=self.themeMenu, label="Window theme configuration")
                         self.add_separator()
                         self.add_checkbutton(label="Auto-save configurations", onvalue=1, offvalue=0, variable=self.root.autoSaveConfigVar)
-                        self.add_command(label="Save the configurations now", command=self.root._Interface__save_database)
-                        self.add_separator()
+                        """self.add_separator()
                         class langMenu(Menu):
                             def __init__(self, master: viewMenu):
                                 super().__init__(master, tearoff=0)
@@ -2295,7 +2297,7 @@ class Interface(Tk):
                                 self.add_separator()
                                 self.add_command(label="Reset language to default", accelerator="Ctrl+Alt+L")
                         self.langMenu = langMenu(self)
-                        self.add_cascade(menu=self.langMenu, label="Language")
+                        self.add_cascade(menu=self.langMenu, label="Language")"""
 
                 self.fileMenu = fileMenu(self)
                 self.viewMenu = viewMenu(self)
