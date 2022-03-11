@@ -13,6 +13,8 @@ blob_storage/
 build/
 dist/
 
+test*.py
+
 *.manifest
 *.spec
 bot.py
