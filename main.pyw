@@ -22,7 +22,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 __title__ = "Encrypt-n-Decrypt"
-__author__ = "Yilmaz04"
+__author__ = "Yilmaz4"
 __license__ = "MIT"
 __copyright__ = "Copyright © 2017-2022 Yilmaz Alpaslan"
 __version__ = "1.0.0"
