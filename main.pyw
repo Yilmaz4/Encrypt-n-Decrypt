@@ -1130,7 +1130,7 @@ class Interface(Tk):
 
                         self.algorithmSelect = algorithmSelect(self)
                         self.encryptButton = Button(self, text="Encrypt", width=22, command=self.master.master.crypto.encrypt, takefocus=0)
-                        self.writeFileContentCheck = Checkbutton(self, text="Write encrypted data to the file", variable=self.master.master.writeFileContentVar, state=DISABLED, takefocus=0)
+                        self.writeFileContentCheck = Checkbutton(self, text="Write encrypted data", variable=self.master.master.writeFileContentVar, state=DISABLED, takefocus=0)
 
                         self.algorithmSelect.place(x=10, y=155)
                         self.encryptButton.place(x=9, y=480)
