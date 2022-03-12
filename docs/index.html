@@ -1,0 +1,52 @@
+<!doctype html>
+<html land="en-US">
+
+<head>
+    <title>My first website</title>
+    <link rel="icon" href="https://www.freepnglogos.com/uploads/logo-internet-png/logo-internet-chemiphase-updated-website-goes-live-chemiphase-ltd-12.png">
+    <script>
+        var i = 0;
+        function printDate() {
+            i++;
+            document.getElementById("status").innerHTML = `Pharagraph has been changed ${i} times`;
+            console.log("hi");
+        }
+    </script>
+    <var>
+        
+    </var>
+</head>
+
+<body style="background-color: rgb(36, 36, 36);color:white;">
+
+    <h1 style="font-size:60px;color:rgb(69, 101, 206);font-family:verdana;">Heading 1</h1>
+    <h2 style="font-size:50px;color:rgb(85, 206, 69);font-family:verdana;">Heading 2</h2>
+    <h3 style="font-size:40px;color:rgb(206, 94, 69);font-family:verdana;">Heading 3</h3>
+    <h4 style="font-size:30px;color:rgb(206, 69, 106);font-family:verdana;">Heading 4</h4>
+    <h5 style="font-size:20px;color:rgb(206, 69, 69);font-family:verdana;">Heading 5</h5>
+    <h6 style="font-size:10px;color:rgb(206, 197, 69);font-family:verdana;">Heading 6</h6>
+    <hr>
+    <p style="font-family:courier;font-size:15px" title="This is the first pharagraph">This is the first pharagraph
+        <sup>and here is a superscript</sup>
+        <sub>and a subscript</sub>
+        followed by
+        <a href="https://google.com">a hyperlink</a>,
+        <b>a bold text</b>,
+        <strong>a strong text</strong>,
+        <i>an italic text</i>,
+        <em>an emphasized text</em>,
+        <mark>a marked text</mark>,
+        <small>a small text</small>,
+        <del>a deleted text</del> and finally
+        <ins>an inserted text</ins>.
+    </p>
+    <p style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:15px">I would like to make a quote from Python docs, <abbr title="Python Enhancement Proposal">PEP</abbr>> 517.</p>
+    <blockquote style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:15px" cite="https://google.com">
+        While distutils / setuptools have taken us a long way, they suffer from three serious problems: (a) they`re missing important features like usable build-time dependency declaration, autoconfiguration, and even basic ergonomic niceties like DRY-compliant version number management, and (b) extending them is difficult, so while there do exist various solutions to the above problems, they’re often quirky, fragile, and expensive to maintain, and yet (c) it’s very difficult to use anything else, because distutils/setuptools provide the standard interface for installing packages expected by both users and installation tools like pip.
+    </blockquote>
+    <p style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:15px">And to support this quotation, I have a small quote as well: <q>e equals to mc<sup>2</sup></q></p>
+    <p id="status">Pharagraph</p>
+    <button type="button" on_click="printDate()">Click me!</button>
+</body>
+
+</html>
