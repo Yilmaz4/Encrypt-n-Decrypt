@@ -994,7 +994,7 @@ class Interface(Tk):
                 class encryptionFrame(Frame):
                     def __init__(self, master: mainNotebook = None, **kwargs):
                         super().__init__(master=master, **kwargs)
-                        self.root = self.master.master
+                        self.root: Interface = self.master.master
 
                         self.textEntryCheck = Radiobutton(self, text="Plain text:", tooltip="Select this if you want to encrypt a short message", value=0, variable=self.root.dataSourceVar, command=self.changeDataSource, takefocus=0)
                         self.textEntry = Entry(self, width=48, font=("Consolas", 9), state=NORMAL, takefocus=0, textvariable=self.root.textEntryVar)
@@ -1030,7 +1030,7 @@ class Interface(Tk):
                                 class symmetricEncryption(Frame):
                                     def __init__(self, master: Notebook, **kwargs):
                                         super().__init__(master, **kwargs)
-                                        self.root = self.master.master.master.master
+                                        self.root: Interface = self.master.master.master.master
 
                                         self.generateRandomKeyCheck = Radiobutton(self, text="Generate a random key", value=0, variable=self.root.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
 
@@ -1076,7 +1076,7 @@ class Interface(Tk):
                                 class asymmetricEncryption(Frame):
                                     def __init__(self, master: Notebook, **kwargs):
                                         super().__init__(master, **kwargs)
-                                        self.root = self.master.master.master.master
+                                        self.root: Interface = self.master.master.master.master
 
                                         self.generateRandomKeyCheck = Radiobutton(self, text="Generate a random key", value=0, variable=self.root.keySourceSelection, command=self.master.master.changeSourceSelection, takefocus=0)
 
@@ -1139,7 +1139,7 @@ class Interface(Tk):
                         class outputFrame(LabelFrame):
                             def __init__(self, master: Frame):
                                 super().__init__(master, text="Output", height=502, width=403, takefocus=0)
-                                self.root = self.master.master.master
+                                self.root: Interface = self.master.master.master
 
                                 self.outputText = ScrolledText(self, height = 6, width = 52, state=DISABLED, font = ("Consolas", 9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.root.outputVar, highlightcolor="#cccccc")
                                 self.AESKeyText = Text(self, width=54, height=1, state=DISABLED, font=("Consolas",9), bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, textvariable=self.root.AESKeyVar, highlightcolor="#cccccc")
@@ -1518,15 +1518,16 @@ class Interface(Tk):
                 class decryptionFrame(Frame):
                     def __init__(self, master: Notebook = None, **kwargs):
                         super().__init__(master=master, **kwargs)
+                        self.root: Interface = self.master.master
 
-                        self.textDecryptRadio = Radiobutton(self, text = "Encrypted text:", value=0, variable=self.master.master.decryptSourceVar, command=self.changeDecryptSource, takefocus=0)
+                        self.textDecryptRadio = Radiobutton(self, text = "Encrypted text:", value=0, variable=self.root.decryptSourceVar, command=self.changeDecryptSource, takefocus=0)
                         self.textDecryptValidityLabel = Label(self, text="Validity: [Blank]", foreground="gray")
-                        self.textDecryptEntry = ScrolledText(self, width=105, height=5, font=("Consolas", 9), textvariable=self.master.master.textDecryptVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
-                        self.textDecryptPasteButton = Button(self, width=15, text="Paste", command=lambda: self.textDecryptEntry.replace(self.master.master.clipboard_get()), takefocus=0)
+                        self.textDecryptEntry = ScrolledText(self, width=105, height=5, font=("Consolas", 9), textvariable=self.root.textDecryptVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                        self.textDecryptPasteButton = Button(self, width=15, text="Paste", command=lambda: self.textDecryptEntry.replace(self.root.clipboard_get()), takefocus=0)
                         self.textDecryptClearButton = Button(self, width=15, text="Clear", command=lambda: self.textDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
 
-                        self.fileDecryptRadio = Radiobutton(self, text = "Encrypted file:", value=1, variable=self.master.master.decryptSourceVar, command=self.changeDecryptSource, takefocus=0)
-                        self.fileDecryptEntry = Entry(self, width=107, font=("Consolas", 9), textvariable=self.master.master.fileDecryptVar, state=DISABLED, takefocus=0)
+                        self.fileDecryptRadio = Radiobutton(self, text = "Encrypted file:", value=1, variable=self.root.decryptSourceVar, command=self.changeDecryptSource, takefocus=0)
+                        self.fileDecryptEntry = Entry(self, width=107, font=("Consolas", 9), textvariable=self.root.fileDecryptVar, state=DISABLED, takefocus=0)
                         self.fileDecryptBrowseButton = Button(self, width=15, text="Browse...", state=DISABLED, command=self.decryptBrowseFile, takefocus=0)
                         self.fileDecryptClearButton = Button(self, width=15, text="Clear", state=DISABLED, command=lambda: self.fileDecryptEntry.delete(0, END), takefocus=0)
 
@@ -1536,26 +1537,26 @@ class Interface(Tk):
                         self.decryptNotebook.add(self.symmetricDecryption, text="Symmetric Key Decryption")
                         self.decryptNotebook.add(self.asymmetricEncryption, text="Asymmetric Key Decryption", state=DISABLED)
                         self.decryptAlgorithmFrame = LabelFrame(self.symmetricDecryption, text="Select algorithm", height=63, width=749, takefocus=0)
-                        self.decryptAESCheck = Radiobutton(self.decryptAlgorithmFrame, text="AES (Advanced Encryption Standard)", value=0, variable=self.master.master.decryptAlgorithmVar, takefocus=0)
-                        self.decryptDESCheck = Radiobutton(self.decryptAlgorithmFrame, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.master.master.decryptAlgorithmVar, takefocus=0)
+                        self.decryptAESCheck = Radiobutton(self.decryptAlgorithmFrame, text="AES (Advanced Encryption Standard)", value=0, variable=self.root.decryptAlgorithmVar, takefocus=0)
+                        self.decryptDESCheck = Radiobutton(self.decryptAlgorithmFrame, text="3DES (Triple Data Encryption Standard)", value=1, variable=self.root.decryptAlgorithmVar, takefocus=0)
                         self.decryptKeyFrame = LabelFrame(self.symmetricDecryption, text="Enter encryption key", height=84, width=749, takefocus=0)
                         self.decryptKeyValidity = Label(self.symmetricDecryption, text="Validity: [Blank]", foreground="gray")
-                        self.decryptKeyEntry = Entry(self.decryptKeyFrame, width=103, font=("Consolas", 9), textvariable=self.master.master.decryptKeyVar, takefocus=0)
+                        self.decryptKeyEntry = Entry(self.decryptKeyFrame, width=103, font=("Consolas", 9), textvariable=self.root.decryptKeyVar, takefocus=0)
                         self.decryptKeyBrowseButton = Button(self.decryptKeyFrame, width=21, text="Browse key file...", takefocus=0)
-                        self.decryptKeyPasteButton = Button(self.decryptKeyFrame, width=15, text="Paste", takefocus=0, command=lambda: self.decryptKeyEntry.replace(self.master.master.clipboard_get()))
+                        self.decryptKeyPasteButton = Button(self.decryptKeyFrame, width=15, text="Paste", takefocus=0, command=lambda: self.decryptKeyEntry.replace(self.root.clipboard_get()))
                         self.decryptKeyClearButton = Button(self.decryptKeyFrame, width=15, text="Clear", takefocus=0, command=lambda: self.decryptKeyEntry.delete(0, END), state=DISABLED)
 
-                        self.decryptButton = Button(self, width=22, text="Decrypt", command=self.master.master.crypto.decrypt, takefocus=0, state=DISABLED)
+                        self.decryptButton = Button(self, width=22, text="Decrypt", command=self.root.crypto.decrypt, takefocus=0, state=DISABLED)
                         self.decryptOutputFrame = LabelFrame(self, text="Decrypted text", height=84, width=766, takefocus=0)
                         self.decryptOutputText = Text(self.decryptOutputFrame, width=105, height=1, font=("Consolas", 9), state=DISABLED, bg="#F0F0F0", relief=FLAT, highlightbackground="#cccccc", highlightthickness=1, takefocus=0, textvariable=self.master.master.decryptOutputVar, highlightcolor="#cccccc")
                         self.decryptCopyButton = Button(self.decryptOutputFrame, text="Copy", width=17, takefocus=0, state=DISABLED)
                         self.decryptClearButton = Button(self.decryptOutputFrame, text="Clear", width=17, takefocus=0, state=DISABLED)
                         self.decryptSaveButton = Button(self.decryptOutputFrame, text="Save as...", width=20, takefocus=0, state=DISABLED)
 
-                        self.master.master.textDecryptVar.trace("w", self.textDecryptCallback)
-                        self.master.master.fileDecryptVar.trace("w", self.fileDecryptCallback)
-                        self.master.master.decryptKeyVar.trace("w", self.decryptLimitKeyEntry)
-                        self.master.master.decryptOutputVar.trace("w", self.decryptOutputCallback)
+                        self.root.textDecryptVar.trace("w", self.textDecryptCallback)
+                        self.root.fileDecryptVar.trace("w", self.fileDecryptCallback)
+                        self.root.decryptKeyVar.trace("w", self.decryptLimitKeyEntry)
+                        self.root.decryptOutputVar.trace("w", self.decryptOutputCallback)
 
                         self.textDecryptRadio.place(x=8, y=2)
                         self.textDecryptValidityLabel.place(x=108, y=3)
@@ -1583,7 +1584,7 @@ class Interface(Tk):
                         self.decryptSaveButton.place(x=622, y=30)
 
                     def changeDecryptSource(self):
-                        if not bool(self.master.master.decryptSourceVar.get()):
+                        if not bool(self.root.decryptSourceVar.get()):
                             self.textDecryptEntry.configure(state=NORMAL, bg="white", foreground="black", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                             self.textDecryptPasteButton.configure(state=NORMAL)
                             self.textDecryptClearButton.configure(state=NORMAL)
@@ -1645,17 +1646,17 @@ class Interface(Tk):
 
                     def decryptLimitKeyEntry(self, *args, **kwargs):
                         global value
-                        if len(self.master.master.decryptKeyVar.get()) > 32:
-                            self.master.master.decryptKeyVar.set(self.master.master.decryptKeyVar.get()[:32])
-                        value = self.master.master.decryptKeyVar.get()
-                        if ''.join(str(self.master.master.decryptKeyVar.get()).split()) == "":
+                        if len(self.root.decryptKeyVar.get()) > 32:
+                            self.root.decryptKeyVar.set(self.root.decryptKeyVar.get()[:32])
+                        value = self.root.decryptKeyVar.get()
+                        if ''.join(str(self.root.decryptKeyVar.get()).split()) == "":
                             self.decryptKeyClearButton.configure(state=DISABLED)
                         else:
                             self.decryptKeyClearButton.configure(state=NORMAL)
                         if len(value) == 0:
                             self.decryptButton.configure(state=DISABLED)
                         else:
-                            cond = bool(self.master.master.decryptAlgorithmVar.get())
+                            cond = bool(self.root.decryptAlgorithmVar.get())
                             iv = get_random_bytes(AES.block_size if not cond else DES3.block_size)
                             try:
                                 if not cond:
@@ -1665,7 +1666,7 @@ class Interface(Tk):
                             except:
                                 self.decryptButton.configure(state=DISABLED)
                             else:
-                                if not bool(self.master.master.decryptSourceVar.get()):
+                                if not bool(self.root.decryptSourceVar.get()):
                                     if ''.join(self.textDecryptEntry.get("1.0", END).split()) != "" and base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.textDecryptEntry.get("1.0", END).encode("utf-8"))) == self.textDecryptEntry.get("1.0", END).rstrip().encode("utf-8"):
                                         self.decryptButton.configure(state=NORMAL)
                                     else:
@@ -1683,7 +1684,7 @@ class Interface(Tk):
                             self.fileDecryptEntry.replace(filePath)
 
                     def decryptOutputCallback(self, *args, **kwargs):
-                        if not ''.join(str(self.master.master.decryptOutputVar.get()).split()) == "":
+                        if not ''.join(str(self.root.decryptOutputVar.get()).split()) == "":
                             self.decryptClearButton.configure(state=NORMAL)
                             self.decryptCopyButton.configure(state=NORMAL)
                             self.decryptSaveButton.configure(state=NORMAL)
@@ -1699,7 +1700,7 @@ class Interface(Tk):
                         class base64Frame(LabelFrame):
                             def __init__(self, master: Frame = None):
                                 super().__init__(master=master, height=342, width=405, text="Base64 Encoder & Decoder")
-                                self.root = self.master.master.master
+                                self.root: Interface = self.master.master.master
 
                                 """self.base64InputLabel = Label(self, text="Input", takefocus=0)
                                 self.base64InputValidity = Label(self, text="Validity: [Blank]", foreground="gray")
