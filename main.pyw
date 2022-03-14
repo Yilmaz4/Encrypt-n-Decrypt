@@ -1007,6 +1007,7 @@ class Interface(Tk):
                         self.fileEntry = Entry(self, width=48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=self.root.fileEntryVar)
                         self.fileBrowseButton = Button(self, text="Browse...", width=14, state=DISABLED, command=self.fileEntryBrowse, takefocus=0)
                         self.fileClearButton = Button(self, text="Clear", width=14, state=DISABLED, command=lambda: self.fileEntry.delete(0, END), takefocus=0)
+                        self.writeFileContentCheck = Checkbutton(self, text="Write encrypted data", variable=self.root.writeFileContentVar, state=DISABLED, takefocus=0)
 
                         self.root.textEntryVar.trace("w", self.textEntryCallback)
                         self.root.fileEntryVar.trace("w", self.fileEntryCallback)
@@ -1015,13 +1016,13 @@ class Interface(Tk):
                         self.textEntry.place(x=24, y=22)
                         self.textPasteButton.place(x=23, y=49)
                         self.textClearButton.place(x=124, y=49)
-                        self.textEntryHideCharCheck.place(x=263, y=50)
 
                         self.fileEntryCheck.place(x=8, y=76)
                         self.fileValidityLabel.place(x=51, y=77)
                         self.fileEntry.place(x=24, y=96)
                         self.fileBrowseButton.place(x=23, y=123)
                         self.fileClearButton.place(x=124, y=123)
+                        self.writeFileContentCheck.place(x=236, y=124)
 
                         class algorithmSelect(Notebook):
                             def __init__(self, master: encryptionFrame):
@@ -1129,12 +1130,12 @@ class Interface(Tk):
                                 self.add(self.asymmetricEncryption, text="Asymmetric Key Encryption", state=DISABLED)
 
                         self.algorithmSelect = algorithmSelect(self)
-                        self.encryptButton = Button(self, text="Encrypt", width=22, command=self.master.master.crypto.encrypt, takefocus=0)
-                        self.writeFileContentCheck = Checkbutton(self, text="Write encrypted data", variable=self.master.master.writeFileContentVar, state=DISABLED, takefocus=0)
+                        self.encryptButton = Button(self, text="Encrypt", width=22, command=self.root.crypto.encrypt, takefocus=0)
+                        self.cancelButton = Button(self, text="Cancel", takefocus=0)
 
                         self.algorithmSelect.place(x=10, y=155)
                         self.encryptButton.place(x=9, y=480)
-                        self.writeFileContentCheck.place(x=160, y=482)
+                        self.cancelButton.place(x=158, y=480)
 
                         class outputFrame(LabelFrame):
                             def __init__(self, master: Frame):
