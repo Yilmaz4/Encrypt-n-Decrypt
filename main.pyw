@@ -55,7 +55,7 @@ try:
     from datetime import datetime
     from random import randint, choice
     from ttkthemes import ThemedStyle
-    from threading import Thread
+    from threading import Thread, Event
     from hurry.filesize import size, alternative
     from re import findall
     from traceback import format_exc
@@ -71,38 +71,54 @@ try:
     import functools, multipledispatch, sqlite3, inspect
 
 except (ModuleNotFoundError, ImportError) as exc:
-    match exc.msg.replace("No module named '", "").replace("'", ""):
-        case "Crypto.Cipher" | "Crypto.PublicKey" | "Crypto.Signature" | "Crypto.Hash" | "Crypto.Protocol.KDF" | "Crypto.Random":
-            lib_name = "pycryptodome"
-        case _:
-            lib_name = exc.msg.replace("No module named '", "").replace("'", "")
+    from sys import version_info
+    from collections import defaultdict
+
+    lib: str = exc.msg.replace("No module named '", "").replace("'", "")
+    if version_info.minor == 10:
+        match lib:
+            case "Crypto.Cipher" | "Crypto.PublicKey" | "Crypto.Signature" | "Crypto.Hash" | "Crypto.Protocol.KDF" | "Crypto.Random":
+                lib_name = "pycryptodome"
+            case _:
+                lib_name = exc.msg.replace("No module named '", "").replace("'", "")
+    else:
+        libs = defaultdict(lambda: lib)
+        libs.update(dict.fromkeys(["Crypto.Cipher", "Crypto.PublicKey", "Crypto.Signature", "Crypto.Hash", "Crypto.Protocol.KDF", "Crypto.Random"], "pycryptodome"))
+        lib_name = libs[lib]
     messagebox.showerror("Missing library", "A required library named \"{name}\" is missing! You should be able to install that library with the following command:\n\npython -m pip install {name}\n\nIf that doesn't work, try googling.".format(name=lib_name))
     __import__("sys").exit()
 
+
 def threaded(function: Callable):
+    """
+    Function decorator to run the function in a separate thread, using "threading" module
+    """
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
         Thread(target=function, args=args, kwargs=kwargs).start()
     return wrapper
 
 def exception_logged(function: Callable):
+    """
+    Function decorator to catch any exception(s) that has potential to occur
+    and log the traceback to Encrypt-n-Decrypt.log file in that case.
+    """
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
         try:
             return function(*args, **kwargs)
         except Exception as exc:
+            # An exception occured in the function...
+            # Get the root object (instance of 'Interface') from global variables
             try:
+                # If this doesn't raise KeyError, that means the exception occured after initialization of the interface
                 root: Interface = globals()["root"]
-            except:
+            except KeyError:
+                # If this raises KeyError, that means the exception occured during/before initialization
                 pass
             if os.path.exists(f"{__title__}.log"):
                 with open(f"{__title__}.log", mode="r", encoding="utf-8") as file:
                     index = file.read()
-                    new_index: list = []
-                    for line in index.splitlines()[::-1]:
-                        if "Start of logging session at" in line:
-                            continue
-                        new_index.append(line)
             else:
                 index = str()
             message = f"{datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')} [{'ERROR'}] {'An unexpected & unknown error has occured. Details about the can be found below. Please report this error to me over GitHub with the error details.'}"
@@ -122,22 +138,24 @@ def exception_logged(function: Callable):
                     for line in format_exc().splitlines():
                         file.write(" " * (len(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')) + 1) + line + "\n")
             messagebox.showerror(f"Unexpected {'fatal ' if 'root' not in globals() | locals() else ''}error", f"An unexpected & unknown {'fatal ' if 'root' not in globals() | locals() else ''}error has occured. Error details {'have been saved to Encrypt-n-Decrypt.log' if 'root' not in globals() | locals() else 'can be found in logs'}. Please report this error to me over GitHub with the error details.")
+            # Terminate the program to prevent unexpected behavior in the program
             exit(0)
     return wrapper
 
-class EmptyLogger(object):
-    widget = None
-
-__logger__ = EmptyLogger()
-
+# The class containing the functions for encryption, decryption & getting hash
 class Cryptography(object, metaclass=type):
     def __init__(self, master: Tk):
         self.master = self.root = master
         self.__encryption_busy: bool = False
         self.__decryption_busy: bool = False
 
+    @threaded
+    @exception_logged
     @staticmethod
     def generate_key(length: int = 32) -> str:
+        """
+        Function to generate and return a random encryption key in the given length (defaults to 32)
+        """
         if not isinstance(length, int):
             length = int(length)
         key = str()
@@ -151,38 +169,99 @@ class Cryptography(object, metaclass=type):
                 key += choice("!'^+%&/()=?_<>#${[]}\|__--$__--")
         return key
 
-    @overload
-    def derivate_key(password: bytes) -> bytes: ...
-    @overload
-    def derivate_key(password: str) -> Optional[bytes]: ...
-
+    @threaded
     @exception_logged
+    @staticmethod
     def derivate_key(password: Union[str, bytes]) -> Optional[bytes]:
+        """
+        Function to derivate an encryption key from a password (using KDF protocol)
+        """
         try:
             return base64.urlsafe_b64encode(scrypt(password.decode("utf-8") if isinstance(password, bytes) else password, get_random_bytes(16), 24, N=2**14, r=8, p=1))
         except UnicodeDecodeError:
             return None
 
+    @threaded
+    @exception_logged
+    @staticmethod
+    def get_key(path: str, root: Tk, entry: Entry) -> Optional[str]:
+        path = filedialog.askopenfilename(title="Select key file", filetypes=[("Encrypt'n'Decrypt key file", "*.key"), ("Text document", "*.txt"), ("All files", "*.*")])
+        if ''.join(path.split()) == '':
+            return
+        if os.path.splitext(path)[1] != ".txt":
+            key = self.getKey(path)
+            if not key:
+                messagebox.showwarning("ERR_INVALID_KEY_FILE","The specified file does not contain any valid key for encryption.")
+                root.logger.error("Key file with no valid key inside was specified.")
+                return
+        else:
+            with open(path, encoding="utf-8", mode="r") as file:
+                key = file.read()
+        entry.replace(key)
+        if not os.path.getsize(path) in [16, 24, 32, 76, 88, 96]:
+            messagebox.showwarning("Invalid key file", "The specified file does not contain any valid key for encryption.")
+            root.logger.error("Key file with no valid key inside was specified.")
+            return
+        with open(path, mode="rb") as file:
+            index = file.read()
+        where = -1
+        for _ in range(len(index)):
+            where += 1
+            key_to_try = index[where:where+32]
+            try:
+                iv = base64.urlsafe_b64decode(index.replace(key_to_try, ""))[:16]
+                aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CFB, iv=iv)
+            except:
+                continue
+            else:
+                try:
+                    output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")).replace(iv, b""))
+                    output_key = output_key.decode("utf-8")
+                except:
+                    continue
+                else:
+                    try:
+                        if len(output_key) in [16, 24, 32]:
+                            return output_key
+                    except:
+                        continue
+        with open(path, encoding = 'utf-8', mode="r") as file:
+            if len(file.read()) == 16 or len(file.read()) == 24 or len(file.read()) == 32:
+                return str(file.read())
+            else:
+                return None
+
     @exception_logged
     def traffic_controlled(function: Callable):
+        """
+        Function decorator for the 'encrypt' and 'decrypt' methods of this class
+        in order to prevent stack overflow by waiting for the previous encryption
+        process to finish if it's still in progress before starting a new thread
+        """
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
+            # args[0] is always 'self' in methods of a class
             self: Cryptography = args[0]
             root: Interface = self.master
             if function.__name__ == "encrypt":
                 root.mainNotebook.encryptionFrame.encryptButton.configure(state=DISABLED if bool(root.dataSourceVar.get()) else NORMAL if not bool(root.mainNotebook.encryptionFrame.algorithmSelect.index(root.mainNotebook.encryptionFrame.algorithmSelect.select())) else DISABLED)
                 if self.__encryption_busy and self.__encryption_busy is not None:
+                    # If an encryption is in progress, don't create a new thread and return instead
                     return
+                # If no encryptions are in progress, set the attribute representing whether an encryption is in progress or not to True
                 self.__encryption_busy = True
                 try:
+                    # And start the encryption
                     return function(*args, **kwargs)
                 except Exception: ...
                 finally:
+                    # Even if the encryption fails, set the attribute back to False to allow new requests
                     self.__encryption_busy = False
                     root.mainNotebook.encryptionFrame.encryptButton.configure(state=NORMAL)
             else:
                 root.mainNotebook.decryptionFrame.decryptButton.configure(state=DISABLED) if bool(root.decryptSourceVar.get()) else None
                 if self.__decryption_busy and self.__decryption_busy is not None:
+                    # Likewise, if a decryption is in progress, don't create a new thread and return instead
                     return
                 self.__decryption_busy = True
                 try:
@@ -195,8 +274,12 @@ class Cryptography(object, metaclass=type):
 
     @exception_logged
     def update_status(self, status: str = "Ready") -> None:
+        """
+        A simple method to simplify updating the status bar of the program
+        """
         root: Interface = self.root
         root.statusBar.configure(text=f"Status: {status}")
+        # Call the 'update()' method manually in case the interface is not responding at the moment
         root.update()
 
     @property
@@ -366,9 +449,9 @@ class Cryptography(object, metaclass=type):
 
             self.update_status("Ready")
 
-    @exception_logged
     @threaded
     @traffic_controlled
+    @exception_logged
     def decrypt(self) -> None:
         root: Interface = self.master
         if not bool(root.decryptSourceVar.get()):
@@ -467,8 +550,8 @@ class Cryptography(object, metaclass=type):
                 root.mainNotebook.decryptionFrame.decryptOutputText.replace("Decrypted data is not being displayed because it's longer than 15.000 characters.")
         self.update_status("Ready")
 
-    @exception_logged
     @threaded
+    @exception_logged
     def hash(self, data: Union[str, bytes], SHA1Widget: Widget, SHA256Widget: Widget, SHA512Widget: Widget, MD5Widget: Widget) -> None:
         self.__hashDigestFrame: object = self.root.mainNotebook.miscFrame.hashDigestFrame
         self.SHA1Entry, self.SHA256Entry, self.SHA512Entry, self.MD5Entry = SHA1Widget, SHA256Widget, SHA512Widget, MD5Widget
@@ -933,7 +1016,6 @@ class Widget(Widget):
             self.toolTip = ToolTip(widget=self, tooltip=tooltip)
 
 class Entry(Widget, Entry):
-    @exception_logged
     def replace(self, string: str):
         old_val = self["state"]
         self.configure(state=NORMAL)
@@ -941,7 +1023,6 @@ class Entry(Widget, Entry):
         self.insert(0, string)
         self.configure(state=old_val)
 
-    @exception_logged
     def clear(self):
         old_val = self["state"]
         self.configure(state=NORMAL)
@@ -1131,11 +1212,9 @@ class Interface(Tk):
 
                         self.algorithmSelect = algorithmSelect(self)
                         self.encryptButton = Button(self, text="Encrypt", width=22, command=self.root.crypto.encrypt, takefocus=0)
-                        self.cancelButton = Button(self, text="Cancel", takefocus=0)
 
                         self.algorithmSelect.place(x=10, y=155)
                         self.encryptButton.place(x=9, y=480)
-                        self.cancelButton.place(x=158, y=480)
 
                         class outputFrame(LabelFrame):
                             def __init__(self, master: Frame):
@@ -1326,57 +1405,6 @@ class Interface(Tk):
                             }
                             self.algorithmSelect.symmetricEncryption.keyValidityStatusLabel.configure(foreground=colors[" ".join(self.algorithmSelect.symmetricEncryption.keyValidityStatusLabel["text"].split()[:2])])
 
-                    def getKey(self, path: str) -> Optional[str]:
-                        if not os.path.getsize(path) in [16, 24, 32, 76, 88, 96]:
-                            messagebox.showwarning("ERR_INVALID_KEY_FILE","The specified file does not contain any valid key for encryption.")
-                            self.master.master.logger.error("Key file with no valid key inside was specified.")
-                            return
-                        with open(path, encoding = 'utf-8', mode="r") as file:
-                            global index
-                            index = file.read()
-                        index = str(index)
-                        where = -1
-                        for _ in range(len(index)):
-                            where += 1
-                            key_to_try = index[where:where+32]
-                            try:
-                                iv = base64.urlsafe_b64decode(index.replace(key_to_try, ""))[:16]
-                                aes = AES.new(bytes(key_to_try, "utf-8"), AES.MODE_CFB, iv=iv)
-                            except:
-                                continue
-                            else:
-                                try:
-                                    output_key = aes.decrypt(base64.urlsafe_b64decode(index.replace(key_to_try, "")).replace(iv, b""))
-                                    output_key = output_key.decode("utf-8")
-                                except:
-                                    continue
-                                else:
-                                    try:
-                                        if len(output_key) in [16, 24, 32]:
-                                            return output_key
-                                    except:
-                                        continue
-                        with open(path, encoding = 'utf-8', mode="r") as file:
-                            if len(file.read()) == 16 or len(file.read()) == 24 or len(file.read()) == 32:
-                                return str(file.read())
-                            else:
-                                return None
-
-                    def getKeyFromFile(self):
-                        path = filedialog.askopenfilename(title="Select key file", filetypes=[("Encrypt'n'Decrypt key file", "*.key"), ("Text document", "*.txt"), ("All files", "*.*")])
-                        if path == "":
-                            return
-                        if os.path.splitext(path)[1] != ".txt":
-                            key = self.getKey(path)
-                            if not key:
-                                messagebox.showwarning("ERR_INVALID_KEY_FILE","The specified file does not contain any valid key for encryption.")
-                                self.master.master.logger.error("Key file with no valid key inside was specified.")
-                                return
-                        else:
-                            with open(path, encoding="utf-8", mode="r") as file:
-                                key = file.read()
-                        self.algorithmSelect.symmetricEncryption.keyEntry.replace(key)
-
                     def limitKeyEntry(self, *args, **kwargs) -> None:
                         global value
                         if len(self.master.master.keyEntryVar.get()) > 32:
@@ -1549,7 +1577,7 @@ class Interface(Tk):
 
                         self.decryptButton = Button(self, width=22, text="Decrypt", command=self.root.crypto.decrypt, takefocus=0, state=DISABLED)
                         self.decryptOutputFrame = LabelFrame(self, text="Decrypted text", height=84, width=766, takefocus=0)
-                        self.decryptOutputText = Text(self.decryptOutputFrame, width=105, height=1, font=("Consolas", 9), state=DISABLED, bg="#F0F0F0", relief=FLAT, highlightbackground="#cccccc", highlightthickness=1, takefocus=0, textvariable=self.master.master.decryptOutputVar, highlightcolor="#cccccc")
+                        self.decryptOutputText = Entry(self.decryptOutputFrame, width=105, font=("Consolas", 9), state="readonly", textvariable=self.master.master.decryptOutputVar)
                         self.decryptCopyButton = Button(self.decryptOutputFrame, text="Copy", width=17, takefocus=0, state=DISABLED)
                         self.decryptClearButton = Button(self.decryptOutputFrame, text="Clear", width=17, takefocus=0, state=DISABLED)
                         self.decryptSaveButton = Button(self.decryptOutputFrame, text="Save as...", width=20, takefocus=0, state=DISABLED)
@@ -1834,7 +1862,7 @@ class Interface(Tk):
 
                                 self.keyOutputLabel = Label(self, text="Output (Derived Key)", takefocus=0)
                                 self.keyOutputEntry = Entry(self, width=34, state="readonly", font=("Consolas", 10), textvariable=self.root.keyOutputVar, takefocus=0)
-                                self.outputCopyButton = Button(self, text="Copy", state=DISABLED, command=lambda: self.root.clipboard_set(self.keyOutputEntry.get()[:-1 if self.keyOutputEntry.get().endswith("\n") else 0]), takefocus=0)
+                                self.outputCopyButton = Button(self, text="Copy", state=DISABLED, command=lambda: self.root.clipboard_set(self.root.keyOutputVar.get()), takefocus=0)
 
                                 self.root.keyInputVar.trace("w", self.keyInputCallback)
                                 self.root.keyOutputVar.trace("w", lambda *args, **kwargs: self.outputCopyButton.configure(state=NORMAL if ''.join(self.keyOutputEntry.get().split()) != '' else DISABLED))
@@ -1888,16 +1916,16 @@ class Interface(Tk):
 
                                 self.SHA1Label = Label(self, text="SHA-1")
                                 self.SHA1Entry = Entry(self, width=34, font=("Consolas", 10), state="readonly", takefocus=0)
-                                self.SHA1CopyButton = Button(self, text="Copy", state=DISABLED, takefocus=0)
+                                self.SHA1CopyButton = Button(self, text="Copy", state=DISABLED, command=lambda: self.root.clipboard_set(self.SHA1Entry.get()), takefocus=0)
                                 self.SHA256Label = Label(self, text="SHA-256")
                                 self.SHA256Entry = Entry(self, width=34, font=("Consolas", 10), state="readonly", takefocus=0)
-                                self.SHA256CopyButton = Button(self, text="Copy", state=DISABLED, takefocus=0)
+                                self.SHA256CopyButton = Button(self, text="Copy", state=DISABLED, command=lambda: self.root.clipboard_set(self.SHA256Entry.get()), takefocus=0)
                                 self.SHA512Label = Label(self, text="SHA-512")
                                 self.SHA512Entry = Entry(self, width=34, font=("Consolas", 10), state="readonly", takefocus=0)
-                                self.SHA512CopyButton = Button(self, text="Copy", state=DISABLED, takefocus=0)
+                                self.SHA512CopyButton = Button(self, text="Copy", state=DISABLED, command=lambda: self.root.clipboard_set(self.SHA512Entry.get()), takefocus=0)
                                 self.MD5Label = Label(self, text="MD-5")
                                 self.MD5Entry = Entry(self, width=34, font=("Consolas", 10), state="readonly", takefocus=0)
-                                self.MD5CopyButton = Button(self, text="Copy", state=DISABLED, takefocus=0)
+                                self.MD5CopyButton = Button(self, text="Copy", state=DISABLED, command=lambda: self.root.clipboard_set(self.MD5Entry.get()), takefocus=0)
 
                                 self.root.hashPasswordEntryVar.trace("w", self.hashPasswordEntryCallback)
                                 self.root.hashFileEntryVar.trace("w", self.hashFileEntryCallback)
