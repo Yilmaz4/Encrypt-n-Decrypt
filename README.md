@@ -37,7 +37,7 @@ As you can see in the screenshots below, the interface of the program consists o
 
 ### Encryption
 
-![encrypt-n-decrypt](https://user-images.githubusercontent.com/77583632/155799060-40b90545-2447-4039-abba-cc9cb7b5f072.png)
+![Screenshot 2022-03-19 011502](https://user-images.githubusercontent.com/77583632/159093647-2e476933-2d80-4ff8-96c2-ec17d09d3043.png)
 
 The encryption tab is for encrypting, as its name suggests. The program allows you to either enter some text or select a file to encrypt. Right below the area which you select what to encrypt, you can choose whether to generate a new encryption key or use a pre-generated key.
 
