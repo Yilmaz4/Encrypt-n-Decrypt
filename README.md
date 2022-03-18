@@ -26,6 +26,8 @@ However, asymmetric key encryption is not available yet. I'm currently working o
 - Encoding/decoding plain-text or file using base64 encoding.
 - Multi-threaded encryption/decryption, meaning the program will not freeze during long processes.
 - Ability to derivate an encryption key from a password (key derivation function).
+- Plain-text or file base64 encoding/decoding.
+- Plain-text or file hash calculation using SHA-1, SHA-256, SHA-512 and MD-5.
 - Usage of SQLite3 for saving the configurations made (such as what to encrypt or the length of the key to generate) to a database file when the user closes the program and load the saved configurations in the next start-up.
 - Lots of visual themes coming from the [ttkthemes](https://github.com/TkinterEP/ttkthemes) package.
 
