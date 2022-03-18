@@ -35,7 +35,7 @@ Despite being memory efficient, encrypting/decrypting files whose sizes are bigg
 
 ## Introduction
 
-As you can see in the screenshots below, the interface of the program consists of 5 tabs: Encryption, Decryption, Miscellaneous, Logs and Help & About respectively.
+As you can see in the screenshots below, the user interface of the program consists of 5 tabs: Encryption, Decryption, Miscellaneous, Logs and Help & About respectively.
 
 ### Encryption
 
