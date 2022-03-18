@@ -31,7 +31,7 @@ However, asymmetric key encryption is not available yet. I'm currently working o
 - Usage of SQLite3 for saving the configurations made (such as what to encrypt or the length of the key to generate) to a database file when the user closes the program and load the saved configurations in the next start-up.
 - Lots of visual themes coming from the [ttkthemes](https://github.com/TkinterEP/ttkthemes) package.
 
-Despite being memory efficient, encrypting/decrypting files whose sizes are bigger than the amount of RAM installed on the computer can cause the program to run out of memory.
+Despite being memory efficient though, encrypting/decrypting files whose sizes are bigger than the amount of RAM installed on the computer can cause the program to run out of memory.
 
 ## Introduction
 
