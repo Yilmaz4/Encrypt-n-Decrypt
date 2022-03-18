@@ -15,7 +15,7 @@ Hi everyone, welcome to the GitHub repository of my first ever Python project wh
 
 In cryptography, encryption is the process of encoding information. This process converts the original representation of the information, known as plaintext, into an alternative form known as ciphertext. Ideally, only authorized parties can decipher a ciphertext back to plaintext and access the original information. Encryption does not itself prevent interference but denies the intelligible content to a would-be interceptor.
 
-To decrypt the data that you've encrypted using a symmetric key encryption algorithm (AES or 3DES) using this program, you need to have the key called "encryption key" which was used to encrypt the data. Similarly, to decrypt a piece of asymmetrically encrypted data (using RSA algorithm), you need to have a key called "private key".
+To decrypt the data that you'd encrypted using a symmetric key encryption algorithm (AES or 3DES) with this program, you need to have the key called "encryption key" which was used to encrypt the data. This key consists of either 16, 24 or 32 random characters. Similarly, to decrypt a piece of asymmetrically encrypted data (using RSA algorithm), you need to have a key called "private key" which is usually longer than 1024 characters.
 
 However, asymmetric key encryption is not available yet. I'm currently working on it but I'm stuck at the part of placing the input widgets. You can expect RSA algorithm to be usable in the next few months.
 
