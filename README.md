@@ -41,7 +41,7 @@ As you can see in the screenshots below, the user interface of the program consi
 
 ![Screenshot 2022-03-19 011502](https://user-images.githubusercontent.com/77583632/159093647-2e476933-2d80-4ff8-96c2-ec17d09d3043.png)
 
-The encryption tab is for encrypting, as its name suggests. The program allows you to either enter some text or select a file to encrypt. Right below the area which you select what to encrypt, you can choose whether to generate a new encryption key or use a pre-generated key.
+The encryption tab is for encrypting as its name suggests. The program allows you to either enter some text or select a file to encrypt. Right below the area which you select what to encrypt, you can choose whether to generate a new encryption key or use a pre-generated key.
 
 If you choose to generate a new encryption key, you have two options as algorithm to use while encrypting which follow as AES or 3DES. Once you choose the algorithm you would like to use too, you can decide how long should the encryption key be. Longer keys are more secure against brute-force attacks (it's currently impossible to brute-force an AES-256 key). The number after either AES or 3DES represents the lenght of the key in bits. When you divide the number with 8, you can find out the amount of characters that are going to be in the key.
 
