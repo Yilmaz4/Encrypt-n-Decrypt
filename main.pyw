@@ -181,13 +181,13 @@ def traffic_controlled(function: Callable):
                 root.mainNotebook.decryptionFrame.decryptButton.configure(state=NORMAL)
     return wrapper
 
-# The class containing the functions for encryption, decryption & getting hash
 class Cryptography(object):
     def __init__(self, master: Tk):
         self.master = self.root = master
         self.__encryption_busy: bool = False
         self.__decryption_busy: bool = False
 
+    @threaded
     @staticmethod
     def generate_key(length: int = 32) -> str:
         """
