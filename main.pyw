@@ -27,7 +27,6 @@ __license__ = "MIT"
 __copyright__ = "Copyright © 2017-2022 Yilmaz Alpaslan"
 __version__ = "1.0.0"
 
-from msilib import datasizemask
 from tkinter import (
     NORMAL, DISABLED, WORD, FLAT, END, LEFT,
     X, Y, RIGHT, LEFT, BOTH, CENTER, NONE,
@@ -37,7 +36,6 @@ from tkinter import (
     filedialog, messagebox, TclError
 )
 
-from attr import dataclass
 TkLabel = Label
 from tkinter.ttk import (
     Entry, Button, Label, LabelFrame, Frame,
@@ -153,6 +151,9 @@ def exception_logged(function: Callable):
                     for line in format_exc().splitlines():
                         file.write(" " * (len(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')) + 1) + line + "\n")
             messagebox.showerror(f"Unexpected {'fatal ' if 'root' not in globals() | locals() else ''}error", f"An unexpected & unknown {'fatal ' if 'root' not in globals() | locals() else ''}error has occured. Error details {'have been saved to Encrypt-n-Decrypt.log' if 'root' not in globals() | locals() else 'can be found in logs'}. Please report this error to me over GitHub with the error details.")
+            if "root" in globals() | locals():
+                root.statusBar.configure(text="Status: Ready")
+                
     return wrapper
 
 @exception_logged
@@ -357,27 +358,29 @@ class Cryptography(object):
                 path: str = root.mainNotebook.encryptionFrame.fileEntry.get()
                 for filename in path.split('|'):
                     datas.append(filename)
-            for data in datas:
-                if isinstance(data, str):
+            for raw, index in [(raw.lstrip(), datas.index(raw)) for raw in datas]:
+                if isinstance(raw, str):
                     try:
-                        self.update_status(f"Reading the file (file {datas.index(data)}/{len(datas)})...")
-                        with open(data, mode="rb") as file:
+                        self.update_status(f"Reading the file (file {index}/{len(datas)})...")
+                        with open(raw, mode="rb") as file:
                             data: bytes = file.read()
                     except PermissionError:
                         messagebox.showerror("Access denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
                         root.logger.error("Read permission for the file specified has been denied, encryption was interrupted")
                         self.update_status("Ready")
                         return
+                else:
+                    data: bytes = raw
                 try:
                     self.update_status(f"Encrypting...")
-                    root.lastEncryptionResult = iv + cipher.encrypt(data.encode("utf-8") if type(data) is str else data)
+                    root.lastEncryptionResult = iv + cipher.encrypt(data)
                 except MemoryError:
                     messagebox.showerror("Not enough memory", "Your computer has run out of memory while encrypting the file. Try closing other applications or restart your computer.")
                     root.logger.error("Device has run out of memory while encrypting, encryption was interrupted")
                     self.update_status("Ready")
                     return
                 del data
-                self.update_status(f"Encoding the result (file {datas.index(data)}/{len(datas)})...")
+                self.update_status(f"Encoding the result (file {index}/{len(datas)})...")
                 try:
                     try:
                         root.lastEncryptionResult = base64.urlsafe_b64encode(root.lastEncryptionResult).decode("utf-8")
@@ -421,12 +424,16 @@ class Cryptography(object):
                                 failure = True
                                 pass
 
-            if not len(root.lastEncryptionResult) > 15000:
+            if len(datas) == 1 and bool(root.dataSourceVar.get()):
+                root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
+                root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("The encrypted text is not being displayed because multiple files were selected to be encrypted.")
+            elif not len(root.lastEncryptionResult) > 15000:
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="black", wrap=None)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.replace(root.lastEncryptionResult)
             else:
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
+                del root.lastEncryptionResult
 
             root.mainNotebook.encryptionFrame.outputFrame.AESKeyText.replace(key.decode("utf-8"))
             root.mainNotebook.encryptionFrame.outputFrame.RSAPublicText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
