@@ -11,7 +11,7 @@
 
 [//]: <> (009e0a Stable | ffc700 Prerelease | ff0000 Beta)
 
-Hi everyone, welcome to the GitHub repository of my first ever Python project which is capable of encrypting and decrypting data using diverse encryption algorithms such as AES (Advanced Encryption Standard), 3DES (Triple Data Encryption Standard) or RSA (Rivest Shamir Adleman).
+Hey everyone, welcome to the GitHub repository of my first ever Python project which is capable of encrypting and decrypting data using diverse encryption algorithms such as AES (Advanced Encryption Standard), 3DES (Triple Data Encryption Standard) or RSA (Rivest Shamir Adleman).
 
 In cryptography, encryption is the process of encoding information. This process converts the original representation of the information, known as plaintext, into an alternative form known as ciphertext. Ideally, only authorized parties can decipher a ciphertext back to plaintext and access the original information. Encryption does not itself prevent interference but denies the intelligible content to a would-be interceptor.
 
