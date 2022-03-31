@@ -27,10 +27,12 @@ __license__ = "MIT"
 __copyright__ = "Copyright © 2017-2022 Yilmaz Alpaslan"
 __version__ = "1.0.0"
 
+from select import select
 from tkinter import (
     NORMAL, DISABLED, WORD, FLAT, END, LEFT,
     X, Y, RIGHT, LEFT, BOTH, CENTER, NONE,
     TOP, SUNKEN, HORIZONTAL, BOTTOM, W,
+    VERTICAL, YES, NO, N, E, SE, S, W,
     Text, Toplevel, Menu, Pack, Grid, Tk,
     Place, IntVar, StringVar, Label, Frame,
     filedialog, messagebox, TclError
@@ -40,7 +42,8 @@ TkLabel = Label
 from tkinter.ttk import (
     Entry, Button, Label, LabelFrame, Frame,
     Widget, Notebook, Radiobutton, Checkbutton,
-    Scrollbar, Progressbar, Separator, Combobox
+    Scrollbar, Progressbar, Separator, Combobox,
+    Treeview
 )
 
 try:
@@ -350,6 +353,7 @@ class Cryptography(object):
                     messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
                     root.logger.error("Invalid key was specified")
                     self.update_status("Ready")
+                    return
 
             datas: list[str | bytes] = []
             if not bool(root.dataSourceVar.get()):
@@ -372,7 +376,7 @@ class Cryptography(object):
                 else:
                     data: bytes = raw
                 try:
-                    self.update_status(f"Encrypting...")
+                    self.update_status(f"Encrypting (file {index}/{len(datas)})...")
                     root.lastEncryptionResult = iv + cipher.encrypt(data)
                 except MemoryError:
                     messagebox.showerror("Not enough memory", "Your computer has run out of memory while encrypting the file. Try closing other applications or restart your computer.")
@@ -424,16 +428,17 @@ class Cryptography(object):
                                 failure = True
                                 pass
 
-            if len(datas) == 1 and bool(root.dataSourceVar.get()):
+            if len(datas) != 1 and bool(root.dataSourceVar.get()):
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("The encrypted text is not being displayed because multiple files were selected to be encrypted.")
-            elif not len(root.lastEncryptionResult) > 15000:
-                root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="black", wrap=None)
-                root.mainNotebook.encryptionFrame.outputFrame.outputText.replace(root.lastEncryptionResult)
-            else:
+                del root.lastEncryptionResult
+            elif len(root.lastEncryptionResult) > 15000:
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
                 del root.lastEncryptionResult
+            else:
+                root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="black", wrap=None)
+                root.mainNotebook.encryptionFrame.outputFrame.outputText.replace(root.lastEncryptionResult)
 
             root.mainNotebook.encryptionFrame.outputFrame.AESKeyText.replace(key.decode("utf-8"))
             root.mainNotebook.encryptionFrame.outputFrame.RSAPublicText.configure(bg="#F0F0F0", relief=FLAT, takefocus=0, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
@@ -850,7 +855,7 @@ class ScrolledText(Text):
         self.vbar.pack(side=RIGHT, fill=Y)
         kwargs.update({'yscrollcommand': self.vbar.set})
         super().__init__(self.frame, *args, **kwargs)
-        self.pack(side=LEFT, fill=BOTH, expand=True)
+        self.pack(side=LEFT, fill=BOTH, expand=YES)
         self.vbar['command'] = self.yview
         text_meths = vars(Text).keys()
         methods = vars(Pack).keys() | vars(Grid).keys() | vars(Place).keys()
@@ -1072,7 +1077,7 @@ class Notebook(Notebook):
                             self.master.mainNotebook.sourceFrame.downloadingLabel.place_forget()
                             del self.master.mainNotebook.sourceFrame.downloadingLabel
                         self.master._sourceLoadFailure = False        
-                    
+
         if len(self.__history) >= 2:
             del self.__history[0]
         self.__history.append(self.index(self.select()))
@@ -1152,7 +1157,7 @@ class Interface(Tk):
                         self.textEntryHideCharCheck = Checkbutton(self, text="Hide characters", tooltip="Check this if you want the things you write in the above entry to be not visible", variable=self.root.textEntryHideCharVar, onvalue=1, offvalue=0, command=self.changeDataEntryHideChar, takefocus=0)
 
                         self.fileEntryCheck = Radiobutton(self, text="File(s):", value=1, variable=self.root.dataSourceVar, command=self.changeDataSource, takefocus=0)
-                        self.fileValidityLabel = Label(self, text="Validity: [Blank]", foreground="gray")
+                        self.fileValidityLabel = Label(self, text="Validity: [Blank]", cursor="hand2", foreground="gray")
                         self.fileEntry = Entry(self, width=48, font=("Consolas", 9), state=DISABLED, takefocus=0, textvariable=self.root.fileEntryVar)
                         self.fileBrowseButton = Button(self, text="Browse...", width=14, state=DISABLED, command=self.fileEntryBrowse, takefocus=0)
                         self.fileClearButton = Button(self, text="Clear", width=14, state=DISABLED, command=lambda: self.fileEntry.delete(0, END), takefocus=0)
@@ -1160,6 +1165,8 @@ class Interface(Tk):
 
                         self.root.textEntryVar.trace("w", self.textEntryCallback)
                         self.root.fileEntryVar.trace("w", self.fileEntryCallback)
+                        
+                        self.fileValidityLabel.bind("<Button-1>", self.showDebug)
 
                         self.textEntryCheck.place(x=8, y=2)
                         self.textEntry.place(x=24, y=22)
@@ -1276,7 +1283,7 @@ class Interface(Tk):
                                 self.asymmetricEncryption = asymmetricEncryption(self)
 
                                 self.add(self.symmetricEncryption, text="Symmetric Key Encryption")
-                                self.add(self.asymmetricEncryption, text="Asymmetric Key Encryption", state=DISABLED)
+                                self.add(self.asymmetricEncryption, text="Asymmetric Key Encryption")
 
                         self.algorithmSelect = algorithmSelect(self)
                         self.encryptButton = Button(self, text="Encrypt", width=22, command=self.root.crypto.encrypt, takefocus=0)
@@ -1546,35 +1553,110 @@ class Interface(Tk):
                         self.textClearButton.configure(state=DISABLED if self.master.master.textEntryVar.get() == "" else NORMAL)
                     
                     def fileEntryCallback(self, *args, **kwargs):
+                        if not hasattr(self, '_lastFileEntry'):
+                            self._lastFileEntry: str = ''
                         self.fileClearButton.configure(state=DISABLED if self.root.fileEntryVar.get() == "" else NORMAL)
                         all_file = all([os.path.isfile(filename) for filename in [filename.lstrip() for filename in self.fileEntry.get().split('|')]])
-                        if self.fileEntry.get() != "":
-                            for filename in [file.lstrip() for file in self.fileEntry.get().split('|')]:
+                        if ''.join(self.fileEntry.get().split()) != '':
+                            self.fileSelectionResult: list[int] = []
+                            messages: dict[int, dict[str, str]] = {
+                                0: {"text": "All files are encryptable", "foreground": "green"},
+                                1: {"text": "Read access was denied", "foreground": "red"},
+                                2: {"text": "Encryptable but not writable", "foreground": "#c6832a"},
+                                3: {"text": "Not a file", "foreground": "red"},
+                                4: {"text": "Unknown", "foreground": "#c6832a"}
+                            }
+                            files = [file.lstrip() for file in self.fileEntry.get().split('|')]
+                            if len(files) > 50:
+                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} amount of files selected - " + value) if key == "text" else value for key, value in messages[4].items()})
+                                self.encryptButton.configure(state=DISABLED if ''.join(self.fileEntry.get().split()) == '' else NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and all_file and (not bool(self.root.keySourceSelection.get()) or (bool(self.root.keySourceSelection.get()) and ''.join(self.root.mainNotebook.encryptionFrame.algorithmSelect.symmetricEncryption.keyEntry.get().split()) != '')))) else DISABLED)
+                                self._lastFileEntry: str = self.fileEntry.get()
+                                return
+                            for filename in [file.lstrip() for file in self.fileEntry.get().split('|') if file not in self._lastFileEntry.split('|')]:
                                 if os.path.isfile(filename):
                                     try:
-                                        if os.path.getsize(filename) < 104857600:
+                                        if sum([os.path.getsize(file) for file in files]) < 104857600:
                                             with open(filename, mode="rb") as file:
-                                                content = file.read()
+                                                _content = file.read()
                                         else:
-                                            self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
+                                            self.fileSelectionResult.append(4)
+                                            continue
                                     except OSError:
-                                        self.fileValidityLabel.configure(text="Validity: Read access was denied", foreground="red")
+                                        self.fileSelectionResult.append(1)
                                     else:
-                                        if "content" in locals():
+                                        if "_content" in locals():
                                             try:
+                                                times = (os.path.getmtime(filename), os.path.getctime(filename))
                                                 with open(filename, mode="wb") as file:
-                                                    file.write(content)
+                                                    file.write(_content)
+                                                os.utime(filename, times)
                                             except (OSError, PermissionError):
-                                                self.fileValidityLabel.configure(text="Validity: Encryptable but not writable", foreground="#c6832a")
+                                                self.fileSelectionResult.append(2)
                                             else:
-                                                self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
+                                                self.fileSelectionResult.append(0)
                                         else:
-                                            self.fileValidityLabel.configure(text="Validity: Encryptable", foreground="green")
+                                            self.fileSelectionResult.append(0)
                                 else:
-                                    self.fileValidityLabel.configure(text="Validity: Not a file", foreground="red")
+                                    self.fileSelectionResult.append(3)
+                            if all([not item if not bool(item) else False for item in self.fileSelectionResult]):
+                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} file{'s' if len(files) != 1 else ''} selected - " + value) if key == "text" else value for key, value in messages[0].items()})
+                            if 1 in self.fileSelectionResult:
+                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} file{'s' if len(files) != 1 else ''} selected - " + value) if key == "text" else value for key, value in messages[1].items()})
+                            elif 2 in self.fileSelectionResult:
+                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} file{'s' if len(files) != 1 else ''} selected - " + value) if key == "text" else value for key, value in messages[2].items()})
+                            elif 3 in self.fileSelectionResult:
+                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} file{'s' if len(files) != 1 else ''} selected - " + value) if key == "text" else value for key, value in messages[3].items()})
+                            elif 3 in self.fileSelectionResult:
+                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} file{'s' if len(files) != 1 else ''} selected - " + value) if key == "text" else value for key, value in messages[4].items()})
                         else:
                             self.fileValidityLabel.configure(text="Validity: [Blank]", foreground="gray")
                         self.encryptButton.configure(state=DISABLED if ''.join(self.fileEntry.get().split()) == '' else NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and all_file and (not bool(self.root.keySourceSelection.get()) or (bool(self.root.keySourceSelection.get()) and ''.join(self.root.mainNotebook.encryptionFrame.algorithmSelect.symmetricEncryption.keyEntry.get().split()) != '')))) else DISABLED)
+                        self._lastFileEntry: str = self.fileEntry.get()
+                    
+                    def showDebug(self, event=None):
+                        class debugWindow(Toplevel):
+                            def __init__(self, master: encryptionFrame, root: Interface):
+                                self.root = root
+                                self.height = 200
+                                self.width = 400
+                                super().__init__(master, height=self.height, width=self.width)
+                                self.grab_set()
+
+                                self.wm_title("Encrypt-n-Decrypt File Selection Debugging")
+                                self.wm_resizable(height=False, width=False)
+                                self.wm_attributes("-fullscreen", False)
+                                self.wm_maxsize(self.width, self.height)
+                                self.wm_minsize(self.width, self.height)
+                                try:
+                                    self.wm_iconbitmap("icon.ico")
+                                except TclError:
+                                    pass
+
+                                tree = Treeview(self, columns=('file', 'status'), show='headings', selectmode="browse")
+
+                                tree.heading('file', text='File path', anchor=CENTER)
+                                tree.heading('status', text='Status', anchor=CENTER)
+
+                                messages: dict[int, dict[str, str]] = {
+                                    0: {"text": "All permissions granted", "foreground": "green"},
+                                    1: {"text": "Read & write accesses were denied", "foreground": "red"},
+                                    2: {"text": "Write access was denied", "foreground": "#c6832a"},
+                                    3: {"text": "Not a file", "foreground": "red"}
+                                }
+                                try:
+                                    for file, status in {[file.lstrip() for file in self.master.fileEntry.get().split('|')][index]: severity for severity, index in zip(self.master.fileSelectionResult, range(len(self.master.fileSelectionResult)))}.items():
+                                        tree.insert('', END, values=(file.replace(os.path.commonprefix([file for file in [file.lstrip() for file in self.master.fileEntry.get().split('|')]])[:-10], "..."), messages[status]["text"]))
+                                except AttributeError:
+                                    pass
+
+                                scrollbar = Scrollbar(self, orient=VERTICAL, command=tree.yview)
+                                tree.configure(yscroll=scrollbar.set)
+                                tree.place(x=0, y=0, width=384)
+                                scrollbar.place(x=384, y=0, height=200)
+                                
+                                self.focus_force()
+                                self.mainloop()
+                        self.debugWindow = debugWindow(self, self.root)
 
                 class decryptionFrame(Frame):
                     def __init__(self, master: Notebook = None, **kwargs):
@@ -1763,7 +1845,7 @@ class Interface(Tk):
 
                         class base64Frame(LabelFrame):
                             def __init__(self, master: Frame = None):
-                                super().__init__(master=master, height=402, width=405, text="Base64 Encoder & Decoder")
+                                super().__init__(master=master, height=442, width=405, text="Base64 Encoder & Decoder")
                                 self.root: Interface = self.master.master.master
 
                                 """self.base64InputLabel = Label(self, text="Input", takefocus=0)
@@ -1773,15 +1855,15 @@ class Interface(Tk):
                                 self.inputPasteButton = Button(self, width=15, text="Paste", command=lambda: self.base64InputText.replace(self.root.clipboard_get()), takefocus=0)
                                 self.inputBrowseButton = Button(self, width=17, text="Browse...", command=self.browseBase64InputFile, takefocus=0)"""
 
-                                self.plainRadiobutton = Radiobutton(self, text="Plain text:", value=0, variable=self.root.hashCalculationSourceVar, command=self.changeSourceSelection, takefocus=0)
+                                self.plainRadiobutton = Radiobutton(self, text="Plain text:", value=0, variable=self.root.base64SourceVar, command=self.changeSourceSelection, takefocus=0)
                                 self.plainEntry = ScrolledText(self, height=4, width=43, textvariable=self.root.base64InputVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                                 self.plainValidity = Label(self, text="Validity: [Blank]", foreground="gray")
                                 self.plainClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, state=DISABLED, takefocus=0)
                                 self.plainPasteButton = Button(self, width=15, text="Paste", command=lambda: self.plainEntry.replace(self.root.clipboard_get()), takefocus=0)
 
-                                self.fileRadiobutton = Radiobutton(self, text="File:", value=1, variable=self.root.hashCalculationSourceVar, command=self.changeSourceSelection, takefocus=0)
+                                self.fileRadiobutton = Radiobutton(self, text="File:", value=1, variable=self.root.base64SourceVar, command=self.changeSourceSelection, takefocus=0)
                                 self.fileValidity = Label(self, text="Validity: [Blank]", foreground="gray", state=DISABLED)
-                                self.fileEntry = Entry(self, width=44, font=("Consolas", 10), textvariable=self.root.hashFileEntryVar, takefocus=0, state=DISABLED)
+                                self.fileEntry = Entry(self, width=44, font=("Consolas", 10), textvariable=self.root.base64FileEntryVar, takefocus=0, state=DISABLED)
                                 self.fileClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, takefocus=0, state=DISABLED)
                                 self.fileBrowseButton = Button(self, width=15, text="Browse...", command=self.browseFile, takefocus=0, state=DISABLED)
 
@@ -1808,17 +1890,37 @@ class Interface(Tk):
                                 self.plainEntry.place(x=25, y=22)
                                 self.plainClearButton.place(x=131, y=98)
                                 self.plainPasteButton.place(x=24, y=98)
+                                
+                                self.fileRadiobutton.place(x=7, y=125)
+                                self.fileEntry.place(x=25, y=147)
+                                self.fileClearButton.place(x=131, y=174)
+                                self.fileBrowseButton.place(x=24, y=174)
 
                                 self.operationFrame = operationFrame(self)
-                                self.operationFrame.place(x=10, y=185)
+                                self.operationFrame.place(x=10, y=225)
                                 
-                                self.outputLabel.place(x=7, y=250)
-                                self.outputText.place(x=10, y=272)
-                                self.outputClearButton.place(x=116, y=348)
-                                self.outputCopyButton.place(x=9, y=348)
+                                self.outputLabel.place(x=7, y=290)
+                                self.outputText.place(x=10, y=312)
+                                self.outputClearButton.place(x=116, y=388)
+                                self.outputCopyButton.place(x=9, y=388)
 
                             def changeSourceSelection(self):
-                                pass
+                                if not bool(self.root.base64SourceVar.get()):
+                                    self.plainEntry.configure(state=NORMAL)
+                                    self.plainClearButton.configure(state=NORMAL if ''.join(self.plainEntry.get()) != '' else DISABLED)
+                                    self.plainPasteButton.configure(state=NORMAL)
+                                    
+                                    self.fileEntry.configure(state=DISABLED)
+                                    self.fileClearButton.configure(state=DISABLED)
+                                    self.fileBrowseButton.configure(state=DISABLED)
+                                else:
+                                    self.plainEntry.configure(state=DISABLED)
+                                    self.plainClearButton.configure(state=DISABLED)
+                                    self.plainPasteButton.configure(state=DISABLED)
+                                    
+                                    self.fileEntry.configure(state=NORMAL)
+                                    self.fileClearButton.configure(state=NORMAL if ''.join(self.fileEntry.get()) != '' else DISABLED)
+                                    self.fileBrowseButton.configure(state=NORMAL)
 
                             def browseFile(self):
                                 pass
@@ -2184,7 +2286,7 @@ class Interface(Tk):
                             self.downloadingLabel.place(relx=.5, rely=.5, anchor=CENTER)
                         else:
                             self.root._sourceLoadFailure = False
-                        self.sourceText.pack(expand=1, fill=BOTH)
+                        self.sourceText.pack(expand=YES, fill=BOTH)
 
                 self.encryptionFrame = encryptionFrame(self)
                 self.decryptionFrame = decryptionFrame(self)
@@ -2201,7 +2303,7 @@ class Interface(Tk):
                 self.add(self.sourceFrame, text="Source Code")
 
         self.mainNotebook = mainNotebook(self)
-        self.mainNotebook.pack(fill=BOTH, expand=1, pady=4, padx=4, side=TOP)
+        self.mainNotebook.pack(fill=BOTH, expand=YES, pady=4, padx=4, side=TOP)
 
         self.statusBar = TkLabel(self, text="Status: Ready", bd=1, relief=SUNKEN, anchor=W)
         self.statusBar.pack(side=BOTTOM, fill=X)
@@ -2258,6 +2360,8 @@ class Interface(Tk):
         self.encodeOrDecodeVar = IntVar(value=0)
         self.base64InputVar = StringVar()
         self.base64OutputVar = StringVar()
+        self.base64SourceVar = IntVar(value=0)
+        self.base64FileEntryVar = StringVar()
         self.keyInputVar = StringVar()
         self.keyInputHideVar = IntVar(value=0)
         self.keyOutputVar = StringVar()
@@ -2362,6 +2466,7 @@ class Interface(Tk):
                 class fileMenu(Menu):
                     def __init__(self, master: menuBar):
                         super().__init__(master, tearoff=0)
+                        self.root: Interface = self.master.master
                         self.add_command(label = "Encryption", command=lambda: self.master.master.mainNotebook.select(0), accelerator="Ctrl+E", underline=0)
                         self.add_command(label = "Decryption", command=lambda: self.master.master.mainNotebook.select(1), accelerator="Ctrl+D", underline=0)
                         self.add_command(label = "Miscellaneous", command=lambda: self.master.master.mainNotebook.select(2), accelerator="Ctrl+M", underline=0)
@@ -2370,7 +2475,7 @@ class Interface(Tk):
                         self.add_separator()
                         self.add_command(label = "Check for updates", command=lambda: self.master.master.Updates(self.master.master), accelerator="Ctrl+Alt+U", underline=10)
                         self.add_separator()
-                        self.add_command(label = "Exit", accelerator="Alt+F4", command=lambda: self.master.destroy())
+                        self.add_command(label = "Exit", accelerator="Alt+F4", command=lambda: self.root.destroy())
 
                 class viewMenu(Menu):
                     def __init__(self, master: menuBar):
@@ -2394,7 +2499,7 @@ class Interface(Tk):
                                 class speedMenu(Menu):
                                     def __init__(self, master: titleMenu):
                                         super().__init__(master, tearoff=0)
-                                        self.root = self.master.master.master.master
+                                        self.root: Interface = self.master.master.master.master
                                         self.add_radiobutton(label = "Fast", value=1, variable=self.root.updateInterval)
                                         self.add_radiobutton(label = "Moderate", value=2, variable=self.root.updateInterval)
                                         self.add_radiobutton(label = "Slow", value=3, variable=self.root.updateInterval)
