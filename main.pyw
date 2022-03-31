@@ -1848,13 +1848,6 @@ class Interface(Tk):
                                 super().__init__(master=master, height=442, width=405, text="Base64 Encoder & Decoder")
                                 self.root: Interface = self.master.master.master
 
-                                """self.base64InputLabel = Label(self, text="Input", takefocus=0)
-                                self.base64InputValidity = Label(self, text="Validity: [Blank]", foreground="gray")
-                                self.base64InputText = ScrolledText(self, height=4, width=45, textvariable=self.root.base64InputVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
-                                self.inputClearButton = Button(self, width=15, text="Clear", command=self.base64InputText.clear, state=DISABLED, takefocus=0)
-                                self.inputPasteButton = Button(self, width=15, text="Paste", command=lambda: self.base64InputText.replace(self.root.clipboard_get()), takefocus=0)
-                                self.inputBrowseButton = Button(self, width=17, text="Browse...", command=self.browseBase64InputFile, takefocus=0)"""
-
                                 self.plainRadiobutton = Radiobutton(self, text="Plain text:", value=0, variable=self.root.base64SourceVar, command=self.changeSourceSelection, takefocus=0)
                                 self.plainEntry = ScrolledText(self, height=4, width=43, textvariable=self.root.base64InputVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                                 self.plainValidity = Label(self, text="Validity: [Blank]", foreground="gray")
@@ -1863,7 +1856,7 @@ class Interface(Tk):
 
                                 self.fileRadiobutton = Radiobutton(self, text="File:", value=1, variable=self.root.base64SourceVar, command=self.changeSourceSelection, takefocus=0)
                                 self.fileValidity = Label(self, text="Validity: [Blank]", foreground="gray", state=DISABLED)
-                                self.fileEntry = Entry(self, width=44, font=("Consolas", 10), textvariable=self.root.base64FileEntryVar, takefocus=0, state=DISABLED)
+                                self.fileEntry = Entry(self, width=51, font=("Consolas", 10), textvariable=self.root.base64FileEntryVar, takefocus=0, state=DISABLED)
                                 self.fileClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, takefocus=0, state=DISABLED)
                                 self.fileBrowseButton = Button(self, width=15, text="Browse...", command=self.browseFile, takefocus=0, state=DISABLED)
 
@@ -1906,15 +1899,15 @@ class Interface(Tk):
 
                             def changeSourceSelection(self):
                                 if not bool(self.root.base64SourceVar.get()):
-                                    self.plainEntry.configure(state=NORMAL)
-                                    self.plainClearButton.configure(state=NORMAL if ''.join(self.plainEntry.get()) != '' else DISABLED)
+                                    self.plainEntry.configure(state=NORMAL, bg="white", foreground="black", relief=FLAT, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#7a7a7a")
+                                    self.plainClearButton.configure(state=NORMAL if ''.join(self.plainEntry.get("1.0")) != '' else DISABLED)
                                     self.plainPasteButton.configure(state=NORMAL)
                                     
                                     self.fileEntry.configure(state=DISABLED)
                                     self.fileClearButton.configure(state=DISABLED)
                                     self.fileBrowseButton.configure(state=DISABLED)
                                 else:
-                                    self.plainEntry.configure(state=DISABLED)
+                                    self.plainEntry.configure(state=DISABLED, bg="#F0F0F0", foreground="gray", relief=FLAT, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
                                     self.plainClearButton.configure(state=DISABLED)
                                     self.plainPasteButton.configure(state=DISABLED)
                                     
@@ -1923,9 +1916,6 @@ class Interface(Tk):
                                     self.fileBrowseButton.configure(state=NORMAL)
 
                             def browseFile(self):
-                                pass
-
-                            def browseBase64InputFile(self):
                                 filePath = filedialog.askopenfilename(title=f"Open a file to {'encode' if not bool(self.root.encodeOrDecodeVar.get()) else 'decode'}", filetypes=[("All files", "*.*")])
                                 if ''.join(filePath.split()) != '':
                                     try:
