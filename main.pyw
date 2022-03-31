@@ -1925,20 +1925,6 @@ class Interface(Tk):
                                         messagebox.showerror("Access denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
                                         self.root.logger.error("Read permission for the file specified has been denied, base64 encoding was interrupted.")
                                         return
-                                    try:
-                                        index = index.decode("utf-8")
-                                    except UnicodeDecodeError:
-                                        self.base64InputText.configure(foreground="gray", wrap=WORD)
-                                        self.base64InputText.replace("File content is not being displayed because it's in an unknown encoding.")
-                                    else:
-                                        if len(index) > 15000:
-                                            self.base64InputText.configure(foreground="gray", wrap=WORD)
-                                            self.base64InputText.replace("File content is not being displayed because it's longer than 15.000 characters.")
-                                        else:
-                                            self.base64InputText.configure(foreground="black")
-                                            self.base64InputText.replace(index)
-                                    finally:
-                                        self.index = index
 
                             def base64InputCallback(self, *args, **kwargs):
                                 if ''.join(self.plainEntry.get("1.0", END).split()) != "":
