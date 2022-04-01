@@ -83,24 +83,15 @@ try:
     import functools, multipledispatch, sqlite3, inspect
 
 except (ModuleNotFoundError, ImportError) as exc:
+    # If an error occurs while importing a module, show an error message explaining how to install the module, and exit the program
     lib: str = exc.msg.replace("No module named '", "").replace("'", "")
     match lib:
         case "Crypto.Cipher" | "Crypto.PublicKey" | "Crypto.Signature" | "Crypto.Hash" | "Crypto.Protocol.KDF" | "Crypto.Random":
             lib_name = "pycryptodome"
         case _:
-            lib_name = exc.msg.replace("No module named '", "").replace("'", "")
+            lib_name = lib
     messagebox.showerror("Missing library", "A required library named \"{name}\" is missing! You should be able to install that library with the following command:\n\npython -m pip install {name}\n\nIf that doesn't work, try googling.".format(name=lib_name))
     __import__("sys").exit()
-
-class Thread(Thread):
-    def __init__(self, group=None, target: Callable = None, name: str = None, args: tuple = (), kwargs: dict = {}):
-        super().__init__(group, target, name, args, kwargs)
-        self.target, self.args, self.kwargs = target, args, kwargs
-        self._return = None
-
-    def start(self) -> Any:
-        if self.target is not None:
-            return self.target(*self.args, **self.kwargs)
 
 def threaded(function: Callable):
     """
@@ -156,7 +147,6 @@ def exception_logged(function: Callable):
             messagebox.showerror(f"Unexpected {'fatal ' if 'root' not in globals() | locals() else ''}error", f"An unexpected & unknown {'fatal ' if 'root' not in globals() | locals() else ''}error has occured. Error details {'have been saved to Encrypt-n-Decrypt.log' if 'root' not in globals() | locals() else 'can be found in logs'}. Please report this error to me over GitHub with the error details.")
             if "root" in globals() | locals():
                 root.statusBar.configure(text="Status: Ready")
-                
     return wrapper
 
 @exception_logged
@@ -209,7 +199,7 @@ class Cryptography(object):
     @staticmethod
     def generate_key(length: int = 32) -> str:
         """
-        Function to generate and return a random encryption key in the given length (defaults to 32)
+        Static method to generate and return a random encryption key in the given length (defaults to 32)
         """
         if not isinstance(length, int):
             length = int(length)
@@ -225,10 +215,9 @@ class Cryptography(object):
         return key
 
     @staticmethod
-    @threaded
     def derivate_key(password: str | bytes) -> Optional[bytes]:
         """
-        Function to derivate an encryption key from a password (using KDF protocol)
+        Static method to derivate an encryption key from a password (using KDF protocol)
         """
         try:
             return base64.urlsafe_b64encode(scrypt(password.decode("utf-8") if isinstance(password, bytes) else password, get_random_bytes(16), 24, N=2**14, r=8, p=1))
@@ -237,6 +226,9 @@ class Cryptography(object):
 
     @staticmethod
     def get_key(path: str, entry: Entry, root: Tk) -> Optional[str]:
+        """
+        Static method to get the encryption key from the given file and insert it into the given entry
+        """
         path = filedialog.askopenfilename(title="Select key file", filetypes=[("Encrypt'n'Decrypt key file", "*.key"), ("Text document", "*.txt"), ("All files", "*.*")])
         if ''.join(path.split()) == '':
             return
@@ -252,12 +244,15 @@ class Cryptography(object):
                     return
                 else:
                     entry.replace(index.decode("utf-8"))
+                    return index.decode("utf-8")
             case 76 | 88 | 96:
                 with open(path, mode="rb") as file:
                     index = file.read()
                 for s, e in zip(range(0, len(index)), range(int(len(index) / 3), len(index))):
                     try:
-                        entry.replace(AES.new(index[s:e], AES.MODE_CFB, iv=base64.urlsafe_b64decode(index.replace(index[s:e], b""))[:16]).decrypt(base64.urlsafe_b64decode(index.replace(index[s:e], b""))[16:]).decode("utf-8"))
+                        result = AES.new(index[s:e], AES.MODE_CFB, iv=base64.urlsafe_b64decode(index.replace(index[s:e], b""))[:16]).decrypt(base64.urlsafe_b64decode(index.replace(index[s:e], b""))[16:]).decode("utf-8")
+                        entry.replace(result)
+                        return result
                     except Exception:
                         continue
             case _:
@@ -267,12 +262,17 @@ class Cryptography(object):
             
     @classmethod
     def save_key(cls, key: str | bytes, root: Tk) -> None:
+        """
+        Static method to save the encryption key to a file
+        """
         if isinstance(key, str):
             key = bytes(key, "utf-8")
         path = filedialog.asksaveasfilename(title="Save encryption key", initialfile="Encryption Key.key", filetypes=[("Encrypt'n'Decrypt key file", "*.key"), ("Text document", "*.txt"), ("All files", "*.*")], defaultextension="*.key")
         if ''.join(path.split()) == '':
+            # If save dialog was closed without choosing a file, return
             return
         if os.path.splitext(path)[1].lower() == ".key":
+            # If the file extension is .key, save the key using the special algorithm
             _key = cls.generate_key(32)
 
             iv = get_random_bytes(AES.block_size)
@@ -291,6 +291,7 @@ class Cryptography(object):
                     file.write(str(final))
                 root.logger.debug("Encryption key has been saved to \"{}\"".format(path))
         else:
+            # Otherwise, simply save the key onto the file
             with open(path, encoding="utf-8", mode="wb") as file:
                 file.write(key)
 
@@ -306,6 +307,9 @@ class Cryptography(object):
 
     @property
     def encryption_busy(self) -> bool:
+        """
+        Property to check if an encryption process is currently in progress
+        """
         return self.__encryption_busy
     @encryption_busy.setter
     def encryption_busy(self, value: bool) -> None:
@@ -315,6 +319,9 @@ class Cryptography(object):
 
     @property
     def decryption_busy(self) -> bool:
+        """
+        Property to check if a decryption process is currently in progress
+        """
         return self.__decryption_busy
     @decryption_busy.setter
     def decryption_busy(self, value: bool) -> None:
@@ -329,14 +336,18 @@ class Cryptography(object):
         root: Interface = self.master
 
         if not bool(root.mainNotebook.encryptionFrame.algorithmSelect.index(root.mainNotebook.encryptionFrame.algorithmSelect.select())):
+            # If the "Symmetric Key Encryption" tab is selected...
             if not bool(root.keySourceSelection.get()):
+                # If the user has chosen to generate a new key, generate one
                 self.update_status("Generating the key...")
                 key: bytes = self.generate_key(int(root.generateRandomAESVar.get() if not bool(root.generateAlgorithmSelection.get()) else root.generateRandomDESVar.get()) / 8).encode("utf-8")
             else:
+                # Otherwise, use the key the user has provided
                 key: bytes = root.keyEntryVar.get().encode("utf-8")
 
             self.update_status("Creating the cipher...")
             try:
+                # Try to create the cipher (either AES or DES3 object according to the user's choice) with the given/generated key
                 if (not bool(root.generateAlgorithmSelection.get()) and not bool(root.keySourceSelection.get())) or (not bool(root.entryAlgorithmSelection.get()) and bool(root.keySourceSelection.get())):
                     iv = get_random_bytes(AES.block_size)
                     cipher = AES.new(key, AES.MODE_CFB, iv=iv)
@@ -345,11 +356,13 @@ class Cryptography(object):
                     cipher = DES3.new(key, mode=DES3.MODE_OFB, iv=iv)
             except ValueError as details:
                 if not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
+                    # If the key length is not valid, show an error message
                     messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
                     root.logger.error("Key with invalid length was specified")
                     self.update_status("Ready")
                     return
                 else:
+                    # If the key length is valid, but the key contains invalid characters, show an error message
                     messagebox.showerror("Invalid key", "The key you've entered is invalid for encryption. Please enter another key or consider generating one instead.")
                     root.logger.error("Invalid key was specified")
                     self.update_status("Ready")
@@ -357,13 +370,18 @@ class Cryptography(object):
 
             datas: list[str | bytes] = []
             if not bool(root.dataSourceVar.get()):
+                # If the user has chosen to encrypt a plain text, simply put the text from the entry to the datas list
                 datas.append(bytes(root.textEntryVar.get(), "utf-8"))
             else:
+                # Otherwise, split the file paths from the entry using '|' character and put in the datas list
                 path: str = root.mainNotebook.encryptionFrame.fileEntry.get()
                 for filename in path.split('|'):
                     datas.append(filename)
+            
+            # Iterate over the data(s) to be encrypted
             for raw, index in [(raw.lstrip(), datas.index(raw)) for raw in datas]:
                 if isinstance(raw, str):
+                    # If the data is an instance of str, by other means, a file path, open the file and convert to bytes
                     try:
                         self.update_status(f"Reading the file (file {index}/{len(datas)})...")
                         with open(raw, mode="rb") as file:
@@ -374,32 +392,40 @@ class Cryptography(object):
                         self.update_status("Ready")
                         return
                 else:
+                    # Otherwise, just use the current data as is
                     data: bytes = raw
                 try:
-                    self.update_status(f"Encrypting (file {index}/{len(datas)})...")
+                    self.update_status(f"Encrypting (file {index}/{len(datas)})..." if isinstance(raw, str) else "Encrypting...")
+                    # Encrypt the data and combine it with the IV used
                     root.lastEncryptionResult = iv + cipher.encrypt(data)
                 except MemoryError:
+                    # If the computer runs out of memory while encrypting (happens when encrypting big files), show an error message
                     messagebox.showerror("Not enough memory", "Your computer has run out of memory while encrypting the file. Try closing other applications or restart your computer.")
                     root.logger.error("Device has run out of memory while encrypting, encryption was interrupted")
                     self.update_status("Ready")
                     return
+                # Delete the data variable since we have the encrypted data held on another variable, in order to free up some memory
                 del data
-                self.update_status(f"Encoding the result (file {index}/{len(datas)})...")
+                self.update_status(f"Encoding the result (file {index}/{len(datas)})..." if isinstance(raw, str) else "Encoding the result...")
                 try:
                     try:
+                        # Encode the result using base64
                         root.lastEncryptionResult = base64.urlsafe_b64encode(root.lastEncryptionResult).decode("utf-8")
                     except TypeError:
                         self.update_status("Ready")
                         return
                 except MemoryError:
+                    # Again, if the computer runs out of memory while encoding, show an error message
                     messagebox.showerror("Not enough memory", "Your computer has run out of memory while encoding the result. Try closing other applications or restart your computer.")
                     root.logger.error("Device has run out of memory while encoding, encryption was interrupted")
                     self.update_status("Ready")
                     return
+                # Set the variables holding the key used and the file encrypted (if applicable) in order to be able to copy later
                 root.lastEncryptionKey = key
                 root.lastEncryptedFile = root.fileEntryVar.get() if bool(root.dataSourceVar.get()) else None
 
                 failure = False
+                # If a file was chosen to be encrypted and the user had chosen to overwrite the file with the result, write the result to the file
                 if bool(root.dataSourceVar.get()) and bool(root.writeFileContentVar.get()):
                     self.update_status("Writing to the file...")
                     for _ in range(1):
@@ -407,6 +433,7 @@ class Cryptography(object):
                             with open(path, mode="wb") as file:
                                 file.write(bytes(root.lastEncryptionResult, "utf-8"))
                         except PermissionError:
+                            # If the program doesn't have write access to the file, show an error message
                             if messagebox.askyesnocancel("Access denied", "Write access to the file you've specified had been denied. Do you want to save the encrypted data as another file?"):
                                 newpath = filedialog.asksaveasfilename(title="Save encrypted data", initialfile=os.path.basename(path[:-1] if path[-1:] == "\\" else path), initialdir=os.path.dirname(path), filetypes=[("All files","*.*")], defaultextension="*.key")
                                 if newpath == "":
@@ -422,6 +449,7 @@ class Cryptography(object):
                             return
                         except OSError as details:
                             if "No space" in str(details):
+                                # If no space left on device to save the result, show an error message
                                 messagebox.showerror("No space left", "There is no space left on your device. Free up some space and try again.")
                                 root.logger.error("No space left on device, encrypted data could not be saved to the destination")
                                 self.update_status("Ready")
@@ -429,14 +457,17 @@ class Cryptography(object):
                                 pass
 
             if len(datas) != 1 and bool(root.dataSourceVar.get()):
+                # If multiple files were encrypted, don't show the result (because how are we supposed to show anyway)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("The encrypted text is not being displayed because multiple files were selected to be encrypted.")
                 del root.lastEncryptionResult
             elif len(root.lastEncryptionResult) > 15000:
+                # If one file was chosen or a plain text was entered to be encrypted, but the result is over 15.000 characters, don't show the result
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
                 del root.lastEncryptionResult
             else:
+                # Otherwise, just show it
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="black", wrap=None)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.replace(root.lastEncryptionResult)
 
@@ -448,6 +479,7 @@ class Cryptography(object):
 
             self.update_status("Ready")
             if not failure:
+                # If there was no error while writing the result to the file, log the success
                 if not bool(root.keySourceSelection.get()):
                     root.logger.info(f"{'Entered text' if not bool(root.dataSourceVar.get()) else 'Specified file'} has been successfully encrypted using {'AES' if not bool(root.generateAlgorithmSelection.get()) else '3DES'}-{len(key) * 8} algorithm")
                 else:
@@ -588,6 +620,7 @@ class Cryptography(object):
     @threaded
     @exception_logged
     def hash(self, data: str | bytes, SHA1Widget: Widget, SHA256Widget: Widget, SHA512Widget: Widget, MD5Widget: Widget) -> None:
+        # Define the widgets related to hashing
         self.__hashDigestFrame: object = self.root.mainNotebook.miscFrame.hashDigestFrame
         self.SHA1Entry, self.SHA256Entry, self.SHA512Entry, self.MD5Entry = SHA1Widget, SHA256Widget, SHA512Widget, MD5Widget
         self.__hashEntries: dict[str, Widget] = {}
@@ -596,6 +629,7 @@ class Cryptography(object):
             "file": {},
             "output": {}
         }
+        # Instead of inserting every single widget manually, just use a hack to get the widgets from the frame
         for name, value in self.__hashDigestFrame.__dict__.items():
             if name[0].islower() and isinstance(value, (Button, Entry, Radiobutton)):
                 self.__hashWidgets[findall('[a-zA-Z][^A-Z]*', name)[0]][name] = value
@@ -604,6 +638,7 @@ class Cryptography(object):
             elif name.startswith(("SHA", "MD5")) and "entry" in name.lower():
                 self.__hashEntries[name] = value
 
+        # No need for hacking here
         self.__hashAlgorithms: dict[str, object] = {
             "SHA-1": SHA1,
             "SHA-256": SHA256,
@@ -611,21 +646,27 @@ class Cryptography(object):
             "MD-5": MD5
         }
         
+        # If the data is an instance of str data type, by other means, if a file was chosen; the same file was hashed before; and the size of the previously hashed file is exactly the same as current; return
         if isinstance(data, str) and self.__hashDigestFrame._last_file["path"] == self.__hashDigestFrame.fileEntry.get() and self.__hashDigestFrame._last_file["size"] == os.path.getsize(self.__hashDigestFrame.fileEntry.get()):
             return
+        # For some reason, the entries turn to "normal" state, so we have to set them back to "readonly"
         for entry in self.__hashEntries.values():
             entry.configure(foreground="gray", state="readonly")
 
         if isinstance(data, str):
+            # If a file was chosen to be hashed...
             for category in self.__hashWidgets.values():
                 for widget in category.values():
+                    # Disable all the widgets to prevent the user from changing them
                     widget.configure(state=DISABLED)
             self.__hashDigestFrame.root.statusBar.configure(text="Status: Reading the file...")
             self.__hashDigestFrame.root.update()
             try:
+                # Attempt to read the file
                 with open(data, mode="rb") as file:
                     data = file.read()
             except (OSError, PermissionError):
+                # If the program has no read access to the file, show an error message
                 messagebox.showerror("Access denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
                 self.root.logger.error("Read permission for the file specified has been denied, hash calculation was interrupted.")
                 self.update_status("Ready")
@@ -633,19 +674,23 @@ class Cryptography(object):
                     True: "file",
                     False: "plain"
                 }
+                # Set all the widgets back to "normal" state
                 for widget in self.__hashWidgets[determine_category[bool(self.root.hashCalculationSourceVar.get())]].values():
                     widget.configure(state=NORMAL)
                 for radiobutton in [self.__hashWidgets["plain" if "plain" in widget.lower() else "file"][widget] for widget in [j for i in self.__hashWidgets.values() for j in i] if "radio" in widget.lower()]:
                     radiobutton.configure(state=NORMAL)
                 return
             else:
+                # To check later, save the file path and the file size to an attribute
                 self.__hashDigestFrame._last_file["path"] = self.__hashDigestFrame.fileEntry.get()
                 self.__hashDigestFrame._last_file["size"] = os.path.getsize(self.__hashDigestFrame.fileEntry.get())
+        # Start the hashing process...
         for entry, copy_button, name, algorithm in zip(self.__hashEntries.values(), [widget for name, widget in self.__hashWidgets["output"].items() if "copy" in name.lower()], self.__hashAlgorithms.keys(), self.__hashAlgorithms.values()):
             self.update_status(f"Calculating {name} hash...")
             _hasher = algorithm.new()
             _hasher.update(data)
             entry.replace(_hasher.hexdigest())
+            # As we get the hash of the data, set the copy widget of the entry back to "normal" state in order to let the user copy the hash quickly without waiting for others
             entry.configure(foreground="black", state="readonly")
             copy_button.configure(state=NORMAL)
         self.update_status("Ready")
@@ -654,12 +699,16 @@ class Cryptography(object):
             True: "file",
             False: "plain"
         }
+        # Set all the widgets back to "normal" state
         for widget in self.__hashWidgets[determine_category[bool(self.root.hashCalculationSourceVar.get())]].values():
             widget.configure(state=NORMAL)
         for radiobutton in [self.__hashWidgets["plain" if "plain" in widget.lower() else "file"][widget] for widget in [j for i in self.__hashWidgets.values() for j in i] if "radio" in widget.lower()]:
             radiobutton.configure(state=NORMAL)
 
 class Cache(object):
+    """
+    Class for storing logging history and other history data (will be implemented soon)
+    """
     def __init__(self, master: Tk):
         super().__init__()
         self.master = master
@@ -676,6 +725,7 @@ class Handler(logging.Handler):
         self.cache = cache
 
     def emit(self, record: logging.LogRecord):
+        # Format the log message if it was not specified not to be formatted (e.g. if the log message ends with '!NO_FORMAT')
         message = record.getMessage().replace("!NO_FORMAT", "") if record.getMessage().endswith("!NO_FORMAT") else self.format(record)
         def append():
             levels = {
@@ -684,12 +734,15 @@ class Handler(logging.Handler):
             }
             if record.levelno < levels[self.master.levelSelectVar.get()]:
                 return
+            # Insert the log message into the logging widget
             self.widget.configure(state=NORMAL)
             self.widget.insert(END, message, record.levelname.lower())
             self.widget.configure(state=DISABLED)
-
+            
+            # Scroll the widget down to the last line
             self.widget.yview(END)
         if self.widget is not None:
+            # If a widget for logging was specified, call the above function
             self.widget.after(0, append)
         record_dict: dict = {}
         record_dict[record] = {
@@ -701,6 +754,7 @@ class Handler(logging.Handler):
         self.cache.loggings_history.append(record_dict)
 
         if bool(self.master.loggingAutoSaveVar.get()):
+            # If the user has enabled auto-saving, save the log messages to a file
             temp_list: list = []
             for entry in self.cache.loggings_history:
                 record: logging.LogRecord = list(entry.keys())[0]
@@ -726,6 +780,9 @@ class Handler(logging.Handler):
 
     @staticmethod
     def format(record: logging.LogRecord) -> str:
+        """
+        Static method for formatting the log message with the date created and the level of the log
+        """
         return f"{datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')} [{record.levelname}] {record.getMessage()}" + "{}".format('\n' if not record.getMessage().endswith('\n') else '')
 
 class Logger(object):
@@ -745,6 +802,9 @@ class Logger(object):
 
     @exception_logged
     def end_logging_file(self):
+        """
+        Method for adding ending line to the log file on termination of the program
+        """
         if bool(self.root.loggingAutoSaveVar.get()):
             try:
                 with open(f"{__title__}.log", mode="r", encoding="utf-8") as file:
@@ -755,6 +815,7 @@ class Logger(object):
                 if ''.join(index.split()) != '':
                     file.write(f"{'='*24} End of logging session {'='*25}\n")
 
+    # Overwrite all the methods for logging in order to implement 'format' parameter
     def debug(self, message: str, format: bool = True):
         self.logger.debug((message + "\n" if not message.endswith("\n") else message) + ("!NO_FORMAT" if not format else ""))
     def info(self, message: str, format: bool = True):
@@ -767,6 +828,9 @@ class Logger(object):
         self.logger.critical((message + "\n" if not message.endswith("\n") else message) + ("!NO_FORMAT" if not format else ""))
 
 class ToolTip(object):
+    """
+    A class for creating tooltips that appear on hover
+    """
     def __init__(self, widget: Widget, tooltip: str, interval: int = 1000, length: int = 400):
         self.widget = widget
         self.interval = interval
@@ -796,12 +860,15 @@ class ToolTip(object):
 
     @exception_logged
     def showtip(self, event=None):
+        # Get the mouse position and determine the screen coordinates to show the tooltip
         x = root.winfo_pointerx() + 12
         y = root.winfo_pointery() + 16
 
+        # Create a Toplevel because we can't just show a label out of nowhere in the main window with fade-in & fade-away animations
         self.tw = Toplevel(self.widget)
         self.tw.attributes("-alpha", 0)
 
+        # Configure the tooltip for visuality
         self.tw.wm_overrideredirect(True)
         self.tw.wm_geometry("+%d+%d" % (x, y))
         label = Label(self.tw, text=self.text,
@@ -812,21 +879,24 @@ class ToolTip(object):
 
         def fade_in():
             if not self.widget is root.winfo_containing(root.winfo_pointerx(), root.winfo_pointery()):
+                # If mouse is no longer on the widget, destroy the tooltip and unschedule the fade_in
                 self.tw.destroy()
                 return
             alpha = self.tw.attributes("-alpha")
             if alpha != 1:
+                # Increase the transparency by 0.1 until it is fully visible
                 alpha += .1
                 self.tw.attributes("-alpha", alpha)
+                # Call this function again in 10 milliseconds (value of self.speed attribute)
                 self.tw.after(self.speed, fade_in)
             else:
-                self.tw.attributes("-alpha", 1)
                 return
         fade_in()
 
     @exception_logged
     def hidetip(self):
         if self.tw:
+            # If the tooltip is still a thing (i.e. it has not been destroyed unexpectedly), start fading it away
             def fade_away():
                 if self.widget is root.winfo_containing(root.winfo_pointerx(), root.winfo_pointery()):
                     self.tw.destroy()
@@ -836,8 +906,10 @@ class ToolTip(object):
                 except TclError:
                     return
                 if alpha != 0:
+                    # Decrease the transparency by 0.1 until it is fully invisible
                     alpha -= .1
                     self.tw.attributes("-alpha", alpha)
+                    # Call this function again in 10 milliseconds (value of self.speed attribute)
                     self.tw.after(self.speed, fade_away)
                 else:
                     self.tw.destroy()
@@ -850,6 +922,8 @@ class ScrolledText(Text):
             self._textvariable = kwargs.pop("textvariable")
         except KeyError:
             self._textvariable = None
+
+        # Implement the scrollbar
         self.frame = Frame(master)
         self.vbar = Scrollbar(self.frame)
         self.vbar.pack(side=RIGHT, fill=Y)
@@ -865,6 +939,7 @@ class ScrolledText(Text):
             if m[0] != '_' and m != 'config' and m != 'configure':
                 setattr(self, m, getattr(self.frame, m))
 
+        # Implement textvariable
         if self._textvariable is not None:
             self.insert("1.0", self._textvariable.get())
         self.tk.eval("""
@@ -887,11 +962,15 @@ class ScrolledText(Text):
         if self._textvariable is not None:
             self._textvariable.trace("wu", self._on_var_change)
 
+        # Create the tooltip object for the widget if a string for tooltip was specified (rather than None)
         if tooltip is not None:
             self.toolTip = ToolTip(widget=self, tooltip=tooltip)
 
     @multipledispatch.dispatch(str)
     def replace(self, chars: str):
+        """
+        Method to replace the text in the widget entirely with the given string
+        """
         old_val = self["state"]
         self.configure(state=NORMAL)
         self.delete("1.0", END)
@@ -900,10 +979,16 @@ class ScrolledText(Text):
 
     @multipledispatch.dispatch(str, str, str)
     def replace(self, chars: str, start_index: str, end_index: str):
+        """
+        Text class' original replace method in case the user (me) wants to replace a range of text
+        """
         self.tk.call(self._w, 'replace', start_index, end_index, chars)
 
     @exception_logged
     def clear(self):
+        """
+        Method to clear all the text in the widget
+        """
         old_val = self["state"]
         self.configure(state=NORMAL)
         self.delete("1.0", END)
@@ -934,6 +1019,7 @@ class Text(Text):
 
         super().__init__(master, *args, **kwargs)
 
+        # Implement textvariable
         if self._textvariable is not None:
             self.insert("1.0", self._textvariable.get())
         self.tk.eval("""
@@ -956,11 +1042,15 @@ class Text(Text):
         if self._textvariable is not None:
             self._textvariable.trace("wu", self._on_var_change)
         
+        # Create the tooltip object for the widget if a string for tooltip was specified (rather than None)
         if tooltip is not None:
             self.toolTip = ToolTip(widget=self, tooltip=tooltip)
 
     @multipledispatch.dispatch(str)
     def replace(self, chars: str):
+        """
+        Method to replace the text in the widget entirely with the given string
+        """
         old_val = self["state"]
         self.configure(state=NORMAL)
         self.delete("1.0", END)
@@ -969,10 +1059,16 @@ class Text(Text):
 
     @multipledispatch.dispatch(str, str, str)
     def replace(self, chars: str, start_index: str, end_index: str):
+        """
+        Text class' original replace method in case the user (me) wants to replace a range of text
+        """
         self.tk.call(self._w, 'replace', start_index, end_index, chars)
 
     @exception_logged
     def clear(self):
+        """
+        Method to clear all the text in the widget
+        """
         old_val = self["state"]
         self.configure(state=NORMAL)
         self.delete("1.0", END)
@@ -998,6 +1094,11 @@ class Notebook(Notebook):
 
     @property
     def last_tab(self) -> Optional[int]:
+        """
+        Property to get the index of the last tab that was selected in case an
+        error occures while switching to a tab that downloads data from web and
+        the program must return to the last tab
+        """
         try:
             return self.__history[-2]
         except IndexError:
@@ -1009,8 +1110,11 @@ class Notebook(Notebook):
     @exception_logged
     def on_tab_change(self, event = None):
         if self.master.__class__.__name__ == Interface.__name__:
+            # If the notebook we're talking about is the main notebook...
             if self.index(self.select()) == 4:
+                # If the selected tab is the "About & Help" tab...
                 if not hasattr(self, "HTML"):
+                    # If the content isn't downloaded from web yet, downlaod it and assign the HTML to the HTML attribute so that we won't have to download it again
                     self.master.statusBar.configure(text="Status: Downloading HTML...")
                     self.master.update()
                     try:
@@ -1025,23 +1129,31 @@ class Notebook(Notebook):
                     self.HTML = markdown(request)
                     self.master.statusBar.configure(text="Status: Ready")
                     self.master.update()
+                # Re-create the widget that will show the HTML
                 self.master.readmePage = HtmlFrame(self.master, messages_enabled=False, vertical_scrollbar=True)
+                # Load the HTML
                 self.master.readmePage.load_html(self.HTML)
                 self.master.readmePage.set_zoom(0.8)
                 self.master.readmePage.grid_propagate(0)
                 self.master.readmePage.enable_images(1)
                 self.master.readmePage.place(x=5, y=27, height=528, width=790)
             else:
+                # If the selected tab is not the "About & Help" tab...
                 if hasattr(self.master, "readmePage"):
+                    # If the widget that shows the HTML exists, destroy it
                     try:
                         self.master.readmePage.place_forget()
                         self.master.readmePage.destroy()
                     except TclError:
                         pass
                 if self.index(self.select()) == 5 and hasattr(self.master, "_sourceLoadFailure") and self.master._sourceLoadFailure:
+                    # If the selected tab is the "Source Code" tab instead and there was an error while loading the source code...
                     self.master.update()
+                    # Get the AppData location
                     _appdata = f"{os.getenv('APPDATA')}\\{__title__}\\"
                     try:
+                        # Basically this whole bunch of code downloads the source code from GitHub and saves it to the AppData location, then
+                        # extracts the source code and shows the source code written in the *.py or *.pyw file in the source code widget
                         url = [release["zipball_url"] for release in get(f"https://api.github.com/repos/Yilmaz4/{__title__}/releases").json() if release["tag_name"] == f"v{__version__}"][0]
                         req = get(url, stream=True)
                         with open(_appdata + f"source_code_v{__version__}.zip", 'wb') as file:
@@ -1061,28 +1173,38 @@ class Notebook(Notebook):
                         rmtree(_appdata + f"source_code_v{__version__}")
                         os.remove(_appdata + f"source_code_v{__version__}.zip")
                     except IndexError:
+                        # As the error details below this comment explain, this error will pop up if the user is running the *.exe version and the version doesn't exist in the GitHub repository
                         messagebox.showerror("Source code could not be found", f"The source code of this program could not be loaded (as you're using the *.exe version) nor downloaded. This is most probably because you're using a more recent version than the latest release in GitHub repository.")
                         self.master.logger.error("Source code of this version of this program could not be found in GitHub")
+                        # Print the traceback information to the logging widget
                         for line in format_exc().splitlines():
                             self.master.logger.error(" " * (len(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')) + 1) + line + "\n", format=False)
                         self.master.mainNotebook.select(self.master.mainNotebook.last_tab)
                     except (gaierror, ConnectionError, NewConnectionError, MaxRetryError):
+                        # If there was any connection problem, this error will pop up
                         messagebox.showerror("No internet connection", "Your internet connection appears to be offline. We were unable to download required content to show this page.")
                         self.master.logger.error(f"Connection to 'raw.githubusercontent.com' has failed, downloading source code was interrupted.")
+                        # Print the traceback information to the logging widget
                         for line in format_exc().splitlines():
                             self.master.logger.error(" " * (len(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')) + 1) + line + "\n", format=False)
                         self.master.mainNotebook.select(self.master.mainNotebook.last_tab)
                     else:
+                        # If no problem has occured while downloading the source code, destroy the "Loading..." label
                         if hasattr(self.master.mainNotebook.sourceFrame, "downloadingLabel"):
                             self.master.mainNotebook.sourceFrame.downloadingLabel.place_forget()
                             del self.master.mainNotebook.sourceFrame.downloadingLabel
                         self.master._sourceLoadFailure = False        
 
+        # Limit the last tab history to 2 tabs
         if len(self.__history) >= 2:
             del self.__history[0]
+        # Add the selected tab to the history
         self.__history.append(self.index(self.select()))
 
 class Widget(Widget):
+    """
+    Base-class for all widgets except Text and ScrolledText widgets in order to implement tooltips
+    """
     def __init__(self, master: Tk | Frame | LabelFrame, tooltip: Optional[str] = None, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
 
@@ -1103,6 +1225,8 @@ class Entry(Widget, Entry):
         self.delete(0, END)
         self.configure(state=old_val)
 
+# Multiply inherit all the widgets from the Widget class and the original Tkinter widgets in order to add tooltips to them
+
 class Button(Widget, Button): ...
 
 class Label(Widget, Label): ...
@@ -1116,22 +1240,27 @@ class Interface(Tk):
     def __init__(self):
         super().__init__()
 
+        # Load either the "vista" theme (which is the default theme in Windows) or the "arc" theme depending on the operating system
         self.theme = ThemedStyle(self, gif_override=True)
         self.theme.set_theme("vista" if os.name == "nt" else "arc")
 
+        # Create all the variables used by widgets
         self.__initialize_vars()
 
+        # Hide the window till all the widgets are placed
         self.withdraw()
 
         self.height = 580
         self.width = 800
         self.version = __version__
 
+        # Shape the window and set the title
         self.wm_title(f"{__title__} v{self.version}")
         self.wm_geometry(f"{self.width}x{self.height}")
         self.wm_resizable(width=False, height=False)
         self.wm_minsize(width = self.width, height = self.height)
         self.wm_maxsize(width = self.width, height = self.height)
+        # Load the icon if it's present in the current directory
         try:
             self.wm_iconbitmap("icon.ico")
         except TclError:
@@ -1849,14 +1978,14 @@ class Interface(Tk):
                                 self.root: Interface = self.master.master.master
 
                                 self.plainRadiobutton = Radiobutton(self, text="Plain text:", value=0, variable=self.root.base64SourceVar, command=self.changeSourceSelection, takefocus=0)
-                                self.plainEntry = ScrolledText(self, height=4, width=43, textvariable=self.root.base64InputVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                                self.plainEntry = Entry(self, width=52, font=("Consolas", 10), textvariable=self.root.base64InputVar, takefocus=0)
                                 self.plainValidity = Label(self, text="Validity: [Blank]", foreground="gray")
                                 self.plainClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, state=DISABLED, takefocus=0)
                                 self.plainPasteButton = Button(self, width=15, text="Paste", command=lambda: self.plainEntry.replace(self.root.clipboard_get()), takefocus=0)
 
                                 self.fileRadiobutton = Radiobutton(self, text="File:", value=1, variable=self.root.base64SourceVar, command=self.changeSourceSelection, takefocus=0)
                                 self.fileValidity = Label(self, text="Validity: [Blank]", foreground="gray", state=DISABLED)
-                                self.fileEntry = Entry(self, width=51, font=("Consolas", 10), textvariable=self.root.base64FileEntryVar, takefocus=0, state=DISABLED)
+                                self.fileEntry = Entry(self, width=52, font=("Consolas", 10), textvariable=self.root.base64FileEntryVar, takefocus=0, state=DISABLED)
                                 self.fileClearButton = Button(self, width=15, text="Clear", command=self.plainEntry.clear, takefocus=0, state=DISABLED)
                                 self.fileBrowseButton = Button(self, width=15, text="Browse...", command=self.browseFile, takefocus=0, state=DISABLED)
 
@@ -1918,13 +2047,7 @@ class Interface(Tk):
                             def browseFile(self):
                                 filePath = filedialog.askopenfilename(title=f"Open a file to {'encode' if not bool(self.root.encodeOrDecodeVar.get()) else 'decode'}", filetypes=[("All files", "*.*")])
                                 if ''.join(filePath.split()) != '':
-                                    try:
-                                        with open(filePath, mode="rb") as file:
-                                            index = file.read()
-                                    except PermissionError:
-                                        messagebox.showerror("Access denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
-                                        self.root.logger.error("Read permission for the file specified has been denied, base64 encoding was interrupted.")
-                                        return
+                                    self.fileEntry.replace(filePath)
 
                             def base64InputCallback(self, *args, **kwargs):
                                 if ''.join(self.plainEntry.get("1.0", END).split()) != "":
@@ -2281,17 +2404,23 @@ class Interface(Tk):
         self.mainNotebook = mainNotebook(self)
         self.mainNotebook.pack(fill=BOTH, expand=YES, pady=4, padx=4, side=TOP)
 
+        # This is the status label in the bottom
         self.statusBar = TkLabel(self, text="Status: Ready", bd=1, relief=SUNKEN, anchor=W)
         self.statusBar.pack(side=BOTTOM, fill=X)
 
+        # Ready up everything after placing all the widgets
         self.__initialize_menu()
         self.__initialize_protocols()
         self.__initialize_bindings()
         self.__load_database()
 
+        # We're ready to go now, make the window visible
         self.deiconify()
 
     def __initialize_vars(self):
+        """
+        All the variables (either an instance of StringVar or IntVar) that are used by widgets are created here
+        """
         self.showTextChar = IntVar(value=0)
         self.showTooltip = IntVar(value=1)
         self.showInfoBox = IntVar(value=1)
@@ -2382,19 +2511,29 @@ class Interface(Tk):
 
     @exception_logged
     def __load_database(self):
+        """
+        Method to load the database containing the configurations for the program at startup
+        """
         try:
+            # If the folder for the program in AppData is present, load the database (create one if not-existent)
             con = sqlite3.connect(f"{os.getenv('APPDATA')}\\Encrypt-n-Decrypt\\settings.sqlite")
         except sqlite3.OperationalError:
+            # If the folder for the program in AppData is not present, create it and load the database (create one if not-existent)
             os.mkdir(f"{os.getenv('APPDATA')}\\Encrypt-n-Decrypt")
             con = sqlite3.connect(f"{os.getenv('APPDATA')}\\Encrypt-n-Decrypt\\settings.sqlite")
+        # Create the cursor as usual
         cur = con.cursor()
+        # If the database was just created (therefore empty), skip attempting to load data from it
         if not cur.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'user_data'").fetchall():
+            con.close()
             return
         else:
+            # Iterate over the data in the database and set the corresponding variables
             cur.execute("SELECT * FROM user_data")
             for key, value in cur.fetchall():
                 eval(f"self.{key}.set(" + (value if not any(ext in key for ext in ["themeVar", "levelSelectVar"]) else f'\'{value}\'') + ")")
 
+            # Call the methods of the GUI to update the GUI elements' states (normal or disabled) accordingly to the newly set values 
             self.mainNotebook.encryptionFrame.changeAlgorithmSelection()
             self.mainNotebook.encryptionFrame.changeSourceSelection()
             self.mainNotebook.encryptionFrame.changeDataSource()
@@ -2405,20 +2544,28 @@ class Interface(Tk):
             self.mainNotebook.miscFrame.hashDigestFrame.changeSourceSelection()
 
             self.theme.set_theme(self.themeVar.get())
+        # Close the connection to the database
+        con.close()
 
     def __initialize_bindings(self):
+        """
+        Method to create the bindings, such as Ctrl+E, Ctrl+D, etc.
+        """
         def encrypt(*args, **kwargs):
+            """
+            The function to be called when Enter key is pressed on keyboard
+            """
             if self.mainNotebook.index(self.mainNotebook.select()) == 0:
+                # If the encryption tab is selected, call the encryption method
                 self.crypto.encrypt()
             elif self.mainNotebook.index(self.mainNotebook.select()) == 1:
+                # If the decryption tab is selected, call the decryption method
                 self.crypto.decrypt()
             else:
+                # Otherwise, don't call anything
                 return
-        def give_focus(*args, **kwargs):
-            self.after(200, self.encryptionFrame.textEntry.focus_set())
 
         self.bind("<Return>", encrypt)
-        self.bind("<Tab>", give_focus)
 
         self.bind("<Control_L><Alt_L>t", lambda _: self.theme.set_theme("vista"))
         self.bind("<Control_L>e", lambda _: self.mainNotebook.select(0))
@@ -2429,12 +2576,19 @@ class Interface(Tk):
 
     @exception_logged
     def __del__(self):
+        """
+        Magic method to be called when the instance gets deleted
+        """
         if not hasattr(self, "success"):
+            # If the database hasn't been saved yet, save it
             self.__save_database()
             self.success = True
 
     @exception_logged
     def __initialize_menu(self):
+        """
+        Method to create the drop-down menu on top of the window
+        """
         class menuBar(Menu):
             def __init__(self, master: Interface):
                 super().__init__(master, tearoff=0)
@@ -2566,6 +2720,9 @@ class Interface(Tk):
 
     @exception_logged
     def clipboard_get(self) -> Optional[str]:
+        """
+        Override the clipboard_get method to use pyperclip rather than the built-in copy/paste functions in Tkinter
+        """
         clipboard: Optional[str] = pyperclip.paste()
         if not clipboard:
             return str()
@@ -2579,6 +2736,9 @@ class Interface(Tk):
 
     @exception_logged
     def clipboard_set(self, text: str = None):
+        """
+        Override the clipboard_get method as well to use pyperclip
+        """
         pyperclip.copy(text)
 
     class Settings(Toplevel):
@@ -2720,4 +2880,5 @@ class Interface(Tk):
 if __name__ == "__main__":
     root = Interface()
     root.logger.info(f"{__title__} v{__version__} has been initialized")
+    # LAUNCH!
     root.mainloop()
