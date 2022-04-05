@@ -27,7 +27,6 @@ __license__ = "MIT"
 __copyright__ = "Copyright © 2017-2022 Yilmaz Alpaslan"
 __version__ = "1.0.0"
 
-from select import select
 from tkinter import (
     NORMAL, DISABLED, WORD, FLAT, END, LEFT,
     X, Y, RIGHT, LEFT, BOTH, CENTER, NONE,
@@ -521,10 +520,13 @@ class Cryptography(object):
     @exception_logged
     def decrypt(self) -> None:
         root: Interface = self.master
+        
         if not bool(root.decryptSourceVar.get()):
+            # If the user has chosen to decrypt a plain text they entered, decode it with base64
             self.update_status("Decoding encrypted data...")
             data = base64.urlsafe_b64decode(root.textDecryptVar.get().encode("utf-8"))
         else:
+            # Otherwise, if user has chosen to decrypt a file, read the file and decode with base64
             self.update_status("Reading the file...")
             try:
                 with open(root.mainNotebook.decryptionFrame.fileDecryptEntry.get(), mode="r+b") as file:
@@ -1264,6 +1266,7 @@ class Interface(Tk):
         try:
             self.wm_iconbitmap("icon.ico")
         except TclError:
+            # It’s easier to ask for forgiveness than permission
             pass
 
         self.crypto = Cryptography(self)
@@ -1644,6 +1647,7 @@ class Interface(Tk):
                             else:
                                 self.fileClearButton.configure(state=DISABLED)
                                 self.encryptButton.configure(state=DISABLED)
+                            self.root.mainNotebook.encryptionFrame.algorithmSelect.tab(1, state=DISABLED)
                         else:
                             self.writeFileContentCheck.configure(state=DISABLED)
                             self.textEntry.configure(state=NORMAL)
@@ -1658,6 +1662,7 @@ class Interface(Tk):
                             self.fileBrowseButton.configure(state=DISABLED)
                             self.fileClearButton.configure(state=DISABLED)
                             self.encryptButton.configure(state=NORMAL)
+                            self.root.mainNotebook.encryptionFrame.algorithmSelect.tab(1, state=NORMAL)
                             if bool(self.master.master.keySourceSelection.get()):
                                 self.limitKeyEntry()
                         if not bool(self.master.master.dataSourceVar.get()):
@@ -1682,65 +1687,13 @@ class Interface(Tk):
                         self.textClearButton.configure(state=DISABLED if self.master.master.textEntryVar.get() == "" else NORMAL)
                     
                     def fileEntryCallback(self, *args, **kwargs):
-                        if not hasattr(self, '_lastFileEntry'):
-                            self._lastFileEntry: str = ''
-                        self.fileClearButton.configure(state=DISABLED if self.root.fileEntryVar.get() == "" else NORMAL)
-                        all_file = all([os.path.isfile(filename) for filename in [filename.lstrip() for filename in self.fileEntry.get().split('|')]])
+                        self.fileClearButton.configure(state=DISABLED if ''.join(self.fileEntry.get().split()) != '' else NORMAL)
                         if ''.join(self.fileEntry.get().split()) != '':
-                            self.fileSelectionResult: list[int] = []
-                            messages: dict[int, dict[str, str]] = {
-                                0: {"text": "All files are encryptable", "foreground": "green"},
-                                1: {"text": "Read access was denied", "foreground": "red"},
-                                2: {"text": "Encryptable but not writable", "foreground": "#c6832a"},
-                                3: {"text": "Not a file", "foreground": "red"},
-                                4: {"text": "Unknown", "foreground": "#c6832a"}
-                            }
-                            files = [file.lstrip() for file in self.fileEntry.get().split('|')]
-                            if len(files) > 50:
-                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} amount of files selected - " + value) if key == "text" else value for key, value in messages[4].items()})
-                                self.encryptButton.configure(state=DISABLED if ''.join(self.fileEntry.get().split()) == '' else NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and all_file and (not bool(self.root.keySourceSelection.get()) or (bool(self.root.keySourceSelection.get()) and ''.join(self.root.mainNotebook.encryptionFrame.algorithmSelect.symmetricEncryption.keyEntry.get().split()) != '')))) else DISABLED)
-                                self._lastFileEntry: str = self.fileEntry.get()
-                                return
-                            for filename in [file.lstrip() for file in self.fileEntry.get().split('|') if file not in self._lastFileEntry.split('|')]:
-                                if os.path.isfile(filename):
-                                    try:
-                                        if sum([os.path.getsize(file) for file in files]) < 104857600:
-                                            with open(filename, mode="rb") as file:
-                                                _content = file.read()
-                                        else:
-                                            self.fileSelectionResult.append(4)
-                                            continue
-                                    except OSError:
-                                        self.fileSelectionResult.append(1)
-                                    else:
-                                        if "_content" in locals():
-                                            try:
-                                                times = (os.path.getmtime(filename), os.path.getctime(filename))
-                                                with open(filename, mode="wb") as file:
-                                                    file.write(_content)
-                                                os.utime(filename, times)
-                                            except (OSError, PermissionError):
-                                                self.fileSelectionResult.append(2)
-                                            else:
-                                                self.fileSelectionResult.append(0)
-                                        else:
-                                            self.fileSelectionResult.append(0)
-                                else:
-                                    self.fileSelectionResult.append(3)
-                            if all([not item if not bool(item) else False for item in self.fileSelectionResult]):
-                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} file{'s' if len(files) != 1 else ''} selected - " + value) if key == "text" else value for key, value in messages[0].items()})
-                            if 1 in self.fileSelectionResult:
-                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} file{'s' if len(files) != 1 else ''} selected - " + value) if key == "text" else value for key, value in messages[1].items()})
-                            elif 2 in self.fileSelectionResult:
-                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} file{'s' if len(files) != 1 else ''} selected - " + value) if key == "text" else value for key, value in messages[2].items()})
-                            elif 3 in self.fileSelectionResult:
-                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} file{'s' if len(files) != 1 else ''} selected - " + value) if key == "text" else value for key, value in messages[3].items()})
-                            elif 3 in self.fileSelectionResult:
-                                self.fileValidityLabel.configure(**{key: (f"Validity: {len(files)} file{'s' if len(files) != 1 else ''} selected - " + value) if key == "text" else value for key, value in messages[4].items()})
+                            all_valid = all([os.path.isfile(filename) for filename in [filename.lstrip() for filename in self.fileEntry.get().split('|') if ''.join(filename.split()) != '']])
+                            self.fileValidityLabel.configure(**{"text": f"Selection: {len([f.lstrip() for f in self.fileEntry.get().split('|') if ''.join(f.split()) != ''])} file{'s' if len([f.lstrip() for f in self.fileEntry.get().split('|') if ''.join(f.split()) != '']) != 1 else ''} selected", "foreground": "green" if all_valid else "red"})
                         else:
-                            self.fileValidityLabel.configure(text="Validity: [Blank]", foreground="gray")
-                        self.encryptButton.configure(state=DISABLED if ''.join(self.fileEntry.get().split()) == '' else NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and all_file and (not bool(self.root.keySourceSelection.get()) or (bool(self.root.keySourceSelection.get()) and ''.join(self.root.mainNotebook.encryptionFrame.algorithmSelect.symmetricEncryption.keyEntry.get().split()) != '')))) else DISABLED)
-                        self._lastFileEntry: str = self.fileEntry.get()
+                            self.fileValidityLabel.configure(text="Selection: [Blank]", foreground="gray")
+                        self.encryptButton.configure(state=DISABLED if ''.join(self.fileEntry.get().split()) == '' else NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and all_valid and (not bool(self.root.keySourceSelection.get()) or (bool(self.root.keySourceSelection.get()) and ''.join(self.root.mainNotebook.encryptionFrame.algorithmSelect.symmetricEncryption.keyEntry.get().split()) != '')))) else DISABLED)
                     
                     def showDebug(self, event=None):
                         class debugWindow(Toplevel):
@@ -2050,19 +2003,19 @@ class Interface(Tk):
                                     self.fileEntry.replace(filePath)
 
                             def base64InputCallback(self, *args, **kwargs):
-                                if ''.join(self.plainEntry.get("1.0", END).split()) != "":
+                                if ''.join(self.plainEntry.get().split()) != "":
                                     self.plainClearButton.configure(state=NORMAL)
                                 else:
                                     self.plainClearButton.configure(state=DISABLED)
-                                if not bool(self.root.encodeOrDecodeVar.get()) and ''.join(self.plainEntry.get("1.0", END).split()) != "":
+                                if not bool(self.root.encodeOrDecodeVar.get()) and ''.join(self.plainEntry.get().split()) != "":
                                     self.plainValidity.configure(text="Validity: Encodable", foreground="green")
-                                    self.outputText.replace(base64.urlsafe_b64encode(self.plainEntry.get("1.0", END).encode("utf-8")).decode("utf-8"))
+                                    self.outputText.replace(base64.urlsafe_b64encode(self.plainEntry.get().encode("utf-8")).decode("utf-8"))
                                     self.outputText.configure(foreground="black")
-                                elif bool(self.root.encodeOrDecodeVar.get()) and ''.join(self.plainEntry.get("1.0", END).split()) != "":
+                                elif bool(self.root.encodeOrDecodeVar.get()) and ''.join(self.plainEntry.get().split()) != "":
                                     try:
-                                        if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.plainEntry.get("1.0", END).encode("utf-8")).decode("utf-8").encode("utf-8")) == self.plainEntry.get("1.0", END).rstrip().encode("utf-8"):
+                                        if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.plainEntry.get().encode("utf-8")).decode("utf-8").encode("utf-8")) == self.plainEntry.get().rstrip().encode("utf-8"):
                                             self.plainValidity.configure(text="Validity: Valid base64 encoded data", foreground="green")
-                                            self.outputText.replace(base64.urlsafe_b64decode(self.plainEntry.get("1.0", END).encode("utf-8")).decode("utf-8"))
+                                            self.outputText.replace(base64.urlsafe_b64decode(self.plainEntry.get().encode("utf-8")).decode("utf-8"))
                                             self.outputText.configure(foreground="black")
                                         else:
                                             self.plainValidity.configure(text="Validity: Invalid", foreground="red")
