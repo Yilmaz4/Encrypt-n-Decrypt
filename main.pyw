@@ -386,10 +386,9 @@ class Cryptography(object):
                         with open(raw, mode="rb") as file:
                             data: bytes = file.read()
                     except PermissionError:
-                        messagebox.showerror("Access denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
-                        root.logger.error("Read permission for the file specified has been denied, encryption was interrupted")
-                        self.update_status("Ready")
-                        return
+                        messagebox.showerror("Access denied", f"Access to the file named \"{os.path.basename(raw)}\" that you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
+                        root.logger.error(f"Read permission for the file named \"{os.path.basename(raw)}\" that was specified has been denied, skipping")
+                        continue
                 else:
                     # Otherwise, just use the current data as is
                     data: bytes = raw
@@ -413,27 +412,16 @@ class Cryptography(object):
                     except TypeError:
                         self.update_status("Ready")
                         return
-                except MemoryError:
-                    # Again, if the computer runs out of memory while encoding, show an error message
-                    messagebox.showerror("Not enough memory", "Your computer has run out of memory while encoding the result. Try closing other applications or restart your computer.")
-                    root.logger.error("Device has run out of memory while encoding, encryption was interrupted")
-                    self.update_status("Ready")
-                    return
-                # Set the variables holding the key used and the file encrypted (if applicable) in order to be able to copy later
-                root.lastEncryptionKey = key
-                root.lastEncryptedFile = root.fileEntryVar.get() if bool(root.dataSourceVar.get()) else None
-
-                failure = False
-                # If a file was chosen to be encrypted and the user had chosen to overwrite the file with the result, write the result to the file
-                if bool(root.dataSourceVar.get()) and bool(root.writeFileContentVar.get()):
-                    self.update_status("Writing to the file...")
-                    for _ in range(1):
+                    if bool(root.writeFileContentVar.get()) and bool(root.dataSourceVar.get()):
+                        self.update_status(f"Writing to the file (file {index}/{len(datas)})...")
                         try:
                             with open(path, mode="wb") as file:
-                                file.write(bytes(root.lastEncryptionResult, "utf-8"))
+                                file.write(root.lastEncryptionResult.encode("utf-8"))
+                            if len(datas) != 1:
+                                del root.lastEncryptionResult
                         except PermissionError:
                             # If the program doesn't have write access to the file, show an error message
-                            if messagebox.askyesnocancel("Access denied", "Write access to the file you've specified had been denied. Do you want to save the encrypted data as another file?"):
+                            if messagebox.askyesnocancel("Access denied", f"Write access to the file named \"{os.path.basename(raw)}\" that you've specified has been denied, therefore the result could not have been overwritten to the file. Do you want to save the encrypted data as another file?"):
                                 newpath = filedialog.asksaveasfilename(title="Save encrypted data", initialfile=os.path.basename(path[:-1] if path[-1:] == "\\" else path), initialdir=os.path.dirname(path), filetypes=[("All files","*.*")], defaultextension="*.key")
                                 if newpath == "":
                                     failure = True
@@ -446,7 +434,7 @@ class Cryptography(object):
                             self.update_status("Ready")
                             failure = True
                             return
-                        except OSError as details:
+                        except OSError:
                             if "No space" in str(details):
                                 # If no space left on device to save the result, show an error message
                                 messagebox.showerror("No space left", "There is no space left on your device. Free up some space and try again.")
@@ -455,12 +443,24 @@ class Cryptography(object):
                                 failure = True
                                 pass
 
+                except MemoryError:
+                    # Again, if the computer runs out of memory while encoding, show an error message
+                    messagebox.showerror("Not enough memory", "Your computer has run out of memory while encoding the result. Try closing other applications or restart your computer.")
+                    root.logger.error("Device has run out of memory while encoding, encryption was interrupted")
+                    self.update_status("Ready")
+                    return
+                # Set the variables holding the key used and the file encrypted (if applicable) in order to be able to copy later
+                root.lastEncryptionKey = key
+                root.lastEncryptedFile = root.fileEntryVar.get() if bool(root.dataSourceVar.get()) else None
+
+            failure = False
+                            
             if len(datas) != 1 and bool(root.dataSourceVar.get()):
                 # If multiple files were encrypted, don't show the result (because how are we supposed to show anyway)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("The encrypted text is not being displayed because multiple files were selected to be encrypted.")
                 del root.lastEncryptionResult
-            elif len(root.lastEncryptionResult) > 15000:
+            elif hasattr(root, "lastEncryptionResult") and len(root.lastEncryptionResult) > 15000:
                 # If one file was chosen or a plain text was entered to be encrypted, but the result is over 15.000 characters, don't show the result
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
@@ -1745,13 +1745,13 @@ class Interface(Tk):
                         super().__init__(master=master, **kwargs)
                         self.root: Interface = self.master.master
 
-                        self.textDecryptRadio = Radiobutton(self, text = "Encrypted text:", value=0, variable=self.root.decryptSourceVar, command=self.changeDecryptSource, takefocus=0)
+                        self.textDecryptRadio = Radiobutton(self, text = "Cipher text:", value=0, variable=self.root.decryptSourceVar, command=self.changeDecryptSource, takefocus=0)
                         self.textDecryptValidityLabel = Label(self, text="Validity: [Blank]", foreground="gray")
                         self.textDecryptEntry = ScrolledText(self, width=105, height=5, font=("Consolas", 9), textvariable=self.root.textDecryptVar, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                         self.textDecryptPasteButton = Button(self, width=15, text="Paste", command=lambda: self.textDecryptEntry.replace(self.root.clipboard_get()), takefocus=0)
                         self.textDecryptClearButton = Button(self, width=15, text="Clear", command=lambda: self.textDecryptEntry.delete("1.0", END), takefocus=0, state=DISABLED)
 
-                        self.fileDecryptRadio = Radiobutton(self, text = "Encrypted file:", value=1, variable=self.root.decryptSourceVar, command=self.changeDecryptSource, takefocus=0)
+                        self.fileDecryptRadio = Radiobutton(self, text = "File(s):", value=1, variable=self.root.decryptSourceVar, command=self.changeDecryptSource, takefocus=0)
                         self.fileDecryptEntry = Entry(self, width=107, font=("Consolas", 9), textvariable=self.root.fileDecryptVar, state=DISABLED, takefocus=0)
                         self.fileDecryptBrowseButton = Button(self, width=15, text="Browse...", state=DISABLED, command=self.decryptBrowseFile, takefocus=0)
                         self.fileDecryptClearButton = Button(self, width=15, text="Clear", state=DISABLED, command=lambda: self.fileDecryptEntry.delete(0, END), takefocus=0)
@@ -1784,7 +1784,7 @@ class Interface(Tk):
                         self.root.decryptOutputVar.trace("w", self.decryptOutputCallback)
 
                         self.textDecryptRadio.place(x=8, y=2)
-                        self.textDecryptValidityLabel.place(x=108, y=3)
+                        self.textDecryptValidityLabel.place(x=92, y=3)
                         self.textDecryptEntry.place(x=24, y=24)
                         self.textDecryptPasteButton.place(x=23, y=107)
                         self.textDecryptClearButton.place(x=130, y=107)
@@ -1810,7 +1810,7 @@ class Interface(Tk):
 
                     def changeDecryptSource(self):
                         if not bool(self.root.decryptSourceVar.get()):
-                            self.textDecryptEntry.configure(state=NORMAL, bg="white", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
+                            self.textDecryptEntry.configure(state=NORMAL, bg="white", foreground="black", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
                             self.textDecryptPasteButton.configure(state=NORMAL)
                             self.textDecryptClearButton.configure(state=NORMAL)
                             self.fileDecryptEntry.configure(state=DISABLED)
