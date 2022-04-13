@@ -39,7 +39,7 @@ from tkinter import (
 
 TkLabel = Label
 from tkinter.ttk import (
-    Entry, Button, Label, LabelFrame, Frame,
+    Entry, Button, Label, LabelFrame, Frame, Labelframe,
     Widget, Notebook, Radiobutton, Checkbutton,
     Scrollbar, Progressbar, Separator, Combobox,
     Treeview
@@ -49,7 +49,7 @@ try:
     from traceback import format_exc
     from re import findall
     from threading import Thread
-    from typing import Optional, Callable, Any
+    from typing import Optional, Callable, final
     from urllib.request import urlopen
     from hurry.filesize import size, alternative
     from markdown import markdown
@@ -101,7 +101,7 @@ def threaded(function: Callable):
         try:
             return Thread(target=function, args=args, kwargs=kwargs).start()
         except Exception:
-            print(format_exc())
+            pass
     return wrapper
 
 def exception_logged(function: Callable):
@@ -189,11 +189,78 @@ def traffic_controlled(function: Callable):
                 root.mainNotebook.decryptionFrame.decryptButton.configure(state=NORMAL)
     return wrapper
 
+class state_control_function(object):
+    def __init__(self, cls: type):
+        self.cls = cls
+        print(self.cls.__class__, self.cls.root.utils.get_subframes(self.cls))
+    def __call__(self, function: Callable):
+        self.cls.root.scfs.append({'method': function, 'class': [cls for cls in self.cls.root.utils.get_subframes(self.cls) if hasattr(cls, function.__name__)][0]})
+        return function
+
+class selfinjected(object):
+    def __init__(self, name: str):
+        self.name = name
+    def __call__(self, function: Callable):
+        function.__globals__[self.name] = function
+        return function
+
+@final
+class Utilities(object):
+    """
+    Utilities class for some useful methods that may help me in the future
+    """
+    def __init__(self, root: Tk):
+        self.root = root
+        
+    @selfinjected("self")
+    def __init_subclass__(cls: type, *args, **kwargs):
+        raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
+
+    @classmethod
+    def get_master_class(utils, meth: Callable) -> type:
+        """
+        Returns the class of the given method
+        """
+        if isinstance(meth, functools.partial):
+            return utils.get_master_class(meth.func)
+        if inspect.ismethod(meth) or (inspect.isbuiltin(meth) and getattr(meth, '__self__', None) is not None and getattr(meth.__self__, '__class__', None)):
+            for cls in inspect.getmro(meth.__self__.__class__):
+                if meth.__name__ in cls.__dict__:
+                    return cls
+            meth: Callable = getattr(meth, '__func__', meth)
+        if inspect.isfunction(meth):
+            cls: type = getattr(inspect.getmodule(meth),
+                        meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0],
+                        None)
+            if isinstance(cls, type):
+                return cls
+        return getattr(meth, '__objclass__', None)
+    
+    @classmethod
+    def get_inner_classes(utils, cls: type) -> list[type]:
+        """
+        Returns a list of all inner classes of the given class
+        """
+        return [cls_attr for cls_attr in cls.__dict__.values() if inspect.isclass(cls_attr)]
+    
+    @classmethod
+    def get_subframes(utils, obj: object) -> list[object]:
+        """
+        Returns a list of all instances of Frame, Labelframe or Notebook in the given class
+        """
+        print(obj.__dict__)
+        return [obj_attr for obj_attr in (obj.__dict__ if isinstance(obj, (Frame, Labelframe, Notebook)) else obj().__dict__) if isinstance(obj_attr, (Frame, Labelframe, Notebook))]
+
+@final
 class Cryptography(object):
     def __init__(self, master: Tk):
         self.master = self.root = master
         self.__encryption_busy = False
         self.__decryption_busy = False
+    
+    @selfinjected("self")
+    def __init_subclass__(cls: type, *args, **kwargs):
+        raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
 
     @staticmethod
     def generate_key(length: int = 32) -> str:
@@ -268,7 +335,7 @@ class Cryptography(object):
             key = bytes(key, "utf-8")
         path = filedialog.asksaveasfilename(title="Save encryption key", initialfile="Encryption Key.key", filetypes=[("Encrypt'n'Decrypt key file", "*.key"), ("Text document", "*.txt"), ("All files", "*.*")], defaultextension="*.key")
         if ''.join(path.split()) == '':
-            # If save dialog was closed without choosing a file, return
+            # If save dialog was closed without choosing a file, simply return
             return
         if os.path.splitext(path)[1].lower() == ".key":
             # If the file extension is .key, save the key using the special algorithm
@@ -707,6 +774,7 @@ class Cryptography(object):
         for radiobutton in [self.__hashWidgets["plain" if "plain" in widget.lower() else "file"][widget] for widget in [j for i in self.__hashWidgets.values() for j in i] if "radio" in widget.lower()]:
             radiobutton.configure(state=NORMAL)
 
+@final
 class Cache(object):
     """
     Class for storing logging history and other history data (will be implemented soon)
@@ -718,13 +786,22 @@ class Cache(object):
         self.loggings_history: list[dict[logging.LogRecord, dict[str, int | str | bool]]] = []
         self.encryptions_history: list[dict] = []
         self.decryptions_history: list[dict] = []
+    
+    @selfinjected("self")
+    def __init_subclass__(cls: type, *args, **kwargs):
+        raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
 
+@final
 class Handler(logging.Handler):
     def __init__(self, widget: Optional[Text], master: Tk, cache: Cache = None):
         super().__init__()
         self.widget = widget
         self.master = master
         self.cache = cache
+        
+    @selfinjected("self")
+    def __init_subclass__(cls: type, *args, **kwargs):
+        raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
 
     def emit(self, record: logging.LogRecord):
         # Format the log message if it was not specified not to be formatted (e.g. if the log message ends with '!NO_FORMAT')
@@ -787,6 +864,7 @@ class Handler(logging.Handler):
         """
         return f"{datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')} [{record.levelname}] {record.getMessage()}" + "{}".format('\n' if not record.getMessage().endswith('\n') else '')
 
+@final
 class Logger(object):
     def __init__(self, widget: Optional[Text], root: Tk):
         self.widget = widget
@@ -801,6 +879,10 @@ class Logger(object):
         )
         self.logger = logging.getLogger()
         self.logger.propagate = False
+        
+    @selfinjected("self")
+    def __init_subclass__(cls: type, *args, **kwargs):
+        raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
 
     @exception_logged
     def end_logging_file(self):
@@ -829,6 +911,7 @@ class Logger(object):
     def critical(self, message: str, format: bool = True):
         self.logger.critical((message + "\n" if not message.endswith("\n") else message) + ("!NO_FORMAT" if not format else ""))
 
+@final
 class ToolTip(object):
     """
     A class for creating tooltips that appear on hover
@@ -845,6 +928,10 @@ class ToolTip(object):
         self.tw = None
 
         self.speed = 10
+    
+    @selfinjected("self")
+    def __init_subclass__(cls: type, *args, **kwargs):
+        raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
 
     def enter(self, event=None):
         self.schedule()
@@ -917,6 +1004,7 @@ class ToolTip(object):
                     self.tw.destroy()
             fade_away()
 
+@final
 class ScrolledText(Text):
     @exception_logged
     def __init__(self, master: Tk | Frame | LabelFrame, tooltip: Optional[str] = None, *args, **kwargs):
@@ -967,6 +1055,10 @@ class ScrolledText(Text):
         # Create the tooltip object for the widget if a string for tooltip was specified (rather than None)
         if tooltip is not None:
             self.toolTip = ToolTip(widget=self, tooltip=tooltip)
+            
+    @selfinjected("self")
+    def __init_subclass__(cls: type, *args, **kwargs):
+        raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
 
     @multipledispatch.dispatch(str)
     def replace(self, chars: str):
@@ -1011,6 +1103,7 @@ class ScrolledText(Text):
     def __str__(self):
         return str(self.frame)
 
+@final
 class Text(Text):
     @exception_logged
     def __init__(self, master: Tk | Frame | LabelFrame, tooltip: Optional[str] = None, *args, **kwargs):
@@ -1047,6 +1140,10 @@ class Text(Text):
         # Create the tooltip object for the widget if a string for tooltip was specified (rather than None)
         if tooltip is not None:
             self.toolTip = ToolTip(widget=self, tooltip=tooltip)
+
+    @selfinjected("self")
+    def __init_subclass__(cls: type, *args, **kwargs):
+        raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
 
     @multipledispatch.dispatch(str)
     def replace(self, chars: str):
@@ -1154,22 +1251,25 @@ class Notebook(Notebook):
                     # Get the AppData location
                     _appdata = f"{os.getenv('APPDATA')}\\{__title__}\\"
                     try:
-                        # Basically this whole bunch of code downloads the source code from GitHub and saves it to the AppData location, then
-                        # extracts the source code and shows the source code written in the *.py or *.pyw file in the source code widget
+                        # Get the URL for downloading the source code whose version is the same as the version of the program (this would raise IndexError if version tag of this program doesn't exist in GitHub)
                         url = [release["zipball_url"] for release in get(f"https://api.github.com/repos/Yilmaz4/{__title__}/releases").json() if release["tag_name"] == f"v{__version__}"][0]
-                        req = get(url, stream=True)
+                        # Download the source code
+                        src = get(url, stream=True)
                         with open(_appdata + f"source_code_v{__version__}.zip", 'wb') as file:
-                            for chunk in req.iter_content(chunk_size=512):
+                            # Write the source code data to a file in AppData
+                            for chunk in src.iter_content(chunk_size=512):
                                 file.write(chunk)
+                        # Unzip the source code to a folder
                         with ZipFile(_appdata + f"source_code_v{__version__}.zip", "r") as file:
                             file.extractall(_appdata + f"source_code_v{__version__}")
+                        # Try to find the main *.py or *.pyw file in the folder
                         for filename in os.listdir(_appdata + f"source_code_v{__version__}"):
                             if os.path.isdir(_appdata + f"source_code_v{__version__}\\{filename}") and filename.startswith(__author__):
                                 for _filename in os.listdir(_appdata + f"source_code_v{__version__}\\{filename}"):
-                                    if os.path.splitext(_filename)[1] == ".py":
+                                    if os.path.splitext(_filename)[1] in [".py", ".pyw"]:
                                         with open(_appdata + f"source_code_v{__version__}\\{filename}\\{_filename}") as file:
                                             self.master.mainNotebook.sourceFrame.sourceText.replace(file.read())
-                            elif os.path.splitext(filename)[1] == ".py":
+                            elif os.path.splitext(filename)[1] in [".py", ".pyw"]:
                                 with open(_appdata + f"source_code_v{__version__}\\{filename}") as file:
                                     self.master.mainNotebook.sourceFrame.sourceText.replace(file.read())
                         rmtree(_appdata + f"source_code_v{__version__}")
@@ -1213,7 +1313,12 @@ class Widget(Widget):
         if tooltip is not None:
             self.toolTip = ToolTip(widget=self, tooltip=tooltip)
 
+@final
 class Entry(Widget, Entry):
+    @selfinjected("self")
+    def __init_subclass__(cls: type, *args, **kwargs):
+        raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
+
     def replace(self, string: str):
         old_val = self["state"]
         self.configure(state=NORMAL)
@@ -1229,15 +1334,23 @@ class Entry(Widget, Entry):
 
 # Multiply inherit all the widgets from the Widget class and the original Tkinter widgets in order to add tooltips to them
 
+@final
 class Button(Widget, Button): ...
 
+@final
 class Label(Widget, Label): ...
 
+@final
 class Radiobutton(Widget, Radiobutton): ...
 
+@final
 class Checkbutton(Widget, Checkbutton): ...
 
+@final
 class Interface(Tk):
+    """
+    Main class for the user interface
+    """
     @exception_logged
     def __init__(self):
         super().__init__()
@@ -1271,11 +1384,14 @@ class Interface(Tk):
 
         self.crypto = Cryptography(self)
         self.cache = Cache(self)
+        self.utils = Utilities(self)
         self.logger: Logger = None
 
+        self.scfs: list[dict[Callable, type]] = []
         class mainNotebook(Notebook):
             def __init__(self, master: Interface):
                 super().__init__(master, width=380, height=340)
+                self.root: Interface = self.master
 
                 class encryptionFrame(Frame):
                     def __init__(self, master: mainNotebook = None, **kwargs):
@@ -1315,6 +1431,7 @@ class Interface(Tk):
                         class algorithmSelect(Notebook):
                             def __init__(self, master: encryptionFrame):
                                 super().__init__(master, width=355, height=290, takefocus=0)
+                                self.root: encryptionFrame = self.master.master.master
 
                                 class symmetricEncryption(Frame):
                                     def __init__(self, master: Notebook, **kwargs):
@@ -1546,6 +1663,7 @@ class Interface(Tk):
                         self.outputFrame = outputFrame(self)
                         self.outputFrame.place(x=377, y=4)
 
+                    @state_control_function(self)
                     def changeDataEntryHideChar(self):
                         self.textEntry.configure(show="●" if bool(self.root.textEntryHideCharVar.get()) else "")
 
@@ -1572,10 +1690,12 @@ class Interface(Tk):
                         self.algorithmSelect.symmetricEncryption.DES128Check.configure(state=state)
                         self.algorithmSelect.symmetricEncryption.DES192Check.configure(state=state)
 
+                    @state_control_function(self)
                     def changeAlgorithmSelection(self):
                         self.changeAESState(state = DISABLED if bool(self.master.master.generateAlgorithmSelection.get()) else NORMAL)
                         self.changeDESState(state = NORMAL if bool(self.master.master.generateAlgorithmSelection.get()) else DISABLED)
 
+                    @state_control_function(self)
                     def changeSourceSelection(self):
                         self.changeGenerateKeySectionState(state = DISABLED if bool(self.master.master.keySourceSelection.get()) else NORMAL)
                         self.changeAESState(state = DISABLED if bool(self.root.keySourceSelection.get()) else DISABLED if bool(self.master.master.generateAlgorithmSelection.get()) else NORMAL)
@@ -1630,7 +1750,8 @@ class Interface(Tk):
                             else:
                                 self.algorithmSelect.symmetricEncryption.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
                                 self.encryptButton.configure(state=NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and os.path.isfile(self.fileEntry.get()))) else DISABLED)
-
+                                                                                                    
+                    @state_control_function(self)
                     def changeDataSource(self):
                         if bool(self.master.master.dataSourceVar.get()):
                             self.writeFileContentCheck.configure(state=NORMAL)
@@ -1808,6 +1929,7 @@ class Interface(Tk):
                         self.decryptClearButton.place(x=128, y=30)
                         self.decryptSaveButton.place(x=622, y=30)
 
+                    @state_control_function(self)
                     def changeDecryptSource(self):
                         if not bool(self.root.decryptSourceVar.get()):
                             self.textDecryptEntry.configure(state=NORMAL, bg="white", foreground="black", relief=FLAT, takefocus=0, highlightbackground="#7a7a7a", highlightthickness=1)
@@ -1924,6 +2046,7 @@ class Interface(Tk):
                 class miscFrame(Frame):
                     def __init__(self, master: mainNotebook = None):
                         super().__init__(master=master)
+                        self.root: Interface = self.master.master
 
                         class base64Frame(LabelFrame):
                             def __init__(self, master: Frame = None):
@@ -2041,7 +2164,7 @@ class Interface(Tk):
                         class keyDerivationFrame(LabelFrame):
                             def __init__(self, master: miscFrame):
                                 super().__init__(master=master, height=150, width=354, text="Key Derivation Function (KDF)")
-                                self.root = self.master.master.master
+                                self.root: Interface = self.master.master.master
 
                                 self.keyInputLabel = Label(self, text="Input", takefocus=0)
                                 self.keyInputValidity = Label(self, text="Validity: [Blank]", foreground="gray")
@@ -2088,7 +2211,8 @@ class Interface(Tk):
                         class hashDigestFrame(LabelFrame):
                             def __init__(self, master: miscFrame):
                                 super().__init__(master, height=363, width=354, text="Hash Calculator")
-                                self.root = self.master.master.master
+                                self.root: Interface = self.master.master.master
+                                
                                 self._last_file: dict = {"path": None, "size": None}
                                 self.hash = self.root.crypto.hash
 
@@ -2143,6 +2267,7 @@ class Interface(Tk):
                                 self.MD5Entry.place(x=10, y=311)
                                 self.MD5CopyButton.place(x=262, y=309)
 
+                            @state_control_function(self)
                             def changeSourceSelection(self):
                                 if bool(self.root.hashCalculationSourceVar.get()):
                                     self.fileValidity.configure(state=NORMAL)
@@ -2357,7 +2482,7 @@ class Interface(Tk):
         self.mainNotebook = mainNotebook(self)
         self.mainNotebook.pack(fill=BOTH, expand=YES, pady=4, padx=4, side=TOP)
 
-        # This is the status label in the bottom
+        # This is the statusbar in the bottom of the window
         self.statusBar = TkLabel(self, text="Status: Ready", bd=1, relief=SUNKEN, anchor=W)
         self.statusBar.pack(side=BOTTOM, fill=X)
 
@@ -2369,6 +2494,10 @@ class Interface(Tk):
 
         # We're ready to go now, make the window visible
         self.deiconify()
+        
+    @selfinjected("self")
+    def __init_subclass__(cls: type, *args, **kwargs):
+        raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
 
     def __initialize_vars(self):
         """
@@ -2487,14 +2616,8 @@ class Interface(Tk):
                 eval(f"self.{key}.set(" + (value if not any(ext in key for ext in ["themeVar", "levelSelectVar"]) else f'\'{value}\'') + ")")
 
             # Call the methods of the GUI to update the GUI elements' states (normal or disabled) accordingly to the newly set values 
-            self.mainNotebook.encryptionFrame.changeAlgorithmSelection()
-            self.mainNotebook.encryptionFrame.changeSourceSelection()
-            self.mainNotebook.encryptionFrame.changeDataSource()
-            self.mainNotebook.encryptionFrame.changeDataEntryHideChar()
-
-            self.mainNotebook.decryptionFrame.changeDecryptSource()
-
-            self.mainNotebook.miscFrame.hashDigestFrame.changeSourceSelection()
+            for method, cls in [dict.values() for dict in self.scfs]:
+                method(cls)
 
             self.theme.set_theme(self.themeVar.get())
         # Close the connection to the database
@@ -2709,6 +2832,7 @@ class Interface(Tk):
             self.wm_maxsize(self.width, self.height)
             self.wm_minsize(self.width, self.height)
 
+    @final
     class Updates(Toplevel):
         @exception_logged
         def __init__(self, master: Tk):
@@ -2829,6 +2953,10 @@ class Interface(Tk):
             DownloadLinks.place(x=310, y=168)
             self.focus_force()
             self.mainloop()
+            
+        @selfinjected("self")
+        def __init_subclass__(cls: type, *args, **kwargs):
+            raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
 
 if __name__ == "__main__":
     root = Interface()
