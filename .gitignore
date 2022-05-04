@@ -9,6 +9,7 @@ pyinstaller32.exe
 
 .Python
 .vscode/
+.vs/
 blob_storage/
 build/
 dist/

@@ -1,5 +1,13 @@
 """
-MIT License
+████████████████████  ████  ██████████████
+████████████████████  ████  ██████████████
+████    ████    ████  ████       ████
+████    ████    ████  ████       ████
+████    ████    ████  ████       ████
+██      ████      ██  ████       ██
+  ██    ████    ██    ████         ██
+██      ████      ██  ████       ██
+  ██    ████    ██    ████         ██
 
 Copyright © 2017-2022 Yılmaz Alpaslan
 
@@ -27,6 +35,7 @@ __license__ = "MIT"
 __copyright__ = "Copyright © 2017-2022 Yilmaz Alpaslan"
 __version__ = "1.0.0"
 
+from inspect import getsourcelines
 from tkinter import (
     NORMAL, DISABLED, WORD, FLAT, END, LEFT,
     X, Y, RIGHT, LEFT, BOTH, CENTER, NONE,
@@ -46,7 +55,7 @@ from tkinter.ttk import (
 )
 
 try:
-    from traceback import format_exc
+    from traceback import format_exc, print_exc
     from re import findall
     from threading import Thread
     from typing import Optional, Callable, final
@@ -63,6 +72,7 @@ try:
     from types import FunctionType
     from zipfile import ZipFile
     from shutil import rmtree
+    from dill.source import getsource
     
     from requests.exceptions import ConnectionError
     from urllib3.exceptions import NewConnectionError, MaxRetryError
@@ -113,9 +123,11 @@ def exception_logged(function: Callable):
     def wrapper(*args, **kwargs):
         try:
             return function(*args, **kwargs) if isinstance(function, FunctionType) else function(args[0])
-        except Exception as exc:
+        except Exception:
             # An exception occured in the function...
             # Get the root object (instance of 'Interface') from global variables
+            print_exc()
+            return
             try:
                 # If this doesn't raise KeyError, that means the exception occured after initialization of the interface
                 root: Interface = globals()["root"]
@@ -192,11 +204,17 @@ def traffic_controlled(function: Callable):
 class state_control_function(object):
     def __init__(self, cls: type):
         self.cls = cls
-        print(self.cls.__class__, self.cls.root.utils.get_subframes(self.cls))
+
     def __call__(self, function: Callable):
-        self.cls.root.scfs.append({'method': function, 'class': [cls for cls in self.cls.root.utils.get_subframes(self.cls) if hasattr(cls, function.__name__)][0]})
+        self.cls.root.scfs.append({'method': function, 'class': lambda: self._find_class(self.cls, function)})
         return function
 
+    @staticmethod
+    def _find_class(cls: type, function: Callable) -> type:
+        for subcls in [(subcls, value) for subcls, value in cls.__dict__.items() if not isinstance(value, str)]:
+            if hasattr(subcls, function.__name__):
+                return subcls
+            
 class selfinjected(object):
     def __init__(self, name: str):
         self.name = name
@@ -242,14 +260,6 @@ class Utilities(object):
         Returns a list of all inner classes of the given class
         """
         return [cls_attr for cls_attr in cls.__dict__.values() if inspect.isclass(cls_attr)]
-    
-    @classmethod
-    def get_subframes(utils, obj: object) -> list[object]:
-        """
-        Returns a list of all instances of Frame, Labelframe or Notebook in the given class
-        """
-        print(obj.__dict__)
-        return [obj_attr for obj_attr in (obj.__dict__ if isinstance(obj, (Frame, Labelframe, Notebook)) else obj().__dict__) if isinstance(obj_attr, (Frame, Labelframe, Notebook))]
 
 @final
 class Cryptography(object):
@@ -288,7 +298,7 @@ class Cryptography(object):
         try:
             return base64.urlsafe_b64encode(scrypt(password.decode("utf-8") if isinstance(password, bytes) else password, get_random_bytes(16), 24, N=2**14, r=8, p=1))
         except Exception:
-            return None
+            return None 
 
     @staticmethod
     def get_key(path: str, entry: Entry, root: Tk) -> Optional[str]:
@@ -1387,7 +1397,7 @@ class Interface(Tk):
         self.utils = Utilities(self)
         self.logger: Logger = None
 
-        self.scfs: list[dict[Callable, type]] = []
+        self.scfs: list[dict[Callable, Callable]] = []
         class mainNotebook(Notebook):
             def __init__(self, master: Interface):
                 super().__init__(master, width=380, height=340)
@@ -2617,7 +2627,7 @@ class Interface(Tk):
 
             # Call the methods of the GUI to update the GUI elements' states (normal or disabled) accordingly to the newly set values 
             for method, cls in [dict.values() for dict in self.scfs]:
-                method(cls)
+                method(cls())
 
             self.theme.set_theme(self.themeVar.get())
         # Close the connection to the database
