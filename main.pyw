@@ -598,29 +598,6 @@ class Cryptography(object):
 
         if not bool(root.mainNotebook.decryptionFrame.algorithmSelect.index(root.mainNotebook.decryptionFrame.algorithmSelect.select())):
             self.update_status("Defining cipher...")
-            iv = data[:16 if not bool(root.decryptAlgorithmVar.get()) else 8]
-            key = root.decryptKeyVar.get()[:-1 if root.decryptKeyVar.get().endswith("\n") else None].encode("utf-8")
-            try:
-                if not bool(root.decryptAlgorithmVar.get()):
-                    cipher = AES.new(key, AES.MODE_CFB, iv=iv)
-                else:
-                    cipher = DES3.new(key, DES3.MODE_OFB, iv=iv)
-            except ValueError as details:
-                if len(iv) != 16 if not bool(root.decryptAlgorithmVar.get()) else 8:
-                    messagebox.showerror("Unencrypted data", f"The text you've entered seems doesn't seem to be using {'AES' if not bool(root.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
-                    root.logger.error("Unencrypted text was entered")
-                    self.update_status("Ready")
-                    return
-                elif not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
-                    messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
-                    root.logger.error("Key with invalid length was entered for decryption")
-                    self.update_status("Ready")
-                    return
-                else:
-                    messagebox.showerror("Invalid key", "The key you've entered is invalid.")
-                    root.logger.error("Invalid key was entered for decryption")
-                    self.update_status("Ready")
-                    return
 
             datas: list[str | bytes] = []
             if not bool(root.dataSourceVar.get()):
@@ -664,6 +641,30 @@ class Cryptography(object):
                         root.logger.error("Unencrypted file was specified")
                         self.update_status("Ready")
                         return
+                if 'cipher' not in locals():
+                    iv = raw[:16 if not bool(root.decryptAlgorithmVar.get()) else 8]
+                    key = root.decryptKeyVar.get()[:-1 if root.decryptKeyVar.get().endswith("\n") else None].encode("utf-8")
+                    try:
+                        if not bool(root.decryptAlgorithmVar.get()):
+                            cipher = AES.new(key, AES.MODE_CFB, iv=iv)
+                        else:
+                            cipher = DES3.new(key, DES3.MODE_OFB, iv=iv)
+                    except ValueError as details:
+                        if len(iv) != 16 if not bool(root.decryptAlgorithmVar.get()) else 8:
+                            messagebox.showerror("Unencrypted data", f"The text you've entered seems doesn't seem to be using {'AES' if not bool(root.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
+                            root.logger.error("Unencrypted text was entered")
+                            self.update_status("Ready")
+                            return
+                        elif not len(key) in [16, 24, 32 if "AES" in str(details) else False]:
+                            messagebox.showerror("Invalid key length", "The length of the encryption key you've entered is invalid! It can be either 16, 24 or 32 characters long.")
+                            root.logger.error("Key with invalid length was entered for decryption")
+                            self.update_status("Ready")
+                            return
+                        else:
+                            messagebox.showerror("Invalid key", "The key you've entered is invalid.")
+                            root.logger.error("Invalid key was entered for decryption")
+                            self.update_status("Ready")
+                            return
                 try:
                     self.update_status(f"Decrypting (file {index + 1}/{len(datas)})..." if isinstance(raw, str) else "Decrypting...")
                     # Encrypt the data and combine it with the IV used
@@ -2758,17 +2759,23 @@ class Interface(Tk):
             con.close()
             return
         else:
-            # Iterate over the data in the database and set the corresponding variables
-            cur.execute("SELECT * FROM user_data")
-            for key, value in cur.fetchall():
-                eval(f"self.{key}.set(" + (value if not any(ext in key for ext in ["themeVar", "levelSelectVar"]) else f'\'{value}\'') + ")")
+            # Check if the database is compatible with the current version of the program
+            for attribute in [attr for attr in inspect.getmembers(self, lambda attr: not(inspect.isroutine(attr))) if not(attr[0].startswith('__') and attr[0].endswith('__'))]:
+                if not attribute[0] in {key: value for (key, value) in cur.execute("SELECT * FROM user_data").fetchall()}:
+                    break
+                if 
+            else:
+                # Iterate over the data in the database and set the corresponding variables
+                cur.execute("SELECT * FROM user_data")
+                for key, value in cur.fetchall():
+                    eval(f"self.{key}.set(" + (value if not any(ext in key for ext in ["themeVar", "levelSelectVar"]) else f'\'{value}\'') + ")")
 
-            # Call the methods of the GUI to update the GUI elements' states (normal or disabled) accordingly to the newly set values 
-            for method, cls in [dict.values() for dict in self.scfs]:
-                method(cls())
-            self.attributes("-alpha", self.windowAlpha.get() / 100)
+                # Call the methods of the GUI to update the GUI elements' states (normal or disabled) accordingly to the newly set values 
+                for method, cls in [dict.values() for dict in self.scfs]:
+                    method(cls())
+                self.attributes("-alpha", self.windowAlpha.get() / 100)
 
-            self.theme.set_theme(self.themeVar.get())
+                self.theme.set_theme(self.themeVar.get())
         # Close the connection to the database
         con.close()
 
