@@ -209,7 +209,6 @@ class state_control_function(object):
     @staticmethod
     def _find_class(cls: type, function: Callable) -> type:
         return [subcls for subcls in [getattr(cls, subcls) for subcls in cls.__dict__ if not isinstance(getattr(cls, subcls), str)] if hasattr(subcls, function.__name__)][0]
-            
 
 class selfinjected(object):
     def __init__(self, name: str):
@@ -490,7 +489,7 @@ class Cryptography(object):
                     if bool(root.encryptWriteFileContentVar.get()) and bool(root.dataSourceVar.get()):
                         self.update_status(f"Writing to the file (file {index + 1}/{len(datas)})...")
                         try:
-                            with open(path, mode="wb") as file:
+                            with open(raw, mode="wb") as file:
                                 file.write(root.lastEncryptionResult.encode("utf-8"))
                             if len(datas) != 1:
                                 del root.lastEncryptionResult
@@ -509,7 +508,7 @@ class Cryptography(object):
                             self.update_status("Ready")
                             failure = True
                             return
-                        except OSError:
+                        except OSError as details:
                             if "No space" in str(details):
                                 # If no space left on device to save the result, show an error message
                                 messagebox.showerror("No space left", "There is no space left on your device. Free up some space and try again.")
@@ -533,13 +532,15 @@ class Cryptography(object):
             if len(datas) != 1 and bool(root.dataSourceVar.get()):
                 # If multiple files were encrypted, don't show the result (because how are we supposed to show anyway)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
-                root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("The encrypted text is not being displayed because multiple files were selected to be encrypted.")
-                del root.lastEncryptionResult
+                root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("Encrypted data is not being displayed because multiple files were selected to be encrypted.")
+                if hasattr(root, 'lastEncryptionResult'):
+                    del root.lastEncryptionResult
             elif hasattr(root, "lastEncryptionResult") and len(root.lastEncryptionResult) > 15000:
                 # If one file was chosen or a plain text was entered to be encrypted, but the result is over 15.000 characters, don't show the result
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
-                root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("The encrypted text is not being displayed because it is longer than 15.000 characters.")
-                del root.lastEncryptionResult
+                root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("Encrypted data is not being displayed because it is longer than 15.000 characters.")
+                if hasattr(root, 'lastEncryptionResult'):
+                    del root.lastEncryptionResult
             else:
                 # Otherwise, just show it
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="black", wrap=None)
@@ -600,12 +601,12 @@ class Cryptography(object):
             self.update_status("Defining cipher...")
 
             datas: list[str | bytes] = []
-            if not bool(root.dataSourceVar.get()):
+            if not bool(root.decryptSourceVar.get()):
                 # If the user has chosen to decrypt a plain text, simply put the text from the entry to the datas list
-                datas.append(bytes(root.textEntryVar.get(), "utf-8"))
+                datas.append(bytes(root.textDecryptVar.get(), "utf-8"))
             else:
                 # Otherwise, split the file paths from the entry using '|' character and put in the datas list
-                path: str = root.mainNotebook.encryptionFrame.fileEntry.get()
+                path: str = root.mainNotebook.decryptionFrame.fileDecryptEntry.get()
                 for filename in path.split('|'):
                     datas.append(filename)
             
@@ -627,8 +628,8 @@ class Cryptography(object):
                 self.update_status(f"Decoding (file {index + 1}/{len(datas)})..." if isinstance(raw, str) else "Decoding...")
                 try:
                     new_data: bytes = base64.urlsafe_b64decode(data)
-                except:
-                    messagebox.showerror("Unencrypted file", f"This file seems doesn't seem to be encrypted using {'AES' if not bool(root.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
+                except Exception as exc:
+                    messagebox.showerror("Unencrypted file", f"This file doesn't seem to be encrypted using {'AES' if not bool(root.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
                     root.logger.error("Unencrypted file was specified for decryption")
                     self.update_status("Ready")
                     return
@@ -637,13 +638,14 @@ class Cryptography(object):
                         data: bytes = new_data
                         del new_data
                     else:
-                        messagebox.showerror("Unencrypted file", f"This file seems doesn't seem to be {'AES' if not bool(root.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
+                        messagebox.showerror("Unencrypted file", f"This file doesn't seem to be encrypted using {'AES' if not bool(root.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
                         root.logger.error("Unencrypted file was specified")
                         self.update_status("Ready")
                         return
                 if 'cipher' not in locals():
-                    iv = raw[:16 if not bool(root.decryptAlgorithmVar.get()) else 8]
+                    iv = data[:16 if not bool(root.decryptAlgorithmVar.get()) else 8]
                     key = root.decryptKeyVar.get()[:-1 if root.decryptKeyVar.get().endswith("\n") else None].encode("utf-8")
+
                     try:
                         if not bool(root.decryptAlgorithmVar.get()):
                             cipher = AES.new(key, AES.MODE_CFB, iv=iv)
@@ -651,7 +653,7 @@ class Cryptography(object):
                             cipher = DES3.new(key, DES3.MODE_OFB, iv=iv)
                     except ValueError as details:
                         if len(iv) != 16 if not bool(root.decryptAlgorithmVar.get()) else 8:
-                            messagebox.showerror("Unencrypted data", f"The text you've entered seems doesn't seem to be using {'AES' if not bool(root.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
+                            messagebox.showerror("Unencrypted data", f"The text you've entered doesn't seem to be encrypted using {'AES' if not bool(root.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
                             root.logger.error("Unencrypted text was entered")
                             self.update_status("Ready")
                             return
@@ -661,30 +663,31 @@ class Cryptography(object):
                             self.update_status("Ready")
                             return
                         else:
-                            messagebox.showerror("Invalid key", "The key you've entered is invalid.")
+                            messagebox.showerror("Invalid key", "The encryption key you've entered is invalid.")
                             root.logger.error("Invalid key was entered for decryption")
                             self.update_status("Ready")
                             return
                 try:
                     self.update_status(f"Decrypting (file {index + 1}/{len(datas)})..." if isinstance(raw, str) else "Decrypting...")
-                    # Encrypt the data and combine it with the IV used
-                    root.lastEncryptionResult = iv + cipher.decrypt(data)
+                    # Decrypt the data
+                    root.lastDecryptionResult = cipher.decrypt(data.replace(iv, b""))
+                    
                 except MemoryError:
-                    # If the computer runs out of memory while encrypting (happens when encrypting big files), show an error message
+                    # If the computer runs out of memory while decrypting (happens when encrypting big files), show an error message
                     messagebox.showerror("Not enough memory", "Your computer has run out of memory while decrypting the file. Try closing other applications or restart your computer.")
                     root.logger.error("Device has run out of memory while decrypting, decryption was interrupted")
                     self.update_status("Ready")
                     return
-                # Delete the data variable since we have the encrypted data held on another variable, in order to free up some memory
+                # Delete the data variable since we have the decrypted data held on another variable, in order to free up some memory
                 del data
                 try:
                     if bool(root.decryptWriteFileContentVar.get()) and bool(root.dataSourceVar.get()):
                         self.update_status(f"Writing to the file (file {index + 1}/{len(datas)})...")
                         try:
                             with open(path, mode="wb") as file:
-                                file.write(root.lastEncryptionResult.encode("utf-8"))
+                                file.write(root.lastDecryptionResult)
                             if len(datas) != 1:
-                                del root.lastEncryptionResult
+                                del root.lastDecryptionResult
                         except PermissionError:
                             # If the program doesn't have write access to the file, show an error message
                             if messagebox.askyesnocancel("Access denied", f"Write access to the file named \"{os.path.basename(raw)}\" that you've specified has been denied, therefore the result could not have been overwritten to the file. Do you want to save the encrypted data as another file?"):
@@ -702,7 +705,7 @@ class Cryptography(object):
                             return
                         except OSError:
                             if "No space" in str(details):
-                                # If no space left on device to save the result, show an error message
+                                # If no space is left on device to save the result, show an error message
                                 messagebox.showerror("No space left", "There is no space left on your device. Free up some space and try again.")
                                 root.logger.error("No space left on device, encrypted data could not be saved to the destination")
                                 self.update_status("Ready")
@@ -715,64 +718,11 @@ class Cryptography(object):
                     root.logger.error("Device has run out of memory while encoding, encryption was interrupted")
                     self.update_status("Ready")
                     return
-            
-            if not bool(root.decryptSourceVar.get()):
-                # If the user has chosen to decrypt a plain text they entered, decode it with base64
-                self.update_status("Decoding encrypted data...")
-                data = base64.urlsafe_b64decode(root.textDecryptVar.get().encode("utf-8"))
-            else:
-                # Otherwise, if user has chosen to decrypt a file, read the file and decode with base64
-                self.update_status("Reading the file...")
-                try:
-                    with open(root.mainNotebook.decryptionFrame.fileDecryptEntry.get(), mode="r+b") as file:
-                        data = file.read()
-                except PermissionError:
-                    messagebox.showerror("Access denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure read & write access for the file is permitted.")
-                    root.logger.error("Read permission for the file specified has been denied, decryption was interrupted")
-                    self.update_status("Ready")
-                    return
-                self.update_status("Decoding the file data...")
-                try:
-                    decodedData = base64.urlsafe_b64decode(data)
-                except:
-                    messagebox.showerror("Unencrypted file", f"This file seems doesn't seem to be using {'AES' if not bool(root.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
-                    root.logger.error("Unencrypted file was specified")
-                    self.update_status("Ready")
-                    return
-                else:
-                    if data == base64.urlsafe_b64encode(decodedData):
-                        data = decodedData
-                        del decodedData
-                    else:
-                        messagebox.showerror("Unencrypted file", f"This file seems doesn't seem to be {'AES' if not bool(root.decryptAlgorithmVar.get()) else '3DES'} symmetric key encryption algorithm.")
-                        root.logger.error("Unencrypted file was specified")
-                        self.update_status("Ready")
-                        return
-
-            self.update_status("Decrypting...")
-            try:
-                self.lastDecryptionResult = cipher.decrypt(data.replace(iv, b""))
-            except UnicodeDecodeError:
-                messagebox.showerror("Invalid key", "The encryption key you've entered doesn't seem to be the right key. Make sure you've entered the correct key.")
-                root.logger.error("Wrong key entered for decryption")
-                self.update_status("Ready")
-                return
-
-            self.update_status("Writing to the file...")
-            if bool(root.decryptSourceVar.get()):
-                try:
-                    with open(root.mainNotebook.decryptionFrame.fileDecryptEntry.get(), mode="wb") as file:
-                        file.write(self.lastDecryptionResult)
-                except PermissionError:
-                    messagebox.showerror("Access denied", "Access to the file you've specified has been denied. Try running the program as administrator and make sure write access for the file is permitted.")
-                    root.logger.error("Write permission for the file specified has been denied, decryption was interrupted")
-                    self.update_status("Ready")
-                    return
 
             self.update_status("Displaying the result...")
             try:
-                self.lastDecryptionResult = self.lastDecryptionResult.decode("utf-8")
-            except UnicodeDecodeError:
+                root.lastDecryptionResult = root.lastDecryptionResult.decode("utf-8")
+            except UnicodeDecodeError as exc:
                 if bool(root.decryptSourceVar.get()):
                     root.mainNotebook.decryptionFrame.decryptOutputText.configure(foreground="gray")
                     root.mainNotebook.decryptionFrame.decryptOutputText.replace("Decrypted data is not being displayed because it's in an unknown encoding.")
@@ -781,10 +731,13 @@ class Cryptography(object):
                     root.logger.error("Wrong key was entered for decryption")
                     self.update_status("Ready")
                     return
+            except AttributeError:
+                root.mainNotebook.decryptionFrame.decryptOutputText.configure(foreground="gray")
+                root.mainNotebook.decryptionFrame.decryptOutputText.replace("Decrypted data is not being displayed because multiple files were selected to be decrypted.")
             else:
-                if not len(self.lastDecryptionResult) > 15000:
+                if not len(root.lastDecryptionResult) > 15000:
                     root.mainNotebook.decryptionFrame.decryptOutputText.configure(foreground="black")
-                    root.mainNotebook.decryptionFrame.decryptOutputText.replace(self.lastDecryptionResult)
+                    root.mainNotebook.decryptionFrame.decryptOutputText.replace(root.lastDecryptionResult)
                 else:
                     root.mainNotebook.decryptionFrame.decryptOutputText.configure(foreground="gray")
                     root.mainNotebook.decryptionFrame.decryptOutputText.replace("Decrypted data is not being displayed because it's longer than 15.000 characters.")
@@ -2069,7 +2022,7 @@ class Interface(Tk):
                                                             except binascii.Error:
                                                                 self.master.master.master.decryptButton.configure(state=DISABLED)
                                                         else:
-                                                            if os.path.isfile(self.master.master.master.fileDecryptEntry.get()):
+                                                            if self.master.master.master.fileDecryptCallback():
                                                                 self.master.master.master.decryptButton.configure(state=NORMAL)
                                                             else:
                                                                 self.master.master.master.decryptButton.configure(state=DISABLED)
@@ -2174,22 +2127,20 @@ class Interface(Tk):
                             self.decryptButton.configure(state=DISABLED)
 
                     def fileDecryptCallback(self, *args, **kwargs):
-                        if not ''.join(str(self.fileDecryptEntry.get()).split()) == "":
-                            if os.path.isfile(self.fileDecryptEntry.get()):
-                                self.decryptButton.configure(state=NORMAL)
-                                self.algorithmSelect.symmetricDecryption.decryptKeyFrame.decryptLimitKeyEntry()
-                            else:
-                                self.decryptButton.configure(state=DISABLED)
+                        self.fileDecryptClearButton.configure(state=DISABLED if ''.join(self.fileDecryptEntry.get().split()) != '' else NORMAL)
+                        if ''.join(self.fileDecryptEntry.get().split()) != '':
+                            all_valid = all([os.path.isfile(filename) for filename in [filename.lstrip() for filename in self.fileDecryptEntry.get().split('|') if ''.join(filename.split()) != '']])
+                            #self.fileValidityLabel.configure(**{"text": f"Selection: {len([f.lstrip() for f in self.fileEntry.get().split('|') if ''.join(f.split()) != ''])} file{'s' if len([f.lstrip() for f in self.fileEntry.get().split('|') if ''.join(f.split()) != '']) != 1 else ''} selected", "foreground": "green" if all_valid else "red"})
                         else:
-                            self.decryptButton.configure(state=DISABLED)
+                            pass
+                            #self.fileValidityLabel.configure(text="Selection: [Blank]", foreground="gray")
+                        self.decryptButton.configure(state=DISABLED if ''.join(self.fileDecryptEntry.get().split()) == '' else NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and all_valid and (not bool(self.root.keySourceSelection.get()) or (bool(self.root.keySourceSelection.get()) and ''.join(self.root.mainNotebook.decryptionFrame.algorithmSelect.symmetricDecryption.decryptKeyEntry.get().split()) != '')))) else DISABLED)
 
-                    
-                    
                     def decryptBrowseFile(self):
-                        files = [("All files","*.*")]
-                        filePath = filedialog.askopenfilename(title = "Open a file to decrypt", filetypes=files)
-                        if filePath != "":
-                            self.fileDecryptEntry.replace(filePath)
+                        filePath = filedialog.askopenfilenames(title = "Open a file to decrypt", filetypes=[("All files","*.*")])
+                        if not filePath:
+                            return
+                        self.fileDecryptEntry.replace(' | '.join(filePath))
 
                 class miscFrame(Frame):
                     def __init__(self, master: mainNotebook = None):
@@ -2763,8 +2714,10 @@ class Interface(Tk):
             for attribute in [attr for attr in inspect.getmembers(self, lambda attr: not(inspect.isroutine(attr))) if not(attr[0].startswith('__') and attr[0].endswith('__'))]:
                 if not attribute[0] in {key: value for (key, value) in cur.execute("SELECT * FROM user_data").fetchall()}:
                     break
-                if 
             else:
+                for attribute in [attr for attr in {key: value for (key, value) in cur.execute("SELECT * FROM user_data").fetchall()}.keys()]:
+                    if not attribute in [attr[0] for attr in inspect.getmembers(self, lambda attr: not(inspect.isroutine(attr))) if not(attr[0].startswith('__') and attr[0].endswith('__'))]:
+                        return
                 # Iterate over the data in the database and set the corresponding variables
                 cur.execute("SELECT * FROM user_data")
                 for key, value in cur.fetchall():
