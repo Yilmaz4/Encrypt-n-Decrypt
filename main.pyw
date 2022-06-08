@@ -33,7 +33,7 @@ __title__ = "Encrypt-n-Decrypt"
 __author__ = "Yilmaz4"
 __license__ = "MIT"
 __copyright__ = "Copyright © 2017-2022 Yilmaz Alpaslan"
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 from tkinter import (
     NORMAL, DISABLED, WORD, FLAT, END, LEFT,
@@ -681,10 +681,10 @@ class Cryptography(object):
                 # Delete the data variable since we have the decrypted data held on another variable, in order to free up some memory
                 del data
                 try:
-                    if bool(root.decryptWriteFileContentVar.get()) and bool(root.dataSourceVar.get()):
+                    if bool(root.decryptWriteFileContentVar.get()) and bool(root.decryptSourceVar.get()):
                         self.update_status(f"Writing to the file (file {index + 1}/{len(datas)})...")
                         try:
-                            with open(path, mode="wb") as file:
+                            with open(raw, mode="wb") as file:
                                 file.write(root.lastDecryptionResult)
                             if len(datas) != 1:
                                 del root.lastDecryptionResult
@@ -956,7 +956,7 @@ class Logger(object):
                 if ''.join(index.split()) != '':
                     file.write(f"{'='*24} End of logging session {'='*25}\n")
 
-    # Overwrite all the methods for logging in order to implement 'format' parameter
+    # Overwrite all the methods for logging in order to implement the 'format' parameter
     def debug(self, message: str, format: bool = True):
         self.logger.debug((message + "\n" if not message.endswith("\n") else message) + ("!NO_FORMAT" if not format else ""))
     def info(self, message: str, format: bool = True):
@@ -1256,9 +1256,10 @@ class Notebook(Notebook):
         the program must return to the last tab
         """
         try:
+            # Try to get the lastly indexed element from the history
             return self.__history[-1]
         except IndexError:
-            if bool(len(self.__history)):
+            if len(self.__history):
                 return self.__history[0]
             else:
                 return None
@@ -1353,7 +1354,13 @@ class Notebook(Notebook):
                         if hasattr(self.master.mainNotebook.sourceFrame, "downloadingLabel"):
                             self.master.mainNotebook.sourceFrame.downloadingLabel.place_forget()
                             del self.master.mainNotebook.sourceFrame.downloadingLabel
-                        self.master._sourceLoadFailure = False        
+                        self.master._sourceLoadFailure = False
+                else:
+                    if self.__history:
+                        try:
+                            self.forget(5)
+                        except Exception:
+                            pass
 
         # Limit the last tab history to 2 tabs
         if len(self.__history) >= 2:
@@ -1449,6 +1456,7 @@ class Interface(Tk):
         # Initialize the state control functions list, in which functions that control the state/visibility
         # (either NORMAL or DISABLED) of the widgets depending on the state of radio buttons
         self.scfs: list[dict[Callable, Callable]] = []
+        # The main notebook widget
         class mainNotebook(Notebook):
             def __init__(self, master: Interface):
                 super().__init__(master, width=380, height=340)
@@ -1782,13 +1790,16 @@ class Interface(Tk):
                     def limitKeyEntry(self, *args, **kwargs) -> None:
                         global value
                         if len(self.master.master.keyEntryVar.get()) > 32:
+                            # If the entry contains 33 characters (prolly caused by a bug in Tkinter), remove the last character
                             self.master.master.keyEntryVar.set(self.master.master.keyEntryVar.get()[:32])
                         value = self.master.master.keyEntryVar.get()
                         if ''.join(str(self.master.master.keyEntryVar.get()).split()) == "":
+                            # If the entry is empty, gray out the encrypt and clear buttons, and update the status text
                             self.algorithmSelect.symmetricEncryption.keyValidityStatusLabel.configure(foreground="gray", text="Validity: [Blank]")
                             self.encryptButton.configure(state=DISABLED)
                             self.algorithmSelect.symmetricEncryption.keyClearButton.configure(state=DISABLED)
                         else:
+                            # If the entry actually contains something, go ahead
                             self.algorithmSelect.symmetricEncryption.keyClearButton.configure(state=NORMAL if bool(self.root.keySourceSelection.get()) else DISABLED)
                             if not bool(self.master.master.keySourceSelection.get()):
                                 cond = bool(self.master.master.generateAlgorithmSelection.get())
@@ -2086,7 +2097,7 @@ class Interface(Tk):
                                 try:
                                     if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.textDecryptEntry.get("1.0", END).encode("utf-8"))) == self.textDecryptEntry.get("1.0", END).rstrip().encode("utf-8"):
                                         self.textDecryptValidityLabel.configure(text="Validity: Valid base64 encoded data", foreground="green")
-                                        self.decryptButton.configure(state=NORMAL if ''.join(self.decryptKeyEntry.get().split()) != '' else DISABLED)
+                                        self.decryptButton.configure(state=NORMAL if ''.join(self.algorithmSelect.symmetricDecryption.decryptKeyFrame.decryptKeyEntry.get().split()) != '' else DISABLED)
                                     else:
                                         self.textDecryptValidityLabel.configure(text="Validity: Invalid base64 encoded data", foreground="red")
                                         self.decryptButton.configure(state=DISABLED)
@@ -2104,7 +2115,7 @@ class Interface(Tk):
                             self.fileDecryptBrowseButton.configure(state=NORMAL)
                             self.fileDecryptClearButton.configure(state=NORMAL)
                             if os.path.isfile(self.fileDecryptEntry.get()):
-                                self.decryptButton.configure(state=NORMAL if ''.join(self.decryptKeyEntry.get().split()) != '' else DISABLED)
+                                self.decryptButton.configure(state=NORMAL if ''.join(self.algorithmSelect.symmetricDecryption.decryptKeyFrame.decryptKeyEntry.get().split()) != '' else DISABLED)
                             else:
                                 self.decryptButton.configure(state=DISABLED)
                         self.algorithmSelect.symmetricDecryption.decryptKeyFrame.decryptLimitKeyEntry()
@@ -2134,7 +2145,18 @@ class Interface(Tk):
                         else:
                             pass
                             #self.fileValidityLabel.configure(text="Selection: [Blank]", foreground="gray")
-                        self.decryptButton.configure(state=DISABLED if ''.join(self.fileDecryptEntry.get().split()) == '' else NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and all_valid and (not bool(self.root.keySourceSelection.get()) or (bool(self.root.keySourceSelection.get()) and ''.join(self.root.mainNotebook.decryptionFrame.algorithmSelect.symmetricDecryption.decryptKeyEntry.get().split()) != '')))) else DISABLED)
+                        return_res = {
+                            DISABLED: False,
+                            NORMAL: True
+                        }
+                        state = DISABLED if ''.join(self.fileDecryptEntry.get().split()) == '' else NORMAL if (
+                            not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and all_valid and (
+                                ''.join(self.root.mainNotebook.decryptionFrame.algorithmSelect.symmetricDecryption.decryptKeyFrame.decryptKeyEntry.get().split()) != ''
+                            ))
+                        ) else DISABLED
+                                
+                        self.decryptButton.configure(state=state)
+                        return return_res[state]
 
                     def decryptBrowseFile(self):
                         filePath = filedialog.askopenfilenames(title = "Open a file to decrypt", filetypes=[("All files","*.*")])
@@ -2181,84 +2203,100 @@ class Interface(Tk):
                                 self.base64_outputCopyButton = Button(self, width=15, text="Copy", command=lambda: self.root.clipboard_set(self.base64_outputText.get("1.0", END)[:-1 if self.base64_outputText.get("1.0", END).endswith("\n") else 0]), state=DISABLED, takefocus=0)
 
                                 self.root.base64InputVar.trace("w", self.base64_inputCallback)
+                                self.root.base64FileEntryVar.trace("w", self.base64_fileEntryCallback)
                                 self.root.base64OutputVar.trace("w", self.base64_outputCallback)
 
                                 self.base64_plainRadiobutton.place(x=7, y=0)
                                 self.base64_plainEntry.place(x=25, y=22)
-                                self.base64_plainClearButton.place(x=131, y=98)
-                                self.base64_plainPasteButton.place(x=24, y=98)
+                                self.base64_plainValidity.place(x=82, y=1)
+                                self.base64_plainClearButton.place(x=131, y=49)
+                                self.base64_plainPasteButton.place(x=24, y=49)
                                 
-                                self.base64_fileRadiobutton.place(x=7, y=125)
-                                self.base64_fileEntry.place(x=25, y=147)
-                                self.base64_fileClearButton.place(x=131, y=174)
-                                self.base64_fileBrowseButton.place(x=24, y=174)
+                                self.base64_fileRadiobutton.place(x=7, y=78)
+                                self.base64_fileEntry.place(x=25, y=100)
+                                self.base64_fileClearButton.place(x=131, y=127)
+                                self.base64_fileBrowseButton.place(x=24, y=127)
 
                                 self.base64_operationFrame = operationFrame(self)
-                                self.base64_operationFrame.place(x=10, y=225)
+                                self.base64_operationFrame.place(x=10, y=159)
                                 
-                                self.base64_outputLabel.place(x=7, y=290)
-                                self.base64_outputText.place(x=10, y=312)
-                                self.base64_outputClearButton.place(x=116, y=388)
-                                self.base64_outputCopyButton.place(x=9, y=388)
+                                self.base64_outputLabel.place(x=7, y=227)
+                                self.base64_outputText.place(x=10, y=249)
+                                self.base64_outputClearButton.place(x=116, y=325)
+                                self.base64_outputCopyButton.place(x=9, y=325)
 
                             def base64_changeSourceSelection(self):
                                 if not bool(self.root.base64SourceVar.get()):
-                                    self.base64_plainEntry.configure(state=NORMAL, bg="white", foreground="black", relief=FLAT, highlightbackground="#7a7a7a", highlightthickness=1, highlightcolor="#7a7a7a")
-                                    self.base64_plainClearButton.configure(state=NORMAL if ''.join(self.base64_plainEntry.get("1.0")) != '' else DISABLED)
+                                    self.base64_plainEntry.configure(state=NORMAL)
+                                    self.base64_plainClearButton.configure(state=NORMAL if ''.join(self.base64_plainEntry.get()) != '' else DISABLED)
                                     self.base64_plainPasteButton.configure(state=NORMAL)
                                     
                                     self.base64_fileEntry.configure(state=DISABLED)
                                     self.base64_fileClearButton.configure(state=DISABLED)
                                     self.base64_fileBrowseButton.configure(state=DISABLED)
+                                    self.base64_inputCallback()
                                 else:
-                                    self.base64_plainEntry.configure(state=DISABLED, bg="#F0F0F0", foreground="gray", relief=FLAT, highlightbackground="#cccccc", highlightthickness=1, highlightcolor="#cccccc")
+                                    self.base64_plainEntry.configure(state=DISABLED)
                                     self.base64_plainClearButton.configure(state=DISABLED)
                                     self.base64_plainPasteButton.configure(state=DISABLED)
                                     
                                     self.base64_fileEntry.configure(state=NORMAL)
                                     self.base64_fileClearButton.configure(state=NORMAL if ''.join(self.base64_fileEntry.get()) != '' else DISABLED)
                                     self.base64_fileBrowseButton.configure(state=NORMAL)
+                                    self.base64_fileEntryCallback()
 
                             def base64_browseFile(self):
                                 filePath = filedialog.askopenfilename(title=f"Open a file to {'encode' if not bool(self.root.encodeOrDecodeVar.get()) else 'decode'}", filetypes=[("All files", "*.*")])
                                 if ''.join(filePath.split()) != '':
-                                    self.fileEntry.replace(filePath)
+                                    self.base64_fileEntry.replace(filePath)
 
                             def base64_inputCallback(self, *args, **kwargs):
-                                if ''.join(self.plainEntry.get().split()) != "":
-                                    self.plainClearButton.configure(state=NORMAL)
+                                if ''.join(self.base64_plainEntry.get().split()) != "":
+                                    self.base64_plainClearButton.configure(state=NORMAL)
                                 else:
-                                    self.plainClearButton.configure(state=DISABLED)
-                                if not bool(self.root.encodeOrDecodeVar.get()) and ''.join(self.plainEntry.get().split()) != "":
-                                    self.plainValidity.configure(text="Validity: Encodable", foreground="green")
-                                    self.outputText.replace(base64.urlsafe_b64encode(self.plainEntry.get().encode("utf-8")).decode("utf-8"))
-                                    self.outputText.configure(foreground="black")
-                                elif bool(self.root.encodeOrDecodeVar.get()) and ''.join(self.plainEntry.get().split()) != "":
+                                    self.base64_plainClearButton.configure(state=DISABLED)
+                                if not bool(self.root.encodeOrDecodeVar.get()) and ''.join(self.base64_plainEntry.get().split()) != "":
+                                    self.base64_plainValidity.configure(text="Validity: Encodable", foreground="green")
+                                    self.base64_outputText.replace(base64.urlsafe_b64encode(self.base64_plainEntry.get().encode("utf-8")).decode("utf-8"))
+                                    self.base64_outputText.configure(foreground="black")
+                                elif bool(self.root.encodeOrDecodeVar.get()) and ''.join(self.base64_plainEntry.get().split()) != "":
                                     try:
-                                        if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.plainEntry.get().encode("utf-8")).decode("utf-8").encode("utf-8")) == self.plainEntry.get().rstrip().encode("utf-8"):
-                                            self.plainValidity.configure(text="Validity: Valid base64 encoded data", foreground="green")
-                                            self.outputText.replace(base64.urlsafe_b64decode(self.plainEntry.get().encode("utf-8")).decode("utf-8"))
-                                            self.outputText.configure(foreground="black")
+                                        if base64.urlsafe_b64encode(base64.urlsafe_b64decode(self.base64_plainEntry.get().encode("utf-8")).decode("utf-8").encode("utf-8")) == self.base64_plainEntry.get().rstrip().encode("utf-8"):
+                                            self.base64_plainValidity.configure(text="Validity: Valid base64 encoded data", foreground="green")
+                                            self.base64_outputText.replace(base64.urlsafe_b64decode(self.base64_plainEntry.get().encode("utf-8")).decode("utf-8"))
+                                            self.base64_outputText.configure(foreground="black")
                                         else:
-                                            self.plainValidity.configure(text="Validity: Invalid", foreground="red")
-                                            self.outputText.configure(foreground="gray")
+                                            self.base64_plainValidity.configure(text="Validity: Invalid", foreground="red")
+                                            self.base64_outputText.configure(foreground="gray")
                                     except binascii.Error as ExceptionDetails:
-                                        self.plainValidity.configure(text=f"Validity: {'Incorrect padding' if 'padding' in str(ExceptionDetails) else 'Invalid'}", foreground="red")
-                                        self.outputText.configure(foreground="gray")
+                                        self.base64_plainValidity.configure(text=f"Validity: {'Incorrect padding' if 'padding' in str(ExceptionDetails) else 'Invalid'}", foreground="red")
+                                        self.base64_outputText.configure(foreground="gray")
                                     except UnicodeDecodeError:
-                                        self.plainValidity.configure(text="Validity: Unknown encoding", foreground="red")
-                                        self.outputText.configure(foreground="gray")
+                                        self.base64_plainValidity.configure(text="Validity: Unknown encoding", foreground="red")
+                                        self.base64_outputText.configure(foreground="gray")
                                 else:
-                                    self.plainValidity.configure(text="Validity: [Blank]", foreground="gray")
-                                    self.outputText.clear()
+                                    self.base64_plainValidity.configure(text="Validity: [Blank]", foreground="gray")
+                                    self.base64_outputText.clear()
+
+                            def base64_fileEntryCallback(self, *args, **kwargs):
+                                if ''.join(self.base64_fileEntry.get().split()) != '':
+                                    self.base64_fileClearButton.configure(state=NORMAL)
+                                    if os.path.isfile(self.base64_fileEntry.get()):
+                                        try:
+                                            with open(self.base64_fileEntry.get(), mode="rb") as file:
+                                                self.base64_outputText.replace(base64.urlsafe_b64encode(file.read()).decode("utf-8"))
+                                        except Exception as exc:
+                                            print(exc)
+                                else:
+                                    self.base64_fileClearButton.configure(state=DISABLED)
 
                             def base64_outputCallback(self, *args, **kwargs):
-                                if ''.join(self.outputText.get("1.0", END).split()) != "":
-                                    self.outputClearButton.configure(state=NORMAL)
-                                    self.outputCopyButton.configure(state=NORMAL)
+                                if ''.join(self.base64_outputText.get("1.0", END).split()) != "":
+                                    self.base64_outputClearButton.configure(state=NORMAL)
+                                    self.base64_outputCopyButton.configure(state=NORMAL)
                                 else:
-                                    self.outputClearButton.configure(state=DISABLED)
-                                    self.outputCopyButton.configure(state=DISABLED)
+                                    self.base64_outputClearButton.configure(state=DISABLED)
+                                    self.base64_outputCopyButton.configure(state=DISABLED)
 
                         class keyDerivationFrame(LabelFrame):
                             def __init__(self, master: miscFrame):
@@ -2576,7 +2614,7 @@ class Interface(Tk):
                 self.add(self.miscFrame, text="Miscellaneous")
                 self.add(self.loggingFrame, text="Logs")
                 self.add(self.helpFrame, text="Help & About")
-                self.add(self.sourceFrame, text="Source Code")
+                # self.add(self.sourceFrame, text="Source Code")
 
         self.mainNotebook = mainNotebook(self)
         self.mainNotebook.pack(fill=BOTH, expand=YES, pady=4, padx=4, side=TOP)
@@ -2750,6 +2788,13 @@ class Interface(Tk):
                 # Otherwise, don't call anything
                 return
 
+        def show_source(*args, **kwargs):
+            """
+            The function to make the source code tab in mainNotebook visible
+            """
+            self.mainNotebook.add(self.mainNotebook.sourceFrame, text="Source Code")
+            self.mainNotebook.select(5)
+
         self.bind("<Return>", encrypt)
 
         self.bind("<Control_L><Alt_L>t", lambda _: self.theme.set_theme("vista"))
@@ -2758,6 +2803,8 @@ class Interface(Tk):
         self.bind("<Control_L>m", lambda _: self.mainNotebook.select(2))
         self.bind("<Control_L>l", lambda _: self.mainNotebook.select(3))
         self.bind("<F1>", lambda _: self.mainNotebook.select(4))
+        # EASTER EGG! This keybind shows the source code of the program
+        self.bind("<Control_L><Alt_L>s", show_source)
 
     @exception_logged
     def __del__(self):
