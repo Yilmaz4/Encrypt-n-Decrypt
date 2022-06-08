@@ -1356,9 +1356,9 @@ class Notebook(Notebook):
                             del self.master.mainNotebook.sourceFrame.downloadingLabel
                         self.master._sourceLoadFailure = False
                 else:
-                    if self.__history:
+                    if len(self.__history) > 1:
                         try:
-                            self.forget(5)
+                            self.hide(5)
                         except Exception:
                             pass
 
