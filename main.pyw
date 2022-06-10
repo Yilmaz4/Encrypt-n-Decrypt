@@ -331,8 +331,8 @@ class Cryptography(object):
             case _:
                 messagebox.showwarning("Invalid key file", "The specified file does not contain any valid key for encryption.")
                 root.logger.error("Key file with no valid key inside was specified.")
-                return 
-            
+                return
+
     @classmethod
     def save_key(cls, key: str | bytes, root: Tk) -> None:
         """
@@ -1270,6 +1270,11 @@ class Notebook(Notebook):
             # If the notebook we're talking about is the main notebook...
             if self.index(self.select()) == 4:
                 # If the selected tab is the "About & Help" tab...
+                if len(self.__history) > 1:
+                    try:
+                        self.forget(5)
+                    except Exception:
+                        pass
                 if not hasattr(self, "HTML"):
                     # If the content isn't downloaded from web yet, downlaod it and assign the HTML to the HTML attribute so that we won't have to download it again
                     self.master.statusBar.configure(text="Status: Downloading HTML...")
@@ -1358,7 +1363,7 @@ class Notebook(Notebook):
                 else:
                     if len(self.__history) > 1:
                         try:
-                            self.hide(5)
+                            self.forget(5)
                         except Exception:
                             pass
 
@@ -2793,7 +2798,8 @@ class Interface(Tk):
             The function to make the source code tab in mainNotebook visible
             """
             self.mainNotebook.add(self.mainNotebook.sourceFrame, text="Source Code")
-            self.mainNotebook.select(5)
+            if any(["source" in child for child in self.mainNotebook.tabs()]):
+                self.mainNotebook.select(5)
 
         self.bind("<Return>", encrypt)
 
@@ -3109,7 +3115,7 @@ class Interface(Tk):
             DownloadLinks.place(x=310, y=168)
             self.focus_force()
             self.mainloop()
-            
+
         @selfinjected("self")
         def __init_subclass__(cls: type, *args, **kwargs):
             raise TypeError(f"Class \"{Utilities.get_master_class(self).__name__}\" cannot be subclassed.") # type: ignore
