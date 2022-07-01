@@ -1678,7 +1678,7 @@ class Interface(Tk):
                                 self.copyOutputButton = Button(self, text = "Copy", width=10, command=lambda: self.root.clipboard_set(self.outputText.get("1.0", END)), state=DISABLED, takefocus=0)
                                 self.clearOutputButton = Button(self, text = "Clear", width=10, command=lambda: self.outputText.clear(), state=DISABLED, takefocus=0)
                                 self.saveOutputButton = Button(self, width=15, text="Save as...", command=self.saveOutput, state=DISABLED, takefocus=0)
-                                self.copyAESKeyButton = Button(self, width = 10, text="Copy", command=lambda: self.root.clipboard_set(self.AESKeyText.get("1.0", END)), state=DISABLED, takefocus=0)
+                                self.copyAESKeyButton = Button(self, width = 10, text="Copy", command=lambda: self.root.clipboard_set(self.AESKeyText.get("1.0", END).rstrip()), state=DISABLED, takefocus=0)
                                 self.clearAESKeyButton = Button(self, width = 10, text="Clear", command=lambda: self.AESKeyText.clear(), state=DISABLED, takefocus=0)
                                 self.saveAESKeyButton = Button(self, width=15, text="Save as...", command=lambda: self.root.crypto.save_key(self.root.AESKeyVar.get(), self.root), state=DISABLED, takefocus=0)
                                 self.copyRSAPublicButton = Button(self, width = 10, text="Copy", command=lambda: self.root.clipboard_set(self.RSAPublicText.get("1.0", END)), state=DISABLED, takefocus=0)
@@ -1821,7 +1821,6 @@ class Interface(Tk):
 
                         if not bool(self.root.keySourceSelection.get()):
                             self.encryptButton.configure(state=NORMAL)
-                            self.fileEntryCallback()
                         elif bool(self.root.keySourceSelection.get()) and (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and os.path.isfile(self.fileEntry.get()))):
                             self.encryptButton.configure(state=NORMAL)
                             self.limitKeyEntry()
@@ -1871,7 +1870,8 @@ class Interface(Tk):
                             else:
                                 self.algorithmSelect.symmetricEncryption.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
                                 self.encryptButton.configure(state=NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and os.path.isfile(self.fileEntry.get()))) else DISABLED)
-                                self.fileEntryCallback()
+                                if bool(self.root.dataSourceVar.get()):
+                                    self.fileEntryCallback()
 
                     @state_control_function(self)
                     def changeDataSource(self):
@@ -2122,7 +2122,7 @@ class Interface(Tk):
                         self.decryptOutputText = Entry(self.decryptOutputFrame, width=105, font=("Consolas", 9), state=DISABLED, textvariable=self.master.master.decryptOutputVar, takefocus=0)
                         self.decryptCopyButton = Button(self.decryptOutputFrame, text="Copy", width=17, command=lambda: self.root.clipboard_set(self.root.self.lastDecryptionResult), takefocus=0, state=DISABLED)
                         self.decryptClearButton = Button(self.decryptOutputFrame, text="Clear", width=17, command=lambda: self.decryptOutputText.clear(), takefocus=0, state=DISABLED)
-                        self.decryptSaveButton = Button(self.decryptOutputFrame, text="Save as...", width=20, takefocus=0, state=DISABLED)
+                        self.decryptSaveButton = Button(self.decryptOutputFrame, text="Save as...", width=20, takefocus=0, command=self.saveDecryptedOutput, state=DISABLED)
 
                         self.root.textDecryptVar.trace("w", self.textDecryptCallback)
                         self.root.fileDecryptVar.trace("w", self.fileDecryptCallback)
@@ -2133,6 +2133,13 @@ class Interface(Tk):
                         self.decryptCopyButton.place(x=9, y=30)
                         self.decryptClearButton.place(x=128, y=30)
                         self.decryptSaveButton.place(x=622, y=30)
+
+                    def saveDecryptedOutput(self):
+                        path = filedialog.asksaveasfilename(title="Save decryption output", initialfile="Decrypted Data.txt", filetypes=[("Text document", "*.txt"), ("All files", "*.*")], defaultextension="*.txt")
+                        if ''.join(path.split()) == '':
+                            return
+                        with open(path, mode="wb") as file:
+                            file.write(self.root.decryptOutputVar.get().encode("utf-8"))
 
                     @state_control_function(self)
                     def changeDecryptSource(self):
