@@ -540,7 +540,8 @@ class Cryptography(object):
                 root.lastEncryptedFile = root.fileEntryVar.get() if bool(root.dataSourceVar.get()) else None
 
             failure = False
-            root.mainNotebook.encryptionFrame.outputFrame.saveOutputButton.configure(state=DISABLED)
+            root.mainNotebook.encryptionFrame.outputFrame.saveOutputButton.configure(state=NORMAL)
+            root.mainNotebook.encryptionFrame.outputFrame.copyOutputButton.configure(state=NORMAL)
             if len(datas) != 1 and bool(root.dataSourceVar.get()):
                 # If multiple files were encrypted, don't show the result (because how are we supposed to show anyway)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
@@ -548,6 +549,7 @@ class Cryptography(object):
                 if hasattr(root, 'lastEncryptionResult'):
                     del root.lastEncryptionResult
                 root.mainNotebook.encryptionFrame.outputFrame.saveOutputButton.configure(state=DISABLED)
+                root.mainNotebook.encryptionFrame.outputFrame.copyOutputButton.configure(state=DISABLED)
             elif hasattr(root, "lastEncryptionResult") and len(root.lastEncryptionResult) > 15000:
                 # If one file was chosen or a plain text was entered to be encrypted, but the result is over 15.000 characters, don't show the result
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
@@ -733,6 +735,8 @@ class Cryptography(object):
                     self.update_status("Ready")
                     return
 
+            root.mainNotebook.decryptionFrame.decryptSaveButton.configure(state=NORMAL)
+            root.mainNotebook.decryptionFrame.decryptCopyButton.configure(state=NORMAL)
             self.update_status("Displaying the result...")
             try:
                 root.lastDecryptionResult = root.lastDecryptionResult.decode("utf-8")
@@ -748,6 +752,8 @@ class Cryptography(object):
             except AttributeError:
                 root.mainNotebook.decryptionFrame.decryptOutputText.configure(foreground="gray")
                 root.mainNotebook.decryptionFrame.decryptOutputText.replace("Decrypted data is not being displayed because multiple files were selected to be decrypted.")
+                root.mainNotebook.decryptionFrame.decryptSaveButton.configure(state=DISABLED)
+                root.mainNotebook.decryptionFrame.decryptCopyButton.configure(state=DISABLED)
             else:
                 if not len(root.lastDecryptionResult) > 15000:
                     root.mainNotebook.decryptionFrame.decryptOutputText.configure(foreground="black")
