@@ -37,6 +37,7 @@ Implement updating database keys on change, and reset database option
 Implement self-update and auto update-checking
 Implement skipping file when read/write fails, when the file is already not encrypted, and when the key is incorrect for the file in particular
 
+Fix "Encrypt" button becoming disabled when multiple files and a key are selected
 Fix freeze on Base64 huge file encoding
 
 """
@@ -540,16 +541,13 @@ class Cryptography(object):
                 root.lastEncryptedFile = root.fileEntryVar.get() if bool(root.dataSourceVar.get()) else None
 
             failure = False
-            root.mainNotebook.encryptionFrame.outputFrame.saveOutputButton.configure(state=NORMAL)
-            root.mainNotebook.encryptionFrame.outputFrame.copyOutputButton.configure(state=NORMAL)
+                            
             if len(datas) != 1 and bool(root.dataSourceVar.get()):
                 # If multiple files were encrypted, don't show the result (because how are we supposed to show anyway)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.replace("Encrypted data is not being displayed because multiple files were selected to be encrypted.")
                 if hasattr(root, 'lastEncryptionResult'):
                     del root.lastEncryptionResult
-                root.mainNotebook.encryptionFrame.outputFrame.saveOutputButton.configure(state=DISABLED)
-                root.mainNotebook.encryptionFrame.outputFrame.copyOutputButton.configure(state=DISABLED)
             elif hasattr(root, "lastEncryptionResult") and len(root.lastEncryptionResult) > 15000:
                 # If one file was chosen or a plain text was entered to be encrypted, but the result is over 15.000 characters, don't show the result
                 root.mainNotebook.encryptionFrame.outputFrame.outputText.configure(foreground="gray", wrap=WORD)
@@ -650,7 +648,7 @@ class Cryptography(object):
                     self.update_status("Ready")
                     return
                 else:
-                    if data.replace(b"\n", b"") == base64.urlsafe_b64encode(new_data):
+                    if data == base64.urlsafe_b64encode(new_data):
                         data: bytes = new_data
                         del new_data
                     else:
@@ -735,8 +733,6 @@ class Cryptography(object):
                     self.update_status("Ready")
                     return
 
-            root.mainNotebook.decryptionFrame.decryptSaveButton.configure(state=NORMAL)
-            root.mainNotebook.decryptionFrame.decryptCopyButton.configure(state=NORMAL)
             self.update_status("Displaying the result...")
             try:
                 root.lastDecryptionResult = root.lastDecryptionResult.decode("utf-8")
@@ -752,8 +748,6 @@ class Cryptography(object):
             except AttributeError:
                 root.mainNotebook.decryptionFrame.decryptOutputText.configure(foreground="gray")
                 root.mainNotebook.decryptionFrame.decryptOutputText.replace("Decrypted data is not being displayed because multiple files were selected to be decrypted.")
-                root.mainNotebook.decryptionFrame.decryptSaveButton.configure(state=DISABLED)
-                root.mainNotebook.decryptionFrame.decryptCopyButton.configure(state=DISABLED)
             else:
                 if not len(root.lastDecryptionResult) > 15000:
                     root.mainNotebook.decryptionFrame.decryptOutputText.configure(foreground="black")
@@ -1026,8 +1020,6 @@ class ToolTip(object):
 
     @exception_logged
     def showtip(self, event=None):
-        if not bool(root.showTooltip.get()):
-            return
         # Get the mouse position and determine the screen coordinates to show the tooltip
         x = root.winfo_pointerx() + 12
         y = root.winfo_pointery() + 16
@@ -1336,37 +1328,36 @@ class Notebook(Notebook):
                     _appdata = f"{os.getenv('APPDATA')}\\{__title__}\\"
                     try:
                         # Get the URL for downloading the source code whose version is the same as the version of the program (this would raise IndexError if version tag of this program doesn't exist in GitHub)
-                        url = [release["zipball_url"] for release in get(f"https://api.github.com/repos/{__author__}/{__title__}/releases").json() if release["tag_name"] == f"v{__version__}"][0]
+                        url = [release["zipball_url"] for release in get(f"https://api.github.com/repos/Yilmaz4/{__title__}/releases").json() if release["tag_name"] == f"v{__version__}"][0]
                         # Download the source code
                         src = get(url, stream=True)
                         with open(_appdata + f"source_code_v{__version__}.zip", 'wb') as file:
                             # Write the source code data to a file in AppData
                             for chunk in src.iter_content(chunk_size=512):
                                 file.write(chunk)
+                        # Unzip the source code to a folder
+                        with ZipFile(_appdata + f"source_code_v{__version__}.zip", "r") as file:
+                            file.extractall(_appdata + f"source_code_v{__version__}")
+                        # Try to find the main *.py or *.pyw file in the folder
+                        for filename in os.listdir(_appdata + f"source_code_v{__version__}"):
+                            if os.path.isdir(_appdata + f"source_code_v{__version__}\\{filename}") and filename.startswith(__author__):
+                                for _filename in os.listdir(_appdata + f"source_code_v{__version__}\\{filename}"):
+                                    if os.path.splitext(_filename)[1] in [".py", ".pyw"]:
+                                        with open(_appdata + f"source_code_v{__version__}\\{filename}\\{_filename}") as file:
+                                            self.master.mainNotebook.sourceFrame.sourceText.replace(file.read())
+                            elif os.path.splitext(filename)[1] in [".py", ".pyw"]:
+                                with open(_appdata + f"source_code_v{__version__}\\{filename}") as file:
+                                    self.master.mainNotebook.sourceFrame.sourceText.replace(file.read())
+                        rmtree(_appdata + f"source_code_v{__version__}")
+                        os.remove(_appdata + f"source_code_v{__version__}.zip")
                     except IndexError:
-                        # If the version of this program could not be found in GitHub, download the repository directly assuming the latest code matches with this build
-                        try:
-                            src = get(f"https://raw.githubusercontent.com/{__author__}/{__title__}/main/main.pyw", stream=True)
-                            with open(_appdata + f"source_code_v{__version__}.zip", 'wb') as file:
-                                # Write the source code data to a file in AppData
-                                for chunk in src.iter_content(chunk_size=512):
-                                    file.write(chunk)
-                        except (gaierror, ConnectionError, NewConnectionError, MaxRetryError):
-                            # If there was any connection problem, this error will pop up
-                            messagebox.showerror("No internet connection", "Your internet connection appears to be offline. We were unable to download required content to show this page.")
-                            self.master.logger.error(f"Connection to 'raw.githubusercontent.com' has failed, downloading source code was interrupted.")
-                            # Print the traceback information to the logging widget
-                            for line in format_exc().splitlines():
-                                self.master.logger.error(" " * (len(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')) + 1) + line + "\n", format=False)
-                            self.master.mainNotebook.select(self.master.mainNotebook.last_tab)
-                        except Exception:
-                            # If any kind of error other than connection errors happens, do the following things
-                            messagebox.showerror("Unknown error", "An unknown error occured while downloading the source code from GitHub. See logs for more information.")
-                            self.master.logger.error("An unknown error occured while downloading the source code from GitHub.")
-                            # Print the traceback information to the logging widget
-                            for line in format_exc().splitlines():
-                                self.master.logger.error(" " * (len(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')) + 1) + line + "\n", format=False)
-                            self.master.mainNotebook.select(self.master.mainNotebook.last_tab)
+                        # As the error details below this comment explain, this error will pop up if the user is running the *.exe version and the version doesn't exist in the GitHub repository
+                        messagebox.showerror("Source code could not be found", f"The source code of this program could not be loaded (as you're using the *.exe version) nor downloaded. This is most probably because you're using a more recent version than the latest release in GitHub repository.")
+                        self.master.logger.error("Source code of this version of this program could not be found in GitHub")
+                        # Print the traceback information to the logging widget
+                        for line in format_exc().splitlines():
+                            self.master.logger.error(" " * (len(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')) + 1) + line + "\n", format=False)
+                        self.master.mainNotebook.select(self.master.mainNotebook.last_tab)
                     except (gaierror, ConnectionError, NewConnectionError, MaxRetryError):
                         # If there was any connection problem, this error will pop up
                         messagebox.showerror("No internet connection", "Your internet connection appears to be offline. We were unable to download required content to show this page.")
@@ -1375,36 +1366,7 @@ class Notebook(Notebook):
                         for line in format_exc().splitlines():
                             self.master.logger.error(" " * (len(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')) + 1) + line + "\n", format=False)
                         self.master.mainNotebook.select(self.master.mainNotebook.last_tab)
-                        return
-                    except Exception:
-                        # If any kind of error other than connection errors happens, do the following things
-                        messagebox.showerror("Unknown error", "An unknown error occured while downloading the source code from GitHub. See logs for more information.")
-                        self.master.logger.error("An unknown error occured while downloading the source code from GitHub.")
-                        # Print the traceback information to the logging widget
-                        for line in format_exc().splitlines():
-                            self.master.logger.error(" " * (len(datetime.now().strftime(r'%Y-%m-%d %H:%M:%S')) + 1) + line + "\n", format=False)
-                        self.master.mainNotebook.select(self.master.mainNotebook.last_tab)
-                        return
-                    finally:
-                        try:
-                            # Unzip the source code to a folder
-                            with ZipFile(_appdata + f"source_code_v{__version__}.zip", "r") as file:
-                                file.extractall(_appdata + f"source_code_v{__version__}")
-                            # Try to find the main *.py or *.pyw file in the folder
-                            for filename in os.listdir(_appdata + f"source_code_v{__version__}"):
-                                if os.path.isdir(_appdata + f"source_code_v{__version__}\\{filename}") and filename.startswith(__author__):
-                                    for _filename in os.listdir(_appdata + f"source_code_v{__version__}\\{filename}"):
-                                        if os.path.splitext(_filename)[1] in [".py", ".pyw"]:
-                                            with open(_appdata + f"source_code_v{__version__}\\{filename}\\{_filename}") as file:
-                                                self.master.mainNotebook.sourceFrame.sourceText.replace(file.read())
-                                elif os.path.splitext(filename)[1] in [".py", ".pyw"]:
-                                    with open(_appdata + f"source_code_v{__version__}\\{filename}") as file:
-                                        self.master.mainNotebook.sourceFrame.sourceText.replace(file.read())
-                            rmtree(_appdata + f"source_code_v{__version__}")
-                            os.remove(_appdata + f"source_code_v{__version__}.zip")
-                        except:
-                            with open(_appdata + f"source_code_v{__version__}.zip", mode="r", encoding="utf-8") as file:
-                                self.master.mainNotebook.sourceFrame.sourceText.replace(file.read())
+                    else:
                         # If no problem has occured while downloading the source code, destroy the "Loading..." label
                         if hasattr(self.master.mainNotebook.sourceFrame, "downloadingLabel"):
                             self.master.mainNotebook.sourceFrame.downloadingLabel.place_forget()
@@ -1655,7 +1617,7 @@ class Interface(Tk):
                                 self.asymmetricEncryption = asymmetricEncryption(self)
 
                                 self.add(self.symmetricEncryption, text="Symmetric Key Encryption")
-                                self.add(self.asymmetricEncryption, text="Asymmetric Key Encryption", state=DISABLED)
+                                self.add(self.asymmetricEncryption, text="Asymmetric Key Encryption")
 
                         self.algorithmSelect = algorithmSelect(self)
                         self.encryptButton = Button(self, text="Encrypt", width=22, command=self.root.crypto.encrypt, takefocus=0)
@@ -1684,7 +1646,7 @@ class Interface(Tk):
                                 self.copyOutputButton = Button(self, text = "Copy", width=10, command=lambda: self.root.clipboard_set(self.outputText.get("1.0", END)), state=DISABLED, takefocus=0)
                                 self.clearOutputButton = Button(self, text = "Clear", width=10, command=lambda: self.outputText.clear(), state=DISABLED, takefocus=0)
                                 self.saveOutputButton = Button(self, width=15, text="Save as...", command=self.saveOutput, state=DISABLED, takefocus=0)
-                                self.copyAESKeyButton = Button(self, width = 10, text="Copy", command=lambda: self.root.clipboard_set(self.AESKeyText.get("1.0", END).rstrip()), state=DISABLED, takefocus=0)
+                                self.copyAESKeyButton = Button(self, width = 10, text="Copy", command=lambda: self.root.clipboard_set(self.AESKeyText.get("1.0", END)), state=DISABLED, takefocus=0)
                                 self.clearAESKeyButton = Button(self, width = 10, text="Clear", command=lambda: self.AESKeyText.clear(), state=DISABLED, takefocus=0)
                                 self.saveAESKeyButton = Button(self, width=15, text="Save as...", command=lambda: self.root.crypto.save_key(self.root.AESKeyVar.get(), self.root), state=DISABLED, takefocus=0)
                                 self.copyRSAPublicButton = Button(self, width = 10, text="Copy", command=lambda: self.root.clipboard_set(self.RSAPublicText.get("1.0", END)), state=DISABLED, takefocus=0)
@@ -1827,6 +1789,7 @@ class Interface(Tk):
 
                         if not bool(self.root.keySourceSelection.get()):
                             self.encryptButton.configure(state=NORMAL)
+                            self.fileEntryCallback()
                         elif bool(self.root.keySourceSelection.get()) and (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and os.path.isfile(self.fileEntry.get()))):
                             self.encryptButton.configure(state=NORMAL)
                             self.limitKeyEntry()
@@ -1876,8 +1839,7 @@ class Interface(Tk):
                             else:
                                 self.algorithmSelect.symmetricEncryption.keyValidityStatusLabel.configure(foreground="green", text=f"Validity: Valid {'AES' if not cond else '3DES'}-{len(value) * 8} Key")
                                 self.encryptButton.configure(state=NORMAL if (not bool(self.root.dataSourceVar.get()) or (bool(self.root.dataSourceVar.get()) and os.path.isfile(self.fileEntry.get()))) else DISABLED)
-                                if bool(self.root.dataSourceVar.get()):
-                                    self.fileEntryCallback()
+                                self.fileEntryCallback()
 
                     @state_control_function(self)
                     def changeDataSource(self):
@@ -2128,7 +2090,7 @@ class Interface(Tk):
                         self.decryptOutputText = Entry(self.decryptOutputFrame, width=105, font=("Consolas", 9), state=DISABLED, textvariable=self.master.master.decryptOutputVar, takefocus=0)
                         self.decryptCopyButton = Button(self.decryptOutputFrame, text="Copy", width=17, command=lambda: self.root.clipboard_set(self.root.self.lastDecryptionResult), takefocus=0, state=DISABLED)
                         self.decryptClearButton = Button(self.decryptOutputFrame, text="Clear", width=17, command=lambda: self.decryptOutputText.clear(), takefocus=0, state=DISABLED)
-                        self.decryptSaveButton = Button(self.decryptOutputFrame, text="Save as...", width=20, takefocus=0, command=self.saveDecryptedOutput, state=DISABLED)
+                        self.decryptSaveButton = Button(self.decryptOutputFrame, text="Save as...", width=20, takefocus=0, state=DISABLED)
 
                         self.root.textDecryptVar.trace("w", self.textDecryptCallback)
                         self.root.fileDecryptVar.trace("w", self.fileDecryptCallback)
@@ -2139,13 +2101,6 @@ class Interface(Tk):
                         self.decryptCopyButton.place(x=9, y=30)
                         self.decryptClearButton.place(x=128, y=30)
                         self.decryptSaveButton.place(x=622, y=30)
-
-                    def saveDecryptedOutput(self):
-                        path = filedialog.asksaveasfilename(title="Save decryption output", initialfile="Decrypted Data.txt", filetypes=[("Text document", "*.txt"), ("All files", "*.*")], defaultextension="*.txt")
-                        if ''.join(path.split()) == '':
-                            return
-                        with open(path, mode="wb") as file:
-                            file.write(self.root.decryptOutputVar.get().encode("utf-8"))
 
                     @state_control_function(self)
                     def changeDecryptSource(self):
@@ -2581,12 +2536,9 @@ class Interface(Tk):
                         self.keyDerivationFrame = keyDerivationFrame(self)
                         self.hashDigestFrame = hashDigestFrame(self)
 
-                        self.moreSoon = Label(self, text="More coming soon I guess...", foreground="gray")
-
                         self.base64Frame.place(x=10, y=5)
                         self.keyDerivationFrame.place(x=423, y=5)
                         self.hashDigestFrame.place(x=423, y=158)
-                        self.moreSoon.place(x=140, y=450)
 
                 class loggingFrame(Frame):
                     def __init__(self, master: mainNotebook = None, **kwargs):
@@ -2783,33 +2735,15 @@ class Interface(Tk):
 
     @exception_logged
     def __save_database(self):
-        database = f"{os.getenv('APPDATA')}\\Encrypt-n-Decrypt\\settings.sqlite"
-        con = sqlite3.connect(database)
+        con = sqlite3.connect(f"{os.getenv('APPDATA')}\\Encrypt-n-Decrypt\\settings.sqlite")
         cur = con.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS user_data (key, value)")
-        for attribute in [attr for attr in inspect.getmembers(self, lambda attr: not(inspect.isroutine(attr))) if not(attr[0].startswith('__') and attr[0].endswith('__'))]:
-            if not attribute[0] in {key: value for (key, value) in cur.execute("SELECT * FROM user_data").fetchall()}:
-                break
-        else:
-            operation = "INSERT INTO user_data VALUES ('{key}', '{value}')" if not cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='user_data'").fetchall() else "UPDATE user_data SET value = '{value}' WHERE key = '{key}'"
-            for attribute in [a for a in inspect.getmembers(self, lambda a: not(inspect.isroutine(a))) if not(a[0].startswith('__') and a[0].endswith('__'))]:
-                name: str = attribute[0]
-                value: IntVar | StringVar = attribute[1]
-                if isinstance(value, IntVar) or any(ext in name for ext in ["themeVar", "levelSelectVar"]):
-                    cur.execute(operation.format(key=name, value=value.get()))
-            con.commit()
-            con.close()
-            return
-        con.close()
-        os.remove(database)
-        con = sqlite3.connect(database)
-        cur = con.cursor()
+        operation = "INSERT INTO user_data VALUES ('{key}', '{value}')" if not cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='user_data'").fetchall() else "UPDATE user_data SET value = '{value}' WHERE key = '{key}'"
         cur.execute("CREATE TABLE IF NOT EXISTS user_data (key, value)")
         for attribute in [a for a in inspect.getmembers(self, lambda a: not(inspect.isroutine(a))) if not(a[0].startswith('__') and a[0].endswith('__'))]:
             name: str = attribute[0]
             value: IntVar | StringVar = attribute[1]
             if isinstance(value, IntVar) or any(ext in name for ext in ["themeVar", "levelSelectVar"]):
-                cur.execute(f"INSERT INTO user_data VALUES ('{name}', '{value.get()}')")
+                cur.execute(operation.format(key=name, value=value.get()))
         con.commit()
         con.close()
 
@@ -2833,25 +2767,24 @@ class Interface(Tk):
             return
         else:
             # Check if the database is compatible with the current version of the program
-            # for attribute in [attr for attr in inspect.getmembers(self, lambda attr: not(inspect.isroutine(attr))) if not(attr[0].startswith('__') and attr[0].endswith('__'))]:
-            #     if not attribute[0] in {key: value for (key, value) in cur.execute("SELECT * FROM user_data").fetchall()}:
-            #         break
-            # else:
-            # for attribute in [attr for attr in {key: value for (key, value) in cur.execute("SELECT * FROM user_data").fetchall()}.keys()]:
-            #     if not attribute in [attr[0] for attr in inspect.getmembers(self, lambda attr: not(inspect.isroutine(attr))) if not(attr[0].startswith('__') and attr[0].endswith('__'))]:
-            #         return
-            # Iterate over the data in the database and set the corresponding variables
-            cur.execute("SELECT * FROM user_data")
-            for key, value in cur.fetchall():
-                eval(f"self.{key}.set(" + (value if not any(ext in key for ext in ["themeVar", "levelSelectVar"]) else f'\'{value}\'') + ")")
+            for attribute in [attr for attr in inspect.getmembers(self, lambda attr: not(inspect.isroutine(attr))) if not(attr[0].startswith('__') and attr[0].endswith('__'))]:
+                if not attribute[0] in {key: value for (key, value) in cur.execute("SELECT * FROM user_data").fetchall()}:
+                    break
+            else:
+                for attribute in [attr for attr in {key: value for (key, value) in cur.execute("SELECT * FROM user_data").fetchall()}.keys()]:
+                    if not attribute in [attr[0] for attr in inspect.getmembers(self, lambda attr: not(inspect.isroutine(attr))) if not(attr[0].startswith('__') and attr[0].endswith('__'))]:
+                        return
+                # Iterate over the data in the database and set the corresponding variables
+                cur.execute("SELECT * FROM user_data")
+                for key, value in cur.fetchall():
+                    eval(f"self.{key}.set(" + (value if not any(ext in key for ext in ["themeVar", "levelSelectVar"]) else f'\'{value}\'') + ")")
 
-            # Call the methods of the GUI to update the GUI elements' states (normal or disabled) according to the newly set values
-            for method, cls in [dict.values() for dict in self.scfs]:
-                method(cls())
-            self.attributes("-alpha", self.windowAlpha.get() / 100)
+                # Call the methods of the GUI to update the GUI elements' states (normal or disabled) accordingly to the newly set values 
+                for method, cls in [dict.values() for dict in self.scfs]:
+                    method(cls())
+                self.attributes("-alpha", self.windowAlpha.get() / 100)
 
-            self.theme.set_theme(self.themeVar.get())
-            
+                self.theme.set_theme(self.themeVar.get())
         # Close the connection to the database
         con.close()
 
@@ -2956,8 +2889,8 @@ class Interface(Tk):
                                         self.add_command(label = "Update now")
                                 self.speedMenu = speedMenu(self)
                                 self.add_cascade(menu=self.speedMenu, label="Titlebar update interval")
-                        #self.titleMenu = titleMenu(self)
-                        #self.add_cascade(menu=self.titleMenu, label = "Window titlebar configuration")
+                        self.titleMenu = titleMenu(self)
+                        self.add_cascade(menu=self.titleMenu, label = "Window titlebar configuration")
                         class opacityMenu(Menu):
                             def __init__(self, master: viewMenu):
                                 super().__init__(master, tearoff=0)
