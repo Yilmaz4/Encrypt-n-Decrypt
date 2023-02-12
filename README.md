@@ -11,13 +11,13 @@
 
 [//]: <> (009e0a Stable | ffc700 Prerelease | ff0000 Beta)
 
-Hey everyone, welcome to the GitHub repository of my first ever Python project capable of encrypting and decrypting data using diverse encryption algorithms such as AES (Advanced Encryption Standard), 3DES (Triple Data Encryption Standard) or RSA (Rivest Shamir Adleman) (coming soon).
+Hello! Welcome to the GitHub repository Encrypt-n-Decrypt! As its name would imply, this program can encrypt your data, and decrypt it; along with some additional features like KDF, hash and base64 encoding.
 
-In cryptography, encryption is the process of encoding information. This process converts the original representation of the information, known as plaintext, into an alternative form known as ciphertext. Ideally, only authorized parties can decipher a ciphertext back to plaintext and access the original information. Encryption does not itself prevent interference but denies the intelligible content to a would-be interceptor.
+Encryption is turning your data into something unreadable, which can only be turned back to its original form using a digital key. This program lets you do this.
 
-To decrypt the data that you'd encrypted using a symmetric key encryption algorithm (AES or 3DES) with this program, you need to have the key called "encryption key" which you used to encrypt the data. This key consists of either 16, 24 or 32 random characters. Similarly, to decrypt a piece of asymmetrically encrypted data (using RSA algorithm), you need to have a key called "private key" which is usually longer than 1024 characters.
+To decrypt the data that you had encrypted using a symmetric key encryption algorithm (AES or 3DES) with this program, you need to have the key called "the encryption key", which you had used to encrypt your data, or was generated and shown to you. This key consists of either 16, 24 or 32 random characters. Since the same key can be used to both encrypt and decrypt, these kinds of algorithms are called symmetric. Similarly, to decrypt a piece of asymmetrically encrypted data (using RSA algorithm), you need to have a key called "private key" which is usually longer than 1024 characters. In order to have two or more pieces of data be decryptable using the same private key, you need to encrypt them with the same public key, which can be extracted from the private key. Because there are two different keys involved in this process, these algorithms are called asymmetric.
 
-However, asymmetric key encryption is not available yet. I'm currently working on it but I'm stuck at the part of placing the input widgets. You can expect RSA algorithm to be usable in the next few months.
+Asymmetric key encryption is not available yet though. It'll be available in the next update.
 
 ## Features
 
@@ -29,7 +29,7 @@ However, asymmetric key encryption is not available yet. I'm currently working o
 - Usage of SQLite3 for saving the configurations made (such as what to encrypt or the length of the key to generate) to a database file when the user closes the program, and load the saved configurations in the next start-up.
 - Lots of visual themes coming from the [ttkthemes](https://github.com/TkinterEP/ttkthemes) package.
 
-Despite being memory efficient though, encrypting/decrypting files whose sizes are bigger than the amount of RAM installed on the computer can cause the program to run out of memory therefore fail.
+Despite being memory efficient though, encrypting/decrypting files whose sizes are bigger than the amount of RAM installed on the computer can cause the program to run out of memory and therefore fail.
 
 ## Introduction
 
